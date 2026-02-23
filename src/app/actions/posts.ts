@@ -128,7 +128,7 @@ export async function likePost(postId: string): Promise<void> {
       type: 'post_like',
       actor_id: user.id,
       post_id: postId,
-    }).catch(() => {})
+    })
   }
 }
 

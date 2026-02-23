@@ -46,7 +46,7 @@ export async function createComment(postId: string, content: string, parentComme
         actor_id: user.id,
         post_id: postId,
         comment_id: comment.id,
-      }).catch(() => {})
+      })
     }
   } else {
     // Top-level comment: notify post author
@@ -62,7 +62,7 @@ export async function createComment(postId: string, content: string, parentComme
         actor_id: user.id,
         post_id: postId,
         comment_id: comment.id,
-      }).catch(() => {})
+      })
     }
   }
 
@@ -123,7 +123,7 @@ export async function likeComment(commentId: string): Promise<void> {
       type: 'comment_like',
       actor_id: user.id,
       comment_id: commentId,
-    }).catch(() => {})
+    })
   }
 }
 

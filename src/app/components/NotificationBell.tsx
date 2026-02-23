@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { getImageUrl } from '@/lib/supabase/image'
-import { getNotifications, markAllRead } from '@/app/actions/notifications'
+import { getNotifications, markRead, markAllRead } from '@/app/actions/notifications'
 import type { Notification } from '@/lib/supabase/types'
 
 function formatTimeAgo(dateStr: string): string {
@@ -30,16 +30,34 @@ function notificationMessage(n: Notification): string {
   }
 }
 
-function notificationHref(n: Notification): string {
+function notificationHref(n: Notification, currentUsername: string): string {
   const actorUsername = n.actor?.username
-  if (actorUsername) return `/profile/${actorUsername}`
-  return '/feed'
+  switch (n.type) {
+    case 'friend_request':
+    case 'friend_accepted':
+      // Go to the actor's profile so you can respond / view them
+      return actorUsername ? `/profile/${actorUsername}` : '/feed'
+    case 'post_like':
+    case 'post_comment':
+    case 'comment_reply':
+    case 'comment_like':
+      // Go to your own profile wall where the post/comment lives
+      return `/profile/${currentUsername}`
+    default:
+      return '/feed'
+  }
 }
 
-export default function NotificationBell({ userId }: { userId: string }) {
+interface Props {
+  userId: string
+  username: string
+}
+
+export default function NotificationBell({ userId, username }: Props) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const router = useRouter()
 
   const unreadCount = notifications.filter((n) => !n.read_at).length
 
@@ -86,6 +104,20 @@ export default function NotificationBell({ userId }: { userId: string }) {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  async function handleNotificationClick(n: Notification) {
+    setOpen(false)
+    // Mark as read optimistically
+    if (!n.read_at) {
+      setNotifications((prev) =>
+        prev.map((item) =>
+          item.id === n.id ? { ...item, read_at: new Date().toISOString() } : item
+        )
+      )
+      markRead(n.id) // fire and forget — don't await, don't block navigation
+    }
+    router.push(notificationHref(n, username))
+  }
 
   async function handleMarkAllRead() {
     await markAllRead()
@@ -145,11 +177,10 @@ export default function NotificationBell({ userId }: { userId: string }) {
                 const initials = (n.actor?.username?.[0] ?? '?').toUpperCase()
 
                 return (
-                  <Link
+                  <button
                     key={n.id}
-                    href={notificationHref(n)}
-                    onClick={() => setOpen(false)}
-                    className={`flex gap-3 px-4 py-3 hover:bg-zinc-800 transition-colors ${
+                    onClick={() => handleNotificationClick(n)}
+                    className={`w-full flex gap-3 px-4 py-3 hover:bg-zinc-800 transition-colors text-left ${
                       !n.read_at ? 'bg-zinc-800/40' : ''
                     }`}
                   >
@@ -177,7 +208,7 @@ export default function NotificationBell({ userId }: { userId: string }) {
                     {!n.read_at && (
                       <div className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 mt-2" />
                     )}
-                  </Link>
+                  </button>
                 )
               })
             )}

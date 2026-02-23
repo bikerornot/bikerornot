@@ -36,7 +36,7 @@ export default async function PeoplePage() {
             BikerOrNot
           </Link>
           <div className="flex items-center gap-2">
-            <NotificationBell userId={user.id} />
+            <NotificationBell userId={user.id} username={profile.username!} />
             <UserMenu
               username={profile.username!}
               displayName={displayName}

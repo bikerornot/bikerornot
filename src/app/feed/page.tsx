@@ -44,7 +44,7 @@ export default async function FeedPage() {
             <Link href="/people" className="text-sm text-zinc-400 hover:text-orange-400 transition-colors hidden sm:block">
               Find Riders
             </Link>
-            <NotificationBell userId={user.id} />
+            <NotificationBell userId={user.id} username={profile.username!} />
             <UserMenu
               username={profile.username!}
               displayName={displayName}

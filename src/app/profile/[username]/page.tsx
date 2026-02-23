@@ -120,7 +120,7 @@ export default async function ProfilePage({
             </Link>
             {user && currentUserProfile && (
               <>
-                <NotificationBell userId={user.id} />
+                <NotificationBell userId={user.id} username={currentUserProfile.username!} />
                 <UserMenu
                   username={currentUserProfile.username!}
                   displayName={currentUserProfile.username ?? 'Unknown'}

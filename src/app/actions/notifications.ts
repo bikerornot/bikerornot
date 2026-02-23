@@ -29,6 +29,21 @@ export async function getNotifications(): Promise<Notification[]> {
   return (data ?? []) as Notification[]
 }
 
+export async function markRead(notificationId: string): Promise<void> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return
+
+  const admin = getServiceClient()
+  await admin
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('id', notificationId)
+    .eq('user_id', user.id) // safety: only mark your own
+}
+
 export async function markAllRead(): Promise<void> {
   const supabase = await createClient()
   const {

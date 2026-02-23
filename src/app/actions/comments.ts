@@ -10,7 +10,7 @@ function getServiceClient() {
   )
 }
 
-export async function createComment(postId: string, content: string) {
+export async function createComment(postId: string, content: string, parentCommentId?: string) {
   const supabase = await createClient()
   const {
     data: { user },
@@ -20,8 +20,13 @@ export async function createComment(postId: string, content: string) {
   const admin = getServiceClient()
   const { data: comment, error } = await admin
     .from('comments')
-    .insert({ post_id: postId, author_id: user.id, content: content.trim() })
-    .select()
+    .insert({
+      post_id: postId,
+      author_id: user.id,
+      content: content.trim(),
+      ...(parentCommentId ? { parent_comment_id: parentCommentId } : {}),
+    })
+    .select('*, author:profiles(*)')
     .single()
 
   if (error) throw new Error(error.message)

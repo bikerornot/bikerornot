@@ -73,6 +73,7 @@ export interface Comment {
   post_id: string
   author_id: string
   content: string
+  parent_comment_id: string | null
   created_at: string
   deleted_at: string | null
   author?: Profile

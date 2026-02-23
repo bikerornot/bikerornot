@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { findNearbyUsers, type NearbyUser } from '@/app/actions/people'
+import { findNearbyUsers, type NearbyUser, type SearchFilters } from '@/app/actions/people'
 import { sendFriendRequest, cancelFriendRequest, acceptFriendRequest } from '@/app/actions/friends'
 import { getImageUrl } from '@/lib/supabase/image'
 
@@ -165,9 +165,51 @@ function UserCard({
   )
 }
 
+const GENDER_FILTERS = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+]
+
+const RELATIONSHIP_FILTERS = [
+  { value: 'single', label: 'Single' },
+  { value: 'in_a_relationship', label: 'In a Relationship' },
+  { value: 'its_complicated', label: "It's Complicated" },
+]
+
+function FilterCheckbox({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string
+  checked: boolean
+  onChange: () => void
+}) {
+  return (
+    <label className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors text-sm ${
+      checked ? 'border-orange-500 bg-orange-500/10 text-white' : 'border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-500'
+    }`}>
+      <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
+      <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+        checked ? 'bg-orange-500 border-orange-500' : 'border-zinc-500'
+      }`}>
+        {checked && (
+          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12">
+            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </span>
+      {label}
+    </label>
+  )
+}
+
 export default function PeopleSearch({ defaultZip }: { defaultZip: string }) {
   const [zip, setZip] = useState(defaultZip)
   const [radius, setRadius] = useState(50)
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [genderFilter, setGenderFilter] = useState<string[]>([])
+  const [relationshipFilter, setRelationshipFilter] = useState<string[]>([])
   const [results, setResults] = useState<NearbyUser[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [searching, startSearch] = useTransition()
@@ -177,15 +219,24 @@ export default function PeopleSearch({ defaultZip }: { defaultZip: string }) {
     Record<string, NearbyUser['friendshipStatus']>
   >({})
 
+  function toggleFilter(list: string[], setList: (v: string[]) => void, value: string) {
+    setList(list.includes(value) ? list.filter((v) => v !== value) : [...list, value])
+  }
+
   function handleStatusChange(id: string, status: NearbyUser['friendshipStatus']) {
     setStatusOverrides((prev) => ({ ...prev, [id]: status }))
   }
 
+  const activeFilterCount = genderFilter.length + relationshipFilter.length
+
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    const filters: SearchFilters = {}
+    if (genderFilter.length) filters.gender = genderFilter
+    if (relationshipFilter.length) filters.relationshipStatus = relationshipFilter
     startSearch(async () => {
-      const { users, error } = await findNearbyUsers(zip.trim(), radius)
+      const { users, error } = await findNearbyUsers(zip.trim(), radius, filters)
       if (error) {
         setError(error)
         setResults(null)
@@ -235,6 +286,65 @@ export default function PeopleSearch({ defaultZip }: { defaultZip: string }) {
               {searching ? 'Searching…' : 'Search'}
             </button>
           </div>
+        </div>
+
+        {/* Advanced search toggle */}
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="text-xs text-zinc-500 hover:text-orange-400 transition-colors flex items-center gap-1"
+          >
+            <span>{showAdvanced ? '▾' : '▸'}</span>
+            Advanced Search
+            {activeFilterCount > 0 && (
+              <span className="ml-1 bg-orange-500 text-white rounded-full px-1.5 py-0.5 text-xs leading-none">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+
+          {showAdvanced && (
+            <div className="mt-3 space-y-3 pt-3 border-t border-zinc-800">
+              <div>
+                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Gender</p>
+                <div className="flex flex-wrap gap-2">
+                  {GENDER_FILTERS.map((f) => (
+                    <FilterCheckbox
+                      key={f.value}
+                      label={f.label}
+                      checked={genderFilter.includes(f.value)}
+                      onChange={() => toggleFilter(genderFilter, setGenderFilter, f.value)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Relationship Status</p>
+                <div className="flex flex-wrap gap-2">
+                  {RELATIONSHIP_FILTERS.map((f) => (
+                    <FilterCheckbox
+                      key={f.value}
+                      label={f.label}
+                      checked={relationshipFilter.includes(f.value)}
+                      onChange={() => toggleFilter(relationshipFilter, setRelationshipFilter, f.value)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => { setGenderFilter([]); setRelationshipFilter([]) }}
+                  className="text-xs text-zinc-500 hover:text-red-400 transition-colors"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </form>
 

@@ -28,9 +28,15 @@ export interface NearbyUser {
   friendshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'accepted'
 }
 
+export interface SearchFilters {
+  gender?: string[]
+  relationshipStatus?: string[]
+}
+
 export async function findNearbyUsers(
   zipCode: string,
-  radiusMiles: number
+  radiusMiles: number,
+  filters: SearchFilters = {}
 ): Promise<{ users: NearbyUser[]; error: string | null }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -53,8 +59,13 @@ export async function findNearbyUsers(
   if (profilesError) return { users: [], error: profilesError.message }
   if (!profiles || profiles.length === 0) return { users: [], error: null }
 
-  // Filter by radius and compute distances
+  // Filter by radius, distance, and advanced filters
   const nearby = (profiles as Profile[])
+    .filter((p) => {
+      if (filters.gender?.length && !filters.gender.includes(p.gender ?? '')) return false
+      if (filters.relationshipStatus?.length && !filters.relationshipStatus.includes(p.relationship_status ?? '')) return false
+      return true
+    })
     .map((p) => ({
       profile: p,
       distanceMiles: haversine(coords.lat, coords.lng, p.latitude!, p.longitude!),

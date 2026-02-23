@@ -79,6 +79,22 @@ export default function CommentSection({ postId, currentUserId, currentUserProfi
     }
   }
 
+  function handleReplyAdded(reply: Comment) {
+    setComments((prev) =>
+      prev.some((c) => c.id === reply.id) ? prev : [...prev, reply]
+    )
+  }
+
+  // Group into top-level comments and a reply map
+  const topLevel = comments.filter((c) => !c.parent_comment_id)
+  const replyMap = new Map<string, Comment[]>()
+  for (const c of comments) {
+    if (c.parent_comment_id) {
+      const existing = replyMap.get(c.parent_comment_id) ?? []
+      replyMap.set(c.parent_comment_id, [...existing, c])
+    }
+  }
+
   const avatarUrl = currentUserProfile?.profile_photo_url
     ? getImageUrl('avatars', currentUserProfile.profile_photo_url)
     : null
@@ -92,8 +108,16 @@ export default function CommentSection({ postId, currentUserId, currentUserProfi
         <p className="text-zinc-500 text-sm py-2">No comments yet.</p>
       )}
 
-      {comments.map((c) => (
-        <CommentItem key={c.id} comment={c} currentUserId={currentUserId} />
+      {topLevel.map((c) => (
+        <CommentItem
+          key={c.id}
+          comment={c}
+          currentUserId={currentUserId}
+          replies={replyMap.get(c.id) ?? []}
+          postId={postId}
+          currentUserProfile={currentUserProfile}
+          onReplyAdded={handleReplyAdded}
+        />
       ))}
 
       {currentUserId && (

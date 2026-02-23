@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirectTo') || '/'
@@ -32,7 +32,6 @@ export default function LoginPage() {
 
     const supabase = createClient()
 
-    // Extend session to 30 days if "remember me" is checked
     if (rememberMe) {
       await supabase.auth.setSession({ access_token: '', refresh_token: '' }).catch(() => {})
     }
@@ -48,7 +47,6 @@ export default function LoginPage() {
       return
     }
 
-    // Redirect to onboarding if not complete
     const { data: profile } = await supabase
       .from('profiles')
       .select('onboarding_complete')
@@ -98,7 +96,6 @@ export default function LoginPage() {
           />
         </div>
 
-        {/* Remember me */}
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
@@ -131,5 +128,13 @@ export default function LoginPage() {
         </Link>
       </p>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }

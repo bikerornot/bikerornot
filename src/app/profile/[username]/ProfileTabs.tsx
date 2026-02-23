@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Profile } from '@/lib/supabase/types'
 import WallTab from './WallTab'
+import FriendsTab from './FriendsTab'
 
 const TABS = ['Wall', 'Photos', 'Friends', 'About'] as const
 type Tab = (typeof TABS)[number]
@@ -49,7 +50,11 @@ export default function ProfileTabs({
         />
       )}
 
-      {active !== 'Wall' && (
+      {active === 'Friends' && (
+        <FriendsTab profileId={profileId} isOwnProfile={isOwnProfile} />
+      )}
+
+      {active !== 'Wall' && active !== 'Friends' && (
         <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-10 text-center">
           <p className="text-zinc-500 text-sm">{active} coming soon.</p>
         </div>

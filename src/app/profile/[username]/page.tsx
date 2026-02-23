@@ -6,6 +6,7 @@ import { getImageUrl } from '@/lib/supabase/image'
 import ProfilePhotoUpload from './ProfilePhotoUpload'
 import CoverPhotoUpload from './CoverPhotoUpload'
 import ProfileTabs from './ProfileTabs'
+import FriendButton, { type FriendshipStatus } from './FriendButton'
 
 export async function generateMetadata({
   params,
@@ -46,6 +47,35 @@ export default async function ProfilePage({
     .select('*')
     .eq('user_id', profile.id)
     .order('year', { ascending: false })
+
+  // Friend count
+  const { count: friendCount } = await supabase
+    .from('friendships')
+    .select('*', { count: 'exact', head: true })
+    .or(`requester_id.eq.${profile.id},addressee_id.eq.${profile.id}`)
+    .eq('status', 'accepted')
+
+  // Friendship status with current user
+  let friendshipStatus: FriendshipStatus = 'none'
+  if (user && !isOwnProfile) {
+    const { data: friendship } = await supabase
+      .from('friendships')
+      .select('status, requester_id')
+      .or(
+        `and(requester_id.eq.${user.id},addressee_id.eq.${profile.id}),and(requester_id.eq.${profile.id},addressee_id.eq.${user.id})`
+      )
+      .single()
+
+    if (friendship) {
+      if (friendship.status === 'accepted') {
+        friendshipStatus = 'accepted'
+      } else if (friendship.requester_id === user.id) {
+        friendshipStatus = 'pending_sent'
+      } else {
+        friendshipStatus = 'pending_received'
+      }
+    }
+  }
 
   const avatarUrl = profile.profile_photo_url
     ? getImageUrl('avatars', profile.profile_photo_url)
@@ -130,9 +160,12 @@ export default async function ProfilePage({
               </Link>
             ) : (
               <>
-                <button className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-                  Add Friend
-                </button>
+                {user && (
+                  <FriendButton
+                    profileId={profile.id}
+                    initialStatus={friendshipStatus}
+                  />
+                )}
                 <button className="bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors border border-zinc-700">
                   Message
                 </button>
@@ -144,10 +177,7 @@ export default async function ProfilePage({
         {/* Stats */}
         <div className="flex flex-wrap gap-5 text-sm text-zinc-400 mb-4">
           <span>
-            <span className="text-white font-semibold">0</span> Friends
-          </span>
-          <span>
-            <span className="text-white font-semibold">0</span> Posts
+            <span className="text-white font-semibold">{friendCount ?? 0}</span> Friends
           </span>
           <span>
             Member since <span className="text-white">{memberSince}</span>
@@ -196,10 +226,7 @@ export default async function ProfilePage({
               </p>
               <ul className="space-y-1">
                 {bikes.map((bike) => (
-                  <li
-                    key={bike.id}
-                    className="flex items-center gap-2 text-sm text-zinc-300"
-                  >
+                  <li key={bike.id} className="flex items-center gap-2 text-sm text-zinc-300">
                     <span>🏍</span>
                     {bike.year} {bike.make} {bike.model}
                   </li>

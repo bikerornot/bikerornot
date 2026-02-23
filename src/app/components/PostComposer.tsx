@@ -1,0 +1,169 @@
+'use client'
+
+import { useState, useRef } from 'react'
+import Image from 'next/image'
+import { Profile } from '@/lib/supabase/types'
+import { getImageUrl } from '@/lib/supabase/image'
+import { createPost } from '@/app/actions/posts'
+
+interface Props {
+  currentUserProfile: Profile
+  wallOwnerId?: string
+  onPostCreated?: (postId: string) => void
+}
+
+export default function PostComposer({ currentUserProfile, wallOwnerId, onPostCreated }: Props) {
+  const [content, setContent] = useState('')
+  const [images, setImages] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const avatarUrl = currentUserProfile.profile_photo_url
+    ? getImageUrl('avatars', currentUserProfile.profile_photo_url)
+    : null
+  const displayName =
+    currentUserProfile.display_name ??
+    `${currentUserProfile.first_name} ${currentUserProfile.last_name}`
+
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    if (images.length + files.length > 4) {
+      setError('Maximum 4 images per post')
+      e.target.value = ''
+      return
+    }
+    const validFiles = files.filter((f) => f.size <= 10 * 1024 * 1024)
+    if (validFiles.length < files.length) setError('Some images exceed the 10 MB limit')
+
+    setImages((prev) => [...prev, ...validFiles])
+    validFiles.forEach((file) => {
+      setImagePreviews((prev) => [...prev, URL.createObjectURL(file)])
+    })
+    e.target.value = ''
+  }
+
+  function removeImage(index: number) {
+    URL.revokeObjectURL(imagePreviews[index])
+    setImages((prev) => prev.filter((_, i) => i !== index))
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!content.trim() && images.length === 0) return
+
+    setSubmitting(true)
+    setError(null)
+
+    try {
+      const formData = new FormData()
+      if (content.trim()) formData.set('content', content.trim())
+      if (wallOwnerId) formData.set('wallOwnerId', wallOwnerId)
+      images.forEach((file) => formData.append('images', file))
+
+      const postId = await createPost(formData)
+
+      setContent('')
+      setImages([])
+      imagePreviews.forEach((url) => URL.revokeObjectURL(url))
+      setImagePreviews([])
+      onPostCreated?.(postId)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create post')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4">
+      <form onSubmit={handleSubmit}>
+        <div className="flex gap-3">
+          <div className="w-10 h-10 rounded-full bg-zinc-700 overflow-hidden flex-shrink-0">
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt={displayName}
+                width={40}
+                height={40}
+                className="object-cover w-full h-full"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold">
+                {(currentUserProfile.first_name?.[0] ?? '?').toUpperCase()}
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1">
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="What's on your mind?"
+              rows={3}
+              disabled={submitting}
+              className="w-full bg-transparent text-white placeholder-zinc-500 focus:outline-none text-sm resize-none"
+            />
+
+            {imagePreviews.length > 0 && (
+              <div
+                className={`grid gap-2 mt-2 ${imagePreviews.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}
+              >
+                {imagePreviews.map((url, i) => (
+                  <div
+                    key={i}
+                    className="relative aspect-video rounded-lg overflow-hidden bg-zinc-800"
+                  >
+                    <Image src={url} alt="" fill className="object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(i)}
+                      className="absolute top-1 right-1 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-black"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-800">
+              <div className="flex items-center gap-2">
+                {images.length < 4 && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-zinc-400 hover:text-orange-400 transition-colors p-1.5 rounded-lg hover:bg-zinc-800"
+                    title="Add photos (max 4)"
+                  >
+                    📷
+                  </button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  className="hidden"
+                  onChange={handleImageSelect}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={(!content.trim() && images.length === 0) || submitting}
+                className="bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors"
+              >
+                {submitting ? 'Posting…' : 'Post'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  )
+}

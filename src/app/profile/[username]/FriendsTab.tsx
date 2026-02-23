@@ -18,6 +18,75 @@ interface Props {
   isOwnProfile: boolean
 }
 
+const RELATIONSHIP_LABEL: Record<string, string> = {
+  single: 'Single',
+  in_a_relationship: 'In a Relationship',
+  its_complicated: "It's Complicated",
+}
+
+function calcAge(dob: string): number {
+  const today = new Date()
+  const birth = new Date(dob)
+  let age = today.getFullYear() - birth.getFullYear()
+  if (
+    today.getMonth() < birth.getMonth() ||
+    (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())
+  ) age--
+  return age
+}
+
+function ProfileCard({ profile, actions }: { profile: Profile; actions?: React.ReactNode }) {
+  const avatarUrl = profile.profile_photo_url
+    ? getImageUrl('avatars', profile.profile_photo_url)
+    : null
+  const initials = (profile.first_name?.[0] ?? '?').toUpperCase()
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex gap-4 items-start">
+      <Link href={`/profile/${profile.username}`} className="flex-shrink-0">
+        <div className="w-16 h-16 rounded-full bg-zinc-700 overflow-hidden">
+          {avatarUrl ? (
+            <Image src={avatarUrl} alt={profile.username ?? ''} width={64} height={64} className="object-cover w-full h-full" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-zinc-300 text-xl font-bold">
+              {initials}
+            </div>
+          )}
+        </div>
+      </Link>
+
+      <div className="flex-1 min-w-0">
+        <Link
+          href={`/profile/${profile.username}`}
+          className="font-semibold text-white hover:text-orange-400 transition-colors truncate block"
+        >
+          @{profile.username}
+        </Link>
+
+        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-sm text-zinc-400">
+          {(profile.city || profile.state) && (
+            <span>📍 {[profile.city, profile.state].filter(Boolean).join(', ')}</span>
+          )}
+          {profile.gender && (
+            <span>
+              {profile.gender === 'male' ? 'Male' : 'Female'}
+              {profile.date_of_birth ? `, ${calcAge(profile.date_of_birth)}` : ''}
+            </span>
+          )}
+          {!profile.gender && profile.date_of_birth && (
+            <span>{calcAge(profile.date_of_birth)}</span>
+          )}
+          {profile.relationship_status && (
+            <span>{RELATIONSHIP_LABEL[profile.relationship_status] ?? profile.relationship_status}</span>
+          )}
+        </div>
+
+        {actions && <div className="mt-3">{actions}</div>}
+      </div>
+    </div>
+  )
+}
+
 export default function FriendsTab({ profileId, isOwnProfile }: Props) {
   const [friends, setFriends] = useState<Profile[]>([])
   const [pending, setPending] = useState<PendingRequest[]>([])
@@ -27,14 +96,12 @@ export default function FriendsTab({ profileId, isOwnProfile }: Props) {
     const supabase = createClient()
 
     Promise.all([
-      // Accepted friends
       supabase
         .from('friendships')
         .select('requester_id, addressee_id, requester:profiles!requester_id(*), addressee:profiles!addressee_id(*)')
         .or(`requester_id.eq.${profileId},addressee_id.eq.${profileId}`)
         .eq('status', 'accepted'),
 
-      // Pending incoming requests (only relevant on own profile)
       isOwnProfile
         ? supabase
             .from('friendships')
@@ -83,107 +150,55 @@ export default function FriendsTab({ profileId, isOwnProfile }: Props) {
     <div className="space-y-4">
       {/* Pending requests — own profile only */}
       {isOwnProfile && pending.length > 0 && (
-        <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4">
-          <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">
+        <div>
+          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
             Friend Requests ({pending.length})
           </h3>
           <div className="space-y-3">
-            {pending.map(({ requesterId, profile }) => {
-              const avatarUrl = profile.profile_photo_url
-                ? getImageUrl('avatars', profile.profile_photo_url)
-                : null
-              const displayName =
-                profile.display_name ?? `${profile.first_name} ${profile.last_name}`
-              return (
-                <div key={requesterId} className="flex items-center gap-3">
-                  <Link href={`/profile/${profile.username}`} className="flex-shrink-0">
-                    <div className="w-10 h-10 rounded-full bg-zinc-700 overflow-hidden">
-                      {avatarUrl ? (
-                        <Image
-                          src={avatarUrl}
-                          alt={displayName}
-                          width={40}
-                          height={40}
-                          className="object-cover w-full h-full"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold">
-                          {(profile.first_name?.[0] ?? '?').toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-                  <div className="flex-1 min-w-0">
-                    <Link
-                      href={`/profile/${profile.username}`}
-                      className="text-white text-sm font-semibold hover:underline truncate block"
-                    >
-                      {displayName}
-                    </Link>
-                    <p className="text-zinc-500 text-xs">@{profile.username}</p>
-                  </div>
-                  <div className="flex gap-2 flex-shrink-0">
+            {pending.map(({ requesterId, profile }) => (
+              <ProfileCard
+                key={requesterId}
+                profile={profile}
+                actions={
+                  <div className="flex gap-2">
                     <button
                       onClick={() => handleAccept(requesterId)}
-                      className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                      className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-colors"
                     >
                       Accept
                     </button>
                     <button
                       onClick={() => handleDecline(requesterId)}
-                      className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors border border-zinc-700"
+                      className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors border border-zinc-700"
                     >
                       Decline
                     </button>
                   </div>
-                </div>
-              )
-            })}
+                }
+              />
+            ))}
           </div>
+
+          {friends.length > 0 && (
+            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mt-6 mb-3">
+              Friends ({friends.length})
+            </h3>
+          )}
         </div>
       )}
 
-      {/* Friends grid */}
+      {/* Friends list */}
       {friends.length === 0 && pending.length === 0 && (
         <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-8 text-center">
           <p className="text-zinc-400 text-sm">No friends yet.</p>
         </div>
       )}
 
-      {friends.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {friends.map((friend) => {
-            const avatarUrl = friend.profile_photo_url
-              ? getImageUrl('avatars', friend.profile_photo_url)
-              : null
-            const displayName =
-              friend.display_name ?? `${friend.first_name} ${friend.last_name}`
-            return (
-              <Link key={friend.id} href={`/profile/${friend.username}`}>
-                <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4 hover:border-zinc-600 transition-colors text-center">
-                  <div className="w-16 h-16 rounded-full bg-zinc-700 overflow-hidden mx-auto mb-2">
-                    {avatarUrl ? (
-                      <Image
-                        src={avatarUrl}
-                        alt={displayName}
-                        width={64}
-                        height={64}
-                        className="object-cover w-full h-full"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-zinc-400 text-xl font-bold">
-                        {(friend.first_name?.[0] ?? '?').toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-white text-sm font-semibold truncate">{displayName}</p>
-                  <p className="text-zinc-500 text-xs truncate">@{friend.username}</p>
-                </div>
-              </Link>
-            )
-          })}
-        </div>
-      )}
+      <div className="space-y-3">
+        {friends.map((friend) => (
+          <ProfileCard key={friend.id} profile={friend} />
+        ))}
+      </div>
     </div>
   )
 }

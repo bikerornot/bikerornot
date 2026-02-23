@@ -11,6 +11,7 @@ const PAGE_SIZE = 10
 interface Props {
   profileId: string
   isOwnProfile: boolean
+  isFriend: boolean
   currentUserId?: string
   currentUserProfile?: Profile | null
 }
@@ -18,6 +19,7 @@ interface Props {
 export default function WallTab({
   profileId,
   isOwnProfile,
+  isFriend,
   currentUserId,
   currentUserProfile,
 }: Props) {
@@ -117,12 +119,17 @@ export default function WallTab({
 
   return (
     <div className="space-y-4">
-      {currentUserId && currentUserProfile && (
+      {currentUserId && currentUserProfile && (isOwnProfile || isFriend) && (
         <PostComposer
           currentUserProfile={currentUserProfile}
           wallOwnerId={profileId}
           onPostCreated={handlePostCreated}
         />
+      )}
+      {currentUserId && !isOwnProfile && !isFriend && (
+        <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-5 text-center text-zinc-500 text-sm">
+          Become friends to post on this wall.
+        </div>
       )}
 
       {loading && (

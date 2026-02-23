@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Profile, UserBike, RIDING_STYLES, RELATIONSHIP_OPTIONS } from '@/lib/supabase/types'
+import { Profile, UserBike, RELATIONSHIP_OPTIONS, GENDER_OPTIONS } from '@/lib/supabase/types'
 import { saveProfileSettings } from './actions'
 
 interface BikeRow {
@@ -26,15 +26,12 @@ export default function SettingsForm({ profile, initialBikes }: Props) {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [displayName, setDisplayName] = useState(profile.display_name ?? '')
   const [bio, setBio] = useState(profile.bio ?? '')
   const [location, setLocation] = useState(profile.location ?? '')
   const [zipCode, setZipCode] = useState(profile.zip_code ?? '')
+  const [gender, setGender] = useState(profile.gender ?? '')
   const [relationshipStatus, setRelationshipStatus] = useState(
     profile.relationship_status ?? ''
-  )
-  const [ridingStyle, setRidingStyle] = useState<string[]>(
-    profile.riding_style ?? []
   )
   const [bikes, setBikes] = useState<BikeRow[]>(
     initialBikes.map((b) => ({
@@ -45,12 +42,6 @@ export default function SettingsForm({ profile, initialBikes }: Props) {
     }))
   )
   const [deletedBikeIds, setDeletedBikeIds] = useState<string[]>([])
-
-  function toggleRidingStyle(style: string) {
-    setRidingStyle((prev) =>
-      prev.includes(style) ? prev.filter((s) => s !== style) : [...prev, style]
-    )
-  }
 
   function addBike() {
     setBikes((prev) => [...prev, { year: '', make: '', model: '' }])
@@ -77,12 +68,12 @@ export default function SettingsForm({ profile, initialBikes }: Props) {
     try {
       await saveProfileSettings(
         {
-          display_name: displayName.trim() || null,
           bio: bio.trim() || null,
           location: location.trim() || null,
           zip_code: zipCode.trim(),
+          gender: gender || null,
           relationship_status: relationshipStatus || null,
-          riding_style: ridingStyle.length > 0 ? ridingStyle : null,
+          riding_style: null,
         },
         bikes
           .filter((b) => !b.id && b.year.trim() && b.make.trim() && b.model.trim())
@@ -103,20 +94,15 @@ export default function SettingsForm({ profile, initialBikes }: Props) {
 
   return (
     <form onSubmit={handleSave} className="space-y-6">
-      {/* Display name */}
+      {/* Username (read-only) */}
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1">
-          Display name
-        </label>
-        <input
-          type="text"
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          maxLength={60}
-          placeholder="Your display name"
-          className={inputClass}
-        />
+        <label className="block text-sm font-medium text-zinc-300 mb-1">Username</label>
+        <div className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-lg px-3 py-2 text-zinc-400 text-sm cursor-not-allowed">
+          @{profile.username}
+        </div>
+        <p className="text-zinc-600 text-xs mt-1">Username cannot be changed.</p>
       </div>
+
 
       {/* Bio */}
       <div>
@@ -162,6 +148,33 @@ export default function SettingsForm({ profile, initialBikes }: Props) {
         />
       </div>
 
+      {/* Gender */}
+      <div>
+        <label className="block text-sm font-medium text-zinc-300 mb-2">Gender</label>
+        <div className="grid grid-cols-2 gap-2">
+          {GENDER_OPTIONS.map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors ${
+                gender === opt.value
+                  ? 'border-orange-500 bg-orange-500/10 text-white'
+                  : 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:border-zinc-500'
+              }`}
+            >
+              <input
+                type="radio"
+                name="gender"
+                value={opt.value}
+                checked={gender === opt.value}
+                onChange={(e) => setGender(e.target.value)}
+                className="sr-only"
+              />
+              <span className="text-sm font-medium">{opt.label}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
       {/* Relationship status */}
       <div>
         <label className="block text-sm font-medium text-zinc-300 mb-2">
@@ -186,44 +199,6 @@ export default function SettingsForm({ profile, initialBikes }: Props) {
                 className="sr-only"
               />
               <span className="text-sm">{opt.label}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Riding styles */}
-      <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-2">
-          Riding styles
-        </label>
-        <div className="grid grid-cols-2 gap-2">
-          {RIDING_STYLES.map((style) => (
-            <label
-              key={style}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors text-sm ${
-                ridingStyle.includes(style)
-                  ? 'border-orange-500 bg-orange-500/10 text-white'
-                  : 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:border-zinc-500'
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={ridingStyle.includes(style)}
-                onChange={() => toggleRidingStyle(style)}
-                className="sr-only"
-              />
-              <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                ridingStyle.includes(style)
-                  ? 'bg-orange-500 border-orange-500'
-                  : 'border-zinc-500'
-              }`}>
-                {ridingStyle.includes(style) && (
-                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 12 12">
-                    <path d="M10 3L5 8.5 2 5.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                  </svg>
-                )}
-              </span>
-              {style}
             </label>
           ))}
         </div>

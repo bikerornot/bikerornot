@@ -23,9 +23,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, onPostCr
   const avatarUrl = currentUserProfile.profile_photo_url
     ? getImageUrl('avatars', currentUserProfile.profile_photo_url)
     : null
-  const displayName =
-    currentUserProfile.display_name ??
-    `${currentUserProfile.first_name} ${currentUserProfile.last_name}`
+  const displayName = currentUserProfile.username ?? 'Unknown'
 
   function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])

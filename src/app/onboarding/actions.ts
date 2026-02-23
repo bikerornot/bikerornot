@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { geocodeZip } from '@/lib/geocode'
 
 function getServiceClient() {
   return createServiceClient(
@@ -53,6 +54,24 @@ export async function completeOnboarding(
   if (profileError) {
     if (profileError.code === '23505') throw new Error('USERNAME_TAKEN')
     throw new Error(profileError.message)
+  }
+
+  // Geocode zip and store coordinates + city; also store gender from signup metadata
+  const zipCode = user.user_metadata?.zip_code as string | undefined
+  const gender = user.user_metadata?.gender as string | undefined
+  const geoUpdate: Record<string, unknown> = {}
+  if (gender) geoUpdate.gender = gender
+  if (zipCode) {
+    const geo = await geocodeZip(zipCode)
+    if (geo) {
+      geoUpdate.latitude = geo.lat
+      geoUpdate.longitude = geo.lng
+      geoUpdate.city = geo.city
+      geoUpdate.state = geo.state
+    }
+  }
+  if (Object.keys(geoUpdate).length > 0) {
+    await admin.from('profiles').update(geoUpdate).eq('id', user.id)
   }
 
   if (bikes.length > 0) {

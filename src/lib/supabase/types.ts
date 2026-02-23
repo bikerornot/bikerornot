@@ -14,7 +14,12 @@ export interface Profile {
   cover_photo_url: string | null
   status: 'active' | 'suspended' | 'banned'
   role: 'user' | 'moderator' | 'admin'
+  gender: 'male' | 'female' | null
+  city: string | null
+  state: string | null
   onboarding_complete: boolean
+  latitude: number | null
+  longitude: number | null
   created_at: string
   updated_at: string
 }
@@ -74,6 +79,11 @@ export interface Comment {
   like_count?: number
   is_liked_by_me?: boolean
 }
+
+export const GENDER_OPTIONS = [
+  { value: 'male',   label: 'Male' },
+  { value: 'female', label: 'Female' },
+] as const
 
 export const RELATIONSHIP_OPTIONS = [
   { value: 'single',            label: '🟢 Single' },

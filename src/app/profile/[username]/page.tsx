@@ -7,6 +7,7 @@ import ProfilePhotoUpload from './ProfilePhotoUpload'
 import CoverPhotoUpload from './CoverPhotoUpload'
 import ProfileTabs from './ProfileTabs'
 import FriendButton, { type FriendshipStatus } from './FriendButton'
+import UserMenu from '@/app/components/UserMenu'
 
 export async function generateMetadata({
   params,
@@ -78,11 +79,11 @@ export default async function ProfilePage({
   }
 
   const avatarUrl = profile.profile_photo_url
-    ? getImageUrl('avatars', profile.profile_photo_url)
+    ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
     : null
 
   const coverUrl = profile.cover_photo_url
-    ? getImageUrl('covers', profile.cover_photo_url)
+    ? getImageUrl('covers', profile.cover_photo_url, undefined, profile.updated_at)
     : null
 
   const memberSince = new Date(profile.created_at).toLocaleDateString('en-US', {
@@ -102,11 +103,32 @@ export default async function ProfilePage({
     its_complicated: '🤷',
   }
 
-  const displayName =
-    profile.display_name ?? `${profile.first_name} ${profile.last_name}`
+  const displayName = profile.username ?? 'Unknown'
 
   return (
     <div className="min-h-screen bg-zinc-950">
+      {/* Header */}
+      <header className="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-40">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+          <Link href="/feed" className="text-xl font-bold text-white tracking-tight">
+            BikerOrNot
+          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/people" className="text-sm text-zinc-400 hover:text-orange-400 transition-colors hidden sm:block">
+              Find Riders
+            </Link>
+            {user && currentUserProfile && (
+              <UserMenu
+                username={currentUserProfile.username!}
+                displayName={currentUserProfile.username ?? 'Unknown'}
+                avatarUrl={currentUserProfile.profile_photo_url ? getImageUrl('avatars', currentUserProfile.profile_photo_url, undefined, currentUserProfile.updated_at) : null}
+                firstInitial={(currentUserProfile.first_name?.[0] ?? '?').toUpperCase()}
+              />
+            )}
+          </div>
+        </div>
+      </header>
+
       {/* Cover photo */}
       <div className="relative w-full h-48 md:h-64 bg-zinc-800 overflow-hidden">
         {coverUrl && (
@@ -145,8 +167,7 @@ export default async function ProfilePage({
 
           {/* Name + username */}
           <div className="flex-1 min-w-0 pb-2">
-            <h1 className="text-2xl font-bold text-white truncate">{displayName}</h1>
-            <p className="text-zinc-400 text-sm">@{profile.username}</p>
+            <h1 className="text-2xl font-bold text-white truncate">@{profile.username}</h1>
           </div>
 
           {/* Action buttons */}
@@ -190,34 +211,41 @@ export default async function ProfilePage({
             <p className="text-zinc-300 text-sm leading-relaxed">{profile.bio}</p>
           )}
 
-          {profile.location && (
-            <div className="flex items-center gap-2 text-sm text-zinc-400">
-              <span>📍</span>
-              <span>{profile.location}</span>
-            </div>
-          )}
+          <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-zinc-400">
+            {(profile.city || profile.state) && (
+              <div className="flex items-center gap-1.5">
+                <span>📍</span>
+                <span>{[profile.city, profile.state].filter(Boolean).join(', ')}</span>
+              </div>
+            )}
 
-          {profile.relationship_status && (
-            <div>
-              <span className="inline-flex items-center gap-1.5 bg-zinc-800 border border-zinc-700 text-zinc-300 text-xs font-medium px-3 py-1 rounded-full">
-                {relationshipEmoji[profile.relationship_status]}
-                {relationshipLabel[profile.relationship_status]}
-              </span>
-            </div>
-          )}
+            {profile.gender && (
+              <div className="flex items-center gap-1.5">
+                <span>{profile.gender === 'male' ? '♂️' : '♀️'}</span>
+                <span>{profile.gender === 'male' ? 'Male' : 'Female'}</span>
+              </div>
+            )}
 
-          {profile.riding_style && profile.riding_style.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {profile.riding_style.map((style: string) => (
-                <span
-                  key={style}
-                  className="bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs font-medium px-3 py-1 rounded-full"
-                >
-                  {style}
-                </span>
-              ))}
-            </div>
-          )}
+            {profile.date_of_birth && (
+              <div className="flex items-center gap-1.5">
+                <span>🎂</span>
+                <span>{(() => {
+                  const today = new Date()
+                  const birth = new Date(profile.date_of_birth)
+                  let age = today.getFullYear() - birth.getFullYear()
+                  if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--
+                  return `${age} years old`
+                })()}</span>
+              </div>
+            )}
+
+            {profile.relationship_status && (
+              <div className="flex items-center gap-1.5">
+                <span>{relationshipEmoji[profile.relationship_status]}</span>
+                <span>{relationshipLabel[profile.relationship_status]}</span>
+              </div>
+            )}
+          </div>
 
           {bikes && bikes.length > 0 && (
             <div className="border-t border-zinc-800 pt-3">
@@ -235,8 +263,8 @@ export default async function ProfilePage({
             </div>
           )}
 
-          {!profile.bio && !profile.location && !profile.relationship_status &&
-            (!profile.riding_style || profile.riding_style.length === 0) &&
+          {!profile.bio && !profile.city && !profile.state && !profile.gender &&
+            !profile.date_of_birth && !profile.relationship_status &&
             (!bikes || bikes.length === 0) && (
             <p className="text-zinc-500 text-sm text-center py-2">No profile info yet.</p>
           )}
@@ -246,6 +274,7 @@ export default async function ProfilePage({
         <ProfileTabs
           profileId={profile.id}
           isOwnProfile={isOwnProfile}
+          isFriend={friendshipStatus === 'accepted'}
           currentUserId={user?.id}
           currentUserProfile={currentUserProfile}
         />

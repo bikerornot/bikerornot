@@ -1,0 +1,99 @@
+'use server'
+
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { geocodeZip } from '@/lib/geocode'
+import type { Profile } from '@/lib/supabase/types'
+
+function getServiceClient() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
+
+function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3959 // miles
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLon = ((lon2 - lon1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.asin(Math.sqrt(a))
+}
+
+export interface NearbyUser {
+  profile: Profile
+  distanceMiles: number
+  friendshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'accepted'
+}
+
+export async function findNearbyUsers(
+  zipCode: string,
+  radiusMiles: number
+): Promise<{ users: NearbyUser[]; error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { users: [], error: 'Not authenticated' }
+
+  const coords = await geocodeZip(zipCode)
+  if (!coords) return { users: [], error: 'Could not find that zip code. Please check and try again.' }
+
+  const admin = getServiceClient()
+
+  // Fetch all profiles with coordinates, excluding self
+  const { data: profiles, error: profilesError } = await admin
+    .from('profiles')
+    .select('*')
+    .eq('onboarding_complete', true)
+    .eq('status', 'active')
+    .not('latitude', 'is', null)
+    .neq('id', user.id)
+
+  if (profilesError) return { users: [], error: profilesError.message }
+  if (!profiles || profiles.length === 0) return { users: [], error: null }
+
+  // Filter by radius and compute distances
+  const nearby = (profiles as Profile[])
+    .map((p) => ({
+      profile: p,
+      distanceMiles: haversine(coords.lat, coords.lng, p.latitude!, p.longitude!),
+    }))
+    .filter((p) => p.distanceMiles <= radiusMiles)
+    .sort((a, b) => a.distanceMiles - b.distanceMiles)
+
+  if (nearby.length === 0) return { users: [], error: null }
+
+  // Fetch friendship statuses for all nearby users in one query
+  const nearbyIds = nearby.map((n) => n.profile.id)
+  const { data: friendships } = await admin
+    .from('friendships')
+    .select('requester_id, addressee_id, status')
+    .or(
+      nearbyIds
+        .map((id) =>
+          `and(requester_id.eq.${user.id},addressee_id.eq.${id}),and(requester_id.eq.${id},addressee_id.eq.${user.id})`
+        )
+        .join(',')
+    )
+
+  const friendshipMap = new Map<string, NearbyUser['friendshipStatus']>()
+  for (const f of friendships ?? []) {
+    const otherId = f.requester_id === user.id ? f.addressee_id : f.requester_id
+    if (f.status === 'accepted') {
+      friendshipMap.set(otherId, 'accepted')
+    } else if (f.requester_id === user.id) {
+      friendshipMap.set(otherId, 'pending_sent')
+    } else {
+      friendshipMap.set(otherId, 'pending_received')
+    }
+  }
+
+  const users: NearbyUser[] = nearby.map(({ profile, distanceMiles }) => ({
+    profile,
+    distanceMiles: Math.round(distanceMiles * 10) / 10,
+    friendshipStatus: friendshipMap.get(profile.id) ?? 'none',
+  }))
+
+  return { users, error: null }
+}

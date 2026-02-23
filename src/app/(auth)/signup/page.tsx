@@ -5,6 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
+const GENDER_OPTIONS = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+]
+
 const RELATIONSHIP_OPTIONS = [
   { value: 'single', label: '🟢 Single' },
   { value: 'in_a_relationship', label: '💑 In a Relationship' },
@@ -43,6 +48,7 @@ export default function SignupPage() {
     confirmPassword: '',
     dateOfBirth: '',
     zipCode: '',
+    gender: '',
     relationshipStatus: '',
   })
 
@@ -82,6 +88,8 @@ export default function SignupPage() {
       errors.zipCode = 'Enter a valid US or international zip/postal code'
     }
 
+    if (!form.gender) errors.gender = 'Please select your gender'
+
     if (!form.relationshipStatus) errors.relationshipStatus = 'Please select a relationship status'
 
     setFieldErrors(errors)
@@ -109,6 +117,7 @@ export default function SignupPage() {
           last_name: form.lastName.trim(),
           date_of_birth: form.dateOfBirth,
           zip_code: form.zipCode.trim(),
+          gender: form.gender,
           relationship_status: form.relationshipStatus,
         },
       },
@@ -219,6 +228,34 @@ export default function SignupPage() {
             />
             {fieldErrors.zipCode && <p className="text-red-400 text-xs mt-1">{fieldErrors.zipCode}</p>}
           </div>
+        </div>
+
+        {/* Gender */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">Gender</label>
+          <div className="grid grid-cols-2 gap-2">
+            {GENDER_OPTIONS.map((opt) => (
+              <label
+                key={opt.value}
+                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border cursor-pointer transition-colors ${
+                  form.gender === opt.value
+                    ? 'border-orange-500 bg-orange-500/10 text-white'
+                    : 'border-zinc-700 bg-zinc-800 text-zinc-300 hover:border-zinc-500'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="gender"
+                  value={opt.value}
+                  checked={form.gender === opt.value}
+                  onChange={(e) => set('gender', e.target.value)}
+                  className="sr-only"
+                />
+                <span className="text-sm font-medium">{opt.label}</span>
+              </label>
+            ))}
+          </div>
+          {fieldErrors.gender && <p className="text-red-400 text-xs mt-1">{fieldErrors.gender}</p>}
         </div>
 
         {/* Relationship status */}

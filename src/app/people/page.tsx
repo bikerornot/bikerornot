@@ -1,18 +1,15 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { getImageUrl } from '@/lib/supabase/image'
-import FeedClient from './FeedClient'
+import PeopleSearch from './PeopleSearch'
 import UserMenu from '@/app/components/UserMenu'
 
-export const metadata = { title: 'Feed — BikerOrNot' }
+export const metadata = { title: 'Find Riders — BikerOrNot' }
 
-export default async function FeedPage() {
+export default async function PeoplePage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
 
@@ -28,33 +25,28 @@ export default async function FeedPage() {
     ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
     : null
 
-  const displayName =
-    profile.username ?? 'Unknown'
+  const displayName = profile.username ?? 'Unknown'
 
   return (
     <div className="min-h-screen bg-zinc-950">
-      {/* Header */}
       <header className="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-40">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/feed" className="text-xl font-bold text-white tracking-tight">
             BikerOrNot
           </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/people" className="text-sm text-zinc-400 hover:text-orange-400 transition-colors hidden sm:block">
-              Find Riders
-            </Link>
-            <UserMenu
-              username={profile.username!}
-              displayName={displayName}
-              avatarUrl={avatarUrl}
-              firstInitial={(profile.first_name?.[0] ?? '?').toUpperCase()}
-            />
-          </div>
+          <UserMenu
+            username={profile.username!}
+            displayName={displayName}
+            avatarUrl={avatarUrl}
+            firstInitial={(profile.first_name?.[0] ?? '?').toUpperCase()}
+          />
         </div>
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
-        <FeedClient currentUserId={user.id} currentUserProfile={profile} />
+        <h1 className="text-2xl font-bold text-white mb-1">Find Riders</h1>
+        <p className="text-zinc-500 text-sm mb-6">Discover riders near you and send friend requests</p>
+        <PeopleSearch defaultZip={profile.zip_code ?? ''} />
       </div>
     </div>
   )

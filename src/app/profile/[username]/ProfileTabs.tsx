@@ -11,6 +11,7 @@ type Tab = (typeof TABS)[number]
 interface Props {
   profileId: string
   isOwnProfile: boolean
+  isFriend: boolean
   currentUserId?: string
   currentUserProfile?: Profile | null
 }
@@ -18,6 +19,7 @@ interface Props {
 export default function ProfileTabs({
   profileId,
   isOwnProfile,
+  isFriend,
   currentUserId,
   currentUserProfile,
 }: Props) {
@@ -45,6 +47,7 @@ export default function ProfileTabs({
         <WallTab
           profileId={profileId}
           isOwnProfile={isOwnProfile}
+          isFriend={isFriend}
           currentUserId={currentUserId}
           currentUserProfile={currentUserProfile}
         />

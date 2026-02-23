@@ -17,12 +17,14 @@ interface ImageOptions {
 export function getImageUrl(
   bucket: string,
   path: string,
-  options?: ImageOptions
+  options?: ImageOptions,
+  version?: string
 ): string {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 
   if (!options || Object.keys(options).length === 0) {
-    return `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`
+    const base = `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`
+    return version ? `${base}?v=${encodeURIComponent(version)}` : base
   }
 
   const params = new URLSearchParams()
@@ -30,6 +32,7 @@ export function getImageUrl(
   if (options.height)  params.set('height',  String(options.height))
   if (options.quality) params.set('quality', String(options.quality))
   if (options.resize)  params.set('resize',  options.resize)
+  if (version)         params.set('v',       version)
 
   return `${supabaseUrl}/storage/v1/render/image/public/${bucket}/${path}?${params.toString()}`
 }

@@ -37,9 +37,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile }: Pr
   const avatarUrl = author?.profile_photo_url
     ? getImageUrl('avatars', author.profile_photo_url)
     : null
-  const displayName =
-    author?.display_name ??
-    `${author?.first_name ?? ''} ${author?.last_name ?? ''}`.trim()
+  const displayName = author?.username ?? 'Unknown'
 
   async function handleLike() {
     if (!currentUserId) return

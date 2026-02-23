@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { geocodeZip } from '@/lib/geocode'
 
 function getServiceClient() {
   return createServiceClient(
@@ -19,12 +20,12 @@ interface BikeRow {
 
 export async function saveProfileSettings(
   profileUpdates: {
-    display_name: string | null
     bio: string | null
     location: string | null
     zip_code: string
     relationship_status: string | null
     riding_style: string[] | null
+    gender: string | null
   },
   bikes: BikeRow[],
   deletedBikeIds: string[]
@@ -41,6 +42,15 @@ export async function saveProfileSettings(
     .eq('id', user.id)
 
   if (profileError) throw new Error(profileError.message)
+
+  // Geocode the new zip code and store coordinates + city
+  const geo = await geocodeZip(profileUpdates.zip_code)
+  if (geo) {
+    await admin
+      .from('profiles')
+      .update({ latitude: geo.lat, longitude: geo.lng, city: geo.city, state: geo.state })
+      .eq('id', user.id)
+  }
 
   if (deletedBikeIds.length > 0) {
     const { error } = await admin

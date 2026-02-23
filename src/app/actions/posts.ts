@@ -23,6 +23,20 @@ export async function createPost(formData: FormData): Promise<string> {
   const wallOwnerId = formData.get('wallOwnerId') as string | null
   const files = formData.getAll('images') as File[]
 
+  // If posting on someone else's wall, require an accepted friendship
+  if (wallOwnerId && wallOwnerId !== user.id) {
+    const { data: friendship } = await admin
+      .from('friendships')
+      .select('id')
+      .or(
+        `and(requester_id.eq.${user.id},addressee_id.eq.${wallOwnerId}),and(requester_id.eq.${wallOwnerId},addressee_id.eq.${user.id})`
+      )
+      .eq('status', 'accepted')
+      .single()
+
+    if (!friendship) throw new Error('You must be friends to post on this wall')
+  }
+
   const { data: post, error: postError } = await admin
     .from('posts')
     .insert({

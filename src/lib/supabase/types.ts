@@ -81,6 +81,18 @@ export interface Comment {
   is_liked_by_me?: boolean
 }
 
+export interface Notification {
+  id: string
+  user_id: string
+  type: 'friend_request' | 'friend_accepted' | 'post_like' | 'post_comment' | 'comment_reply' | 'comment_like'
+  actor_id: string
+  post_id: string | null
+  comment_id: string | null
+  read_at: string | null
+  created_at: string
+  actor?: Profile
+}
+
 export const GENDER_OPTIONS = [
   { value: 'male',   label: 'Male' },
   { value: 'female', label: 'Female' },

@@ -111,7 +111,25 @@ export async function likePost(postId: string): Promise<void> {
     .from('post_likes')
     .insert({ post_id: postId, user_id: user.id })
 
-  if (error && error.code !== '23505') throw new Error(error.message)
+  if (error) {
+    if (error.code !== '23505') throw new Error(error.message)
+    return // already liked — skip notification
+  }
+
+  const { data: post } = await admin
+    .from('posts')
+    .select('author_id')
+    .eq('id', postId)
+    .single()
+
+  if (post && post.author_id !== user.id) {
+    await admin.from('notifications').insert({
+      user_id: post.author_id,
+      type: 'post_like',
+      actor_id: user.id,
+      post_id: postId,
+    }).catch(() => {})
+  }
 }
 
 export async function unlikePost(postId: string): Promise<void> {

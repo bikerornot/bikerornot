@@ -8,6 +8,7 @@ import CoverPhotoUpload from './CoverPhotoUpload'
 import ProfileTabs from './ProfileTabs'
 import FriendButton, { type FriendshipStatus } from './FriendButton'
 import UserMenu from '@/app/components/UserMenu'
+import NotificationBell from '@/app/components/NotificationBell'
 
 export async function generateMetadata({
   params,
@@ -118,12 +119,15 @@ export default async function ProfilePage({
               Find Riders
             </Link>
             {user && currentUserProfile && (
-              <UserMenu
-                username={currentUserProfile.username!}
-                displayName={currentUserProfile.username ?? 'Unknown'}
-                avatarUrl={currentUserProfile.profile_photo_url ? getImageUrl('avatars', currentUserProfile.profile_photo_url, undefined, currentUserProfile.updated_at) : null}
-                firstInitial={(currentUserProfile.first_name?.[0] ?? '?').toUpperCase()}
-              />
+              <>
+                <NotificationBell userId={user.id} />
+                <UserMenu
+                  username={currentUserProfile.username!}
+                  displayName={currentUserProfile.username ?? 'Unknown'}
+                  avatarUrl={currentUserProfile.profile_photo_url ? getImageUrl('avatars', currentUserProfile.profile_photo_url, undefined, currentUserProfile.updated_at) : null}
+                  firstInitial={(currentUserProfile.first_name?.[0] ?? '?').toUpperCase()}
+                />
+              </>
             )}
           </div>
         </div>

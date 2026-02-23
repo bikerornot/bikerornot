@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getImageUrl } from '@/lib/supabase/image'
 import PeopleSearch from './PeopleSearch'
 import UserMenu from '@/app/components/UserMenu'
+import NotificationBell from '@/app/components/NotificationBell'
 
 export const metadata = { title: 'Find Riders — BikerOrNot' }
 
@@ -34,12 +35,15 @@ export default async function PeoplePage() {
           <Link href="/feed" className="text-xl font-bold text-white tracking-tight">
             BikerOrNot
           </Link>
-          <UserMenu
-            username={profile.username!}
-            displayName={displayName}
-            avatarUrl={avatarUrl}
-            firstInitial={(profile.first_name?.[0] ?? '?').toUpperCase()}
-          />
+          <div className="flex items-center gap-2">
+            <NotificationBell userId={user.id} />
+            <UserMenu
+              username={profile.username!}
+              displayName={displayName}
+              avatarUrl={avatarUrl}
+              firstInitial={(profile.first_name?.[0] ?? '?').toUpperCase()}
+            />
+          </div>
         </div>
       </header>
 

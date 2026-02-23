@@ -30,6 +30,42 @@ export async function createComment(postId: string, content: string, parentComme
     .single()
 
   if (error) throw new Error(error.message)
+
+  // Send notification
+  if (parentCommentId) {
+    // Reply: notify parent comment author
+    const { data: parent } = await admin
+      .from('comments')
+      .select('author_id')
+      .eq('id', parentCommentId)
+      .single()
+    if (parent && parent.author_id !== user.id) {
+      await admin.from('notifications').insert({
+        user_id: parent.author_id,
+        type: 'comment_reply',
+        actor_id: user.id,
+        post_id: postId,
+        comment_id: comment.id,
+      }).catch(() => {})
+    }
+  } else {
+    // Top-level comment: notify post author
+    const { data: post } = await admin
+      .from('posts')
+      .select('author_id')
+      .eq('id', postId)
+      .single()
+    if (post && post.author_id !== user.id) {
+      await admin.from('notifications').insert({
+        user_id: post.author_id,
+        type: 'post_comment',
+        actor_id: user.id,
+        post_id: postId,
+        comment_id: comment.id,
+      }).catch(() => {})
+    }
+  }
+
   return comment
 }
 
@@ -70,7 +106,25 @@ export async function likeComment(commentId: string): Promise<void> {
     .from('comment_likes')
     .insert({ comment_id: commentId, user_id: user.id })
 
-  if (error && error.code !== '23505') throw new Error(error.message)
+  if (error) {
+    if (error.code !== '23505') throw new Error(error.message)
+    return // already liked — skip notification
+  }
+
+  const { data: comment } = await admin
+    .from('comments')
+    .select('author_id')
+    .eq('id', commentId)
+    .single()
+
+  if (comment && comment.author_id !== user.id) {
+    await admin.from('notifications').insert({
+      user_id: comment.author_id,
+      type: 'comment_like',
+      actor_id: user.id,
+      comment_id: commentId,
+    }).catch(() => {})
+  }
 }
 
 export async function unlikeComment(commentId: string): Promise<void> {

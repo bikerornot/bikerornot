@@ -22,6 +22,13 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
     .insert({ requester_id: user.id, addressee_id: addresseeId })
 
   if (error && error.code !== '23505') throw new Error(error.message)
+  if (error) return // already exists, skip notification
+
+  await admin.from('notifications').insert({
+    user_id: addresseeId,
+    type: 'friend_request',
+    actor_id: user.id,
+  }).catch(() => {})
 }
 
 export async function cancelFriendRequest(addresseeId: string): Promise<void> {
@@ -54,6 +61,12 @@ export async function acceptFriendRequest(requesterId: string): Promise<void> {
     .eq('status', 'pending')
 
   if (error) throw new Error(error.message)
+
+  await admin.from('notifications').insert({
+    user_id: requesterId,
+    type: 'friend_accepted',
+    actor_id: user.id,
+  }).catch(() => {})
 }
 
 export async function declineFriendRequest(requesterId: string): Promise<void> {

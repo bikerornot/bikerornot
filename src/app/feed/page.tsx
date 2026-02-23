@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getImageUrl } from '@/lib/supabase/image'
 import FeedClient from './FeedClient'
 import UserMenu from '@/app/components/UserMenu'
+import NotificationBell from '@/app/components/NotificationBell'
 
 export const metadata = { title: 'Feed — BikerOrNot' }
 
@@ -43,6 +44,7 @@ export default async function FeedPage() {
             <Link href="/people" className="text-sm text-zinc-400 hover:text-orange-400 transition-colors hidden sm:block">
               Find Riders
             </Link>
+            <NotificationBell userId={user.id} />
             <UserMenu
               username={profile.username!}
               displayName={displayName}

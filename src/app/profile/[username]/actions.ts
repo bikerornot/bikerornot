@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { moderateImage } from '@/lib/sightengine'
 
 function getServiceClient() {
   return createServiceClient(
@@ -24,6 +25,12 @@ export async function uploadProfilePhoto(formData: FormData): Promise<void> {
   const admin = getServiceClient()
   const arrayBuffer = await file.arrayBuffer()
 
+  // Moderate before storing
+  const moderation = await moderateImage(arrayBuffer, file.type)
+  if (moderation === 'rejected') {
+    throw new Error('This image was rejected by our content filter. Please choose a different photo.')
+  }
+
   const { error: uploadError } = await admin.storage
     .from('avatars')
     .upload(path, arrayBuffer, { contentType: file.type, upsert: true })
@@ -32,7 +39,11 @@ export async function uploadProfilePhoto(formData: FormData): Promise<void> {
 
   const { error: updateError } = await admin
     .from('profiles')
-    .update({ profile_photo_url: path, avatar_reviewed_at: null, updated_at: new Date().toISOString() })
+    .update({
+      profile_photo_url: path,
+      avatar_reviewed_at: moderation === 'approved' ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', user.id)
 
   if (updateError) throw new Error(updateError.message)

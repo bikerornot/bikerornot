@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { moderateImage, type ModerationResult } from '@/lib/sightengine'
 
 function getServiceClient() {
   return createServiceClient(
@@ -51,6 +52,20 @@ export async function createPost(formData: FormData): Promise<string> {
     if (!membership) throw new Error('You must be an active group member to post here')
   }
 
+  // Moderate images BEFORE creating the post so a rejection never leaves an orphaned post
+  const validFiles = files.filter((f) => f && f.size > 0)
+  type CheckedFile = { file: File; bytes: ArrayBuffer; moderation: ModerationResult }
+  const checkedFiles: CheckedFile[] = []
+
+  for (const file of validFiles) {
+    const bytes = await file.arrayBuffer()
+    const moderation = await moderateImage(bytes, file.type)
+    if (moderation === 'rejected') {
+      throw new Error('One or more images were rejected by our content filter. Please review our community guidelines.')
+    }
+    checkedFiles.push({ file, bytes, moderation })
+  }
+
   const { data: post, error: postError } = await admin
     .from('posts')
     .insert({
@@ -75,22 +90,26 @@ export async function createPost(formData: FormData): Promise<string> {
     if (notifError) console.error('Wall post notification error:', notifError.message)
   }
 
-  const validFiles = files.filter((f) => f && f.size > 0)
-  if (validFiles.length > 0) {
-    const imageRows: { post_id: string; storage_path: string; order_index: number }[] = []
+  if (checkedFiles.length > 0) {
+    const now = new Date().toISOString()
+    const imageRows: { post_id: string; storage_path: string; order_index: number; reviewed_at: string | null }[] = []
 
-    for (let i = 0; i < validFiles.length; i++) {
-      const file = validFiles[i]
+    for (let i = 0; i < checkedFiles.length; i++) {
+      const { file, bytes, moderation } = checkedFiles[i]
       const ext = file.name.split('.').pop() ?? 'jpg'
       const path = `${user.id}/${post.id}/${i}.${ext}`
 
-      const bytes = await file.arrayBuffer()
       const { error: uploadError } = await admin.storage
         .from('posts')
         .upload(path, bytes, { contentType: file.type })
 
       if (uploadError) throw new Error(uploadError.message)
-      imageRows.push({ post_id: post.id, storage_path: path, order_index: i })
+      imageRows.push({
+        post_id: post.id,
+        storage_path: path,
+        order_index: i,
+        reviewed_at: moderation === 'approved' ? now : null,
+      })
     }
 
     const { error: imgError } = await admin.from('post_images').insert(imageRows)

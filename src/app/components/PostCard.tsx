@@ -16,6 +16,28 @@ interface Props {
   currentUserProfile?: Profile | null
 }
 
+const URL_REGEX = /(https?:\/\/[^\s]+)/g
+
+function renderWithLinks(text: string) {
+  const parts = text.split(URL_REGEX)
+  return parts.map((part, i) =>
+    URL_REGEX.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-orange-400 hover:text-orange-300 underline break-all"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  )
+}
+
 function formatTimeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
   if (diff < 60) return `${diff}s ago`
@@ -117,7 +139,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile }: Pr
       <div className="px-4 pb-3">
         {post.content && (
           <p className="text-zinc-200 text-sm leading-relaxed whitespace-pre-wrap">
-            {post.content}
+            {renderWithLinks(post.content)}
           </p>
         )}
         {post.images && post.images.length > 0 && (

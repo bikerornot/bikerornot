@@ -17,6 +17,28 @@ interface Props {
   onReplyAdded?: (reply: Comment) => void
 }
 
+const URL_REGEX = /(https?:\/\/[^\s]+)/g
+
+function renderWithLinks(text: string) {
+  const parts = text.split(URL_REGEX)
+  return parts.map((part, i) =>
+    URL_REGEX.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-orange-400 hover:text-orange-300 underline break-all"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  )
+}
+
 function formatTimeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
   if (diff < 60) return `${diff}s`
@@ -90,7 +112,7 @@ function ReplyItem({
           >
             {displayName}
           </Link>
-          <p className="text-zinc-200 text-xs mt-0.5 whitespace-pre-wrap">{reply.content}</p>
+          <p className="text-zinc-200 text-xs mt-0.5 whitespace-pre-wrap">{renderWithLinks(reply.content)}</p>
         </div>
         <div className="flex items-center gap-3 mt-0.5 pl-1">
           <span className="text-zinc-500 text-xs">{formatTimeAgo(reply.created_at)}</span>
@@ -213,7 +235,7 @@ export default function CommentItem({
           >
             {displayName}
           </Link>
-          <p className="text-zinc-200 text-sm mt-0.5 whitespace-pre-wrap">{comment.content}</p>
+          <p className="text-zinc-200 text-sm mt-0.5 whitespace-pre-wrap">{renderWithLinks(comment.content)}</p>
         </div>
 
         <div className="flex items-center gap-4 mt-1 pl-1">

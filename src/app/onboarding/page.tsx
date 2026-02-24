@@ -353,7 +353,7 @@ export default function OnboardingPage() {
               }))
       )
 
-      router.push(`/profile/${username}`)
+      router.push('/feed')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
       if (message === 'USERNAME_TAKEN') {

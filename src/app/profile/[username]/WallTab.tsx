@@ -35,7 +35,7 @@ export default function WallTab({
 
       const base = supabase
         .from('posts')
-        .select('*, author:profiles!author_id(*), images:post_images(*)')
+        .select('*, author:profiles!author_id(*), images:post_images(*), shared_post:posts!shared_post_id(*, author:profiles!author_id(*), images:post_images(*))')
         .eq('wall_owner_id', profileId)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })

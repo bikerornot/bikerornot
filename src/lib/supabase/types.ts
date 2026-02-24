@@ -58,6 +58,7 @@ export interface Post {
   author_id: string
   wall_owner_id: string | null
   group_id?: string | null
+  shared_post_id?: string | null
   content: string | null
   created_at: string
   updated_at: string
@@ -67,6 +68,7 @@ export interface Post {
   like_count?: number
   comment_count?: number
   is_liked_by_me?: boolean
+  shared_post?: Omit<Post, 'shared_post'> | null
 }
 
 export interface Group {

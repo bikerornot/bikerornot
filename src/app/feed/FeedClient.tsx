@@ -28,7 +28,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
       let base = supabase
         .from('posts')
-        .select('*, author:profiles!author_id(*), images:post_images(*)')
+        .select('*, author:profiles!author_id(*), images:post_images(*), shared_post:posts!shared_post_id(*, author:profiles!author_id(*), images:post_images(*))')
         .is('deleted_at', null)
         .is('wall_owner_id', null)
         .order('created_at', { ascending: false })

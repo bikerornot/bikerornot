@@ -371,7 +371,7 @@ export async function getGroupPosts(groupId: string, cursor?: string): Promise<P
 
   const base = admin
     .from('posts')
-    .select('*, author:profiles!author_id(*), images:post_images(*)')
+    .select('*, author:profiles!author_id(*), images:post_images(*), shared_post:posts!shared_post_id(*, author:profiles!author_id(*), images:post_images(*))')
     .eq('group_id', groupId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })

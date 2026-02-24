@@ -100,6 +100,36 @@ export async function createPost(formData: FormData): Promise<string> {
   return post.id
 }
 
+export async function sharePost(postId: string, caption?: string): Promise<string> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const admin = getServiceClient()
+
+  // Verify the original post exists and isn't deleted
+  const { data: original } = await admin
+    .from('posts')
+    .select('id, deleted_at')
+    .eq('id', postId)
+    .single()
+
+  if (!original || original.deleted_at) throw new Error('Post not found')
+
+  const { data: post, error } = await admin
+    .from('posts')
+    .insert({
+      author_id: user.id,
+      shared_post_id: postId,
+      content: caption?.trim() || null,
+    })
+    .select()
+    .single()
+
+  if (error) throw new Error(error.message)
+  return post.id
+}
+
 export async function deletePost(postId: string): Promise<void> {
   const supabase = await createClient()
   const {

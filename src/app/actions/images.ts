@@ -39,13 +39,7 @@ export async function getPostImages(page = 1): Promise<{ images: AdminImage[]; h
 
   const from = (page - 1) * IMAGES_PAGE_SIZE
 
-  // Count total unreviewed post images
-  const { count: queueTotal } = await admin
-    .from('post_images')
-    .select('*', { count: 'exact', head: true })
-    .is('reviewed_at', null)
-
-  // Fetch posts that have unreviewed images, ordered newest first
+  // Get all post IDs with unreviewed images
   const { data: unreviewedPostIds } = await admin
     .from('post_images')
     .select('post_id')
@@ -55,11 +49,29 @@ export async function getPostImages(page = 1): Promise<{ images: AdminImage[]; h
 
   if (!postIdSet.length) return { images: [], hasMore: false, queueTotal: 0 }
 
+  // Filter to non-deleted posts only, then count images from those posts
+  const { data: validPostRows } = await admin
+    .from('posts')
+    .select('id')
+    .is('deleted_at', null)
+    .in('id', postIdSet)
+
+  const validPostIds = (validPostRows ?? []).map((p: any) => p.id)
+
+  if (!validPostIds.length) return { images: [], hasMore: false, queueTotal: 0 }
+
+  // Accurate count: only images attached to live posts
+  const { count: queueTotal } = await admin
+    .from('post_images')
+    .select('*', { count: 'exact', head: true })
+    .is('reviewed_at', null)
+    .in('post_id', validPostIds)
+
   const { data: posts } = await admin
     .from('posts')
     .select('id, created_at, author_id, author:profiles!author_id(id, username, first_name, last_name)')
     .is('deleted_at', null)
-    .in('id', postIdSet)
+    .in('id', validPostIds)
     .order('created_at', { ascending: false })
     .range(from, from + IMAGES_PAGE_SIZE - 1)
 

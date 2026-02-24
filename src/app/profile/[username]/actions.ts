@@ -32,7 +32,7 @@ export async function uploadProfilePhoto(formData: FormData): Promise<void> {
 
   const { error: updateError } = await admin
     .from('profiles')
-    .update({ profile_photo_url: path, updated_at: new Date().toISOString() })
+    .update({ profile_photo_url: path, avatar_reviewed_at: null, updated_at: new Date().toISOString() })
     .eq('id', user.id)
 
   if (updateError) throw new Error(updateError.message)

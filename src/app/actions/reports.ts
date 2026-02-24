@@ -15,7 +15,7 @@ async function requireAdminOrMod() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (!profile || !['admin', 'moderator'].includes(profile.role)) throw new Error('Not authorized')
+  if (!profile || !['admin', 'moderator', 'super_admin'].includes(profile.role)) throw new Error('Not authorized')
   return user.id
 }
 
@@ -65,7 +65,7 @@ export async function getReports(): Promise<ReportRow[]> {
   if (!user) return []
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (!profile || !['admin', 'moderator'].includes(profile.role)) return []
+  if (!profile || !['admin', 'moderator', 'super_admin'].includes(profile.role)) return []
 
   const admin = getServiceClient()
   const { data: reports } = await admin

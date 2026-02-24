@@ -13,7 +13,7 @@ export interface Profile {
   profile_photo_url: string | null
   cover_photo_url: string | null
   status: 'active' | 'suspended' | 'banned'
-  role: 'user' | 'moderator' | 'admin'
+  role: 'user' | 'moderator' | 'admin' | 'super_admin'
   gender: 'male' | 'female' | null
   city: string | null
   state: string | null

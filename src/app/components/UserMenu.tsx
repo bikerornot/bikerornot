@@ -70,15 +70,15 @@ export default function UserMenu({ username, displayName, avatarUrl, firstInitia
           >
             Settings
           </Link>
-          {(role === 'admin' || role === 'moderator') && (
+          {(role === 'admin' || role === 'moderator' || role === 'super_admin') && (
             <>
               <div className="border-t border-zinc-800" />
               <Link
-                href="/admin/reports"
+                href="/admin"
                 onClick={() => setOpen(false)}
                 className="block px-4 py-2.5 text-sm text-orange-400 hover:bg-zinc-800 transition-colors"
               >
-                Mod Queue
+                Admin Panel
               </Link>
             </>
           )}

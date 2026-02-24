@@ -49,6 +49,20 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // For admin routes: verify the user has an elevated role
+  if (isAdmin && user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    const adminRoles = ['moderator', 'admin', 'super_admin']
+    if (!profile || !adminRoles.includes(profile.role)) {
+      url.pathname = '/feed'
+      return NextResponse.redirect(url)
+    }
+  }
+
   // Redirect logged-in users away from auth pages
   if (isAuthRoute && user) {
     url.pathname = '/'

@@ -110,9 +110,17 @@ export default function FriendsTab({ profileId, isOwnProfile }: Props) {
             .eq('status', 'pending')
         : Promise.resolve({ data: [] }),
     ]).then(([friendsRes, pendingRes]) => {
-      const friendProfiles = ((friendsRes.data ?? []) as any[]).map((f) =>
+      const rawFriends = ((friendsRes.data ?? []) as any[]).map((f) =>
         f.requester_id === profileId ? f.addressee : f.requester
       ) as Profile[]
+
+      // Deduplicate in case both directions of a friendship exist
+      const seen = new Set<string>()
+      const friendProfiles = rawFriends.filter((p) => {
+        if (seen.has(p.id)) return false
+        seen.add(p.id)
+        return true
+      })
       setFriends(friendProfiles)
 
       const pendingRequests = ((pendingRes.data ?? []) as any[]).map((f) => ({

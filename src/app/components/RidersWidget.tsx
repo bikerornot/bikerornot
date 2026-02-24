@@ -159,6 +159,11 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
                   {topStyle && (
                     <p className="text-orange-400/80 text-xs leading-tight truncate mt-0.5">{topStyle}</p>
                   )}
+                  {rider.mutual_friend_count > 0 && (
+                    <p className="text-zinc-500 text-xs leading-tight mt-0.5">
+                      {rider.mutual_friend_count} mutual
+                    </p>
+                  )}
                 </div>
 
                 {/* Add button */}

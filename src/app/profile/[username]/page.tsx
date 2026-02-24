@@ -12,6 +12,7 @@ import NotificationBell from '@/app/components/NotificationBell'
 import MessagesLink from '@/app/components/MessagesLink'
 import MessageButton from '@/app/components/MessageButton'
 import ContentMenu from '@/app/components/ContentMenu'
+import { getMutualFriends } from '@/app/actions/suggestions'
 
 export async function generateMetadata({
   params,
@@ -81,6 +82,11 @@ export default async function ProfilePage({
       }
     }
   }
+
+  // Mutual friends (only when viewing someone else's profile)
+  const mutualFriends = user && !isOwnProfile
+    ? await getMutualFriends(profile.id)
+    : []
 
   const avatarUrl = profile.profile_photo_url
     ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
@@ -224,6 +230,44 @@ export default async function ProfilePage({
             Member since <span className="text-white">{memberSince}</span>
           </span>
         </div>
+
+        {/* Mutual friends */}
+        {mutualFriends.length > 0 && (
+          <div className="flex items-center gap-2 mb-4">
+            {/* Avatar stack */}
+            <div className="flex -space-x-2">
+              {mutualFriends.slice(0, 3).map((mf) => {
+                const mfAvatarUrl = mf.profile_photo_url
+                  ? getImageUrl('avatars', mf.profile_photo_url)
+                  : null
+                return (
+                  <div
+                    key={mf.id}
+                    className="w-7 h-7 rounded-full border-2 border-zinc-950 bg-zinc-700 overflow-hidden flex-shrink-0"
+                  >
+                    {mfAvatarUrl ? (
+                      <Image
+                        src={mfAvatarUrl}
+                        alt={mf.username ?? ''}
+                        width={28}
+                        height={28}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs font-bold text-zinc-300">
+                        {(mf.username?.[0] ?? '?').toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            <span className="text-sm text-zinc-400">
+              <span className="text-white font-medium">{mutualFriends.length}</span>{' '}
+              mutual {mutualFriends.length === 1 ? 'friend' : 'friends'}
+            </span>
+          </div>
+        )}
 
         {/* Info card */}
         <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-5 mb-4 space-y-3">

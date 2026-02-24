@@ -33,27 +33,44 @@ export interface AdminImage {
 
 const IMAGES_PAGE_SIZE = 40
 
-export async function getPostImages(page = 1): Promise<{ images: AdminImage[]; hasMore: boolean }> {
+export async function getPostImages(page = 1): Promise<{ images: AdminImage[]; hasMore: boolean; queueTotal: number }> {
   await requireAdminOrMod()
   const admin = getServiceClient()
 
   const from = (page - 1) * IMAGES_PAGE_SIZE
 
-  // Fetch posts ordered by created_at, then batch-fetch their images
+  // Count total unreviewed post images
+  const { count: queueTotal } = await admin
+    .from('post_images')
+    .select('*', { count: 'exact', head: true })
+    .is('reviewed_at', null)
+
+  // Fetch posts that have unreviewed images, ordered newest first
+  const { data: unreviewedPostIds } = await admin
+    .from('post_images')
+    .select('post_id')
+    .is('reviewed_at', null)
+
+  const postIdSet = [...new Set((unreviewedPostIds ?? []).map((r: any) => r.post_id))]
+
+  if (!postIdSet.length) return { images: [], hasMore: false, queueTotal: 0 }
+
   const { data: posts } = await admin
     .from('posts')
     .select('id, created_at, author_id, author:profiles!author_id(id, username, first_name, last_name)')
     .is('deleted_at', null)
+    .in('id', postIdSet)
     .order('created_at', { ascending: false })
     .range(from, from + IMAGES_PAGE_SIZE - 1)
 
-  if (!posts?.length) return { images: [], hasMore: false }
+  if (!posts?.length) return { images: [], hasMore: false, queueTotal: queueTotal ?? 0 }
 
   const postIds = (posts as any[]).map((p) => p.id)
   const { data: postImages } = await admin
     .from('post_images')
     .select('id, post_id, storage_path')
     .in('post_id', postIds)
+    .is('reviewed_at', null)
     .order('order_index')
 
   const postMap = new Map((posts as any[]).map((p) => [p.id, p]))
@@ -72,20 +89,27 @@ export async function getPostImages(page = 1): Promise<{ images: AdminImage[]; h
     }
   })
 
-  return { images, hasMore: (posts as any[]).length === IMAGES_PAGE_SIZE }
+  return { images, hasMore: (posts as any[]).length === IMAGES_PAGE_SIZE, queueTotal: queueTotal ?? 0 }
 }
 
-export async function getAvatarImages(page = 1): Promise<{ images: AdminImage[]; hasMore: boolean }> {
+export async function getAvatarImages(page = 1): Promise<{ images: AdminImage[]; hasMore: boolean; queueTotal: number }> {
   await requireAdminOrMod()
   const admin = getServiceClient()
 
   const from = (page - 1) * IMAGES_PAGE_SIZE
+
+  const { count: queueTotal } = await admin
+    .from('profiles')
+    .select('*', { count: 'exact', head: true })
+    .not('profile_photo_url', 'is', null)
+    .is('avatar_reviewed_at', null)
 
   // Fetch one extra to detect hasMore
   const { data } = await admin
     .from('profiles')
     .select('id, username, first_name, last_name, profile_photo_url, updated_at')
     .not('profile_photo_url', 'is', null)
+    .is('avatar_reviewed_at', null)
     .order('updated_at', { ascending: false })
     .range(from, from + IMAGES_PAGE_SIZE)
 
@@ -101,7 +125,27 @@ export async function getAvatarImages(page = 1): Promise<{ images: AdminImage[];
     created_at: p.updated_at,
   }))
 
-  return { images, hasMore }
+  return { images, hasMore, queueTotal: queueTotal ?? 0 }
+}
+
+export async function approvePostImages(imageIds: string[]): Promise<void> {
+  if (!imageIds.length) return
+  await requireAdminOrMod()
+  const admin = getServiceClient()
+  await admin
+    .from('post_images')
+    .update({ reviewed_at: new Date().toISOString() })
+    .in('id', imageIds)
+}
+
+export async function approveAvatars(userIds: string[]): Promise<void> {
+  if (!userIds.length) return
+  await requireAdminOrMod()
+  const admin = getServiceClient()
+  await admin
+    .from('profiles')
+    .update({ avatar_reviewed_at: new Date().toISOString() })
+    .in('id', userIds)
 }
 
 export async function removePostImages(
@@ -110,7 +154,6 @@ export async function removePostImages(
   if (!items.length) return
   await requireAdminOrMod()
   const admin = getServiceClient()
-
   await Promise.all([
     admin.from('post_images').delete().in('id', items.map((i) => i.imageId)),
     admin.storage.from('posts').remove(items.map((i) => i.storagePath)),
@@ -123,9 +166,8 @@ export async function removeAvatars(
   if (!items.length) return
   await requireAdminOrMod()
   const admin = getServiceClient()
-
   await Promise.all([
-    admin.from('profiles').update({ profile_photo_url: null }).in('id', items.map((i) => i.userId)),
+    admin.from('profiles').update({ profile_photo_url: null, avatar_reviewed_at: null }).in('id', items.map((i) => i.userId)),
     admin.storage.from('avatars').remove(items.map((i) => i.storagePath)),
   ])
 }

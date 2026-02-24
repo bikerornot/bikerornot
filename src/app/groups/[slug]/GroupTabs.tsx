@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Group, GroupMember, Post, Profile } from '@/lib/supabase/types'
-import { getGroupPosts, approveRequest, denyRequest } from '@/app/actions/groups'
+import { getGroupPosts, approveRequest, denyRequest, removeMember } from '@/app/actions/groups'
 import { getImageUrl } from '@/lib/supabase/image'
 import PostCard from '@/app/components/PostCard'
 import PostComposer from '@/app/components/PostComposer'
@@ -37,7 +37,7 @@ export default function GroupTabs({
 }: Props) {
   const [tab, setTab] = useState<Tab>('posts')
   const [posts, setPosts] = useState<Post[]>(initialPosts)
-  const [members] = useState<GroupMember[]>(initialMembers)
+  const [members, setMembers] = useState<GroupMember[]>(initialMembers)
   const [requests, setRequests] = useState<GroupMember[]>(initialRequests)
   const [hasMore, setHasMore] = useState(initialPosts.length === PAGE_SIZE)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -90,6 +90,19 @@ export default function GroupTabs({
     if (data.length > 0) cursorRef.current = data[data.length - 1].created_at
     setHasMore(data.length === PAGE_SIZE)
     setLoadingMore(false)
+  }
+
+  async function handleRemove(userId: string) {
+    if (pendingActions.has(userId)) return
+    setPendingActions((p) => new Set(p).add(userId))
+    try {
+      await removeMember(group.id, userId)
+      setMembers((prev) => prev.filter((m) => m.user_id !== userId))
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to remove member')
+    } finally {
+      setPendingActions((p) => { const n = new Set(p); n.delete(userId); return n })
+    }
   }
 
   async function handleApprove(userId: string) {
@@ -241,6 +254,15 @@ export default function GroupTabs({
                   <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full">
                     Admin
                   </span>
+                )}
+                {isAdmin && m.role !== 'admin' && m.user_id !== currentUserId && (
+                  <button
+                    onClick={(e) => { e.preventDefault(); handleRemove(m.user_id) }}
+                    disabled={pendingActions.has(m.user_id)}
+                    className="text-xs bg-zinc-800 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 text-zinc-500 border border-zinc-700 px-2.5 py-1 rounded-full transition-colors disabled:opacity-40"
+                  >
+                    {pendingActions.has(m.user_id) ? '…' : 'Remove'}
+                  </button>
                 )}
               </Link>
             )

@@ -66,12 +66,13 @@ export async function createPost(formData: FormData): Promise<string> {
 
   // Notify wall owner when someone else posts on their wall
   if (wallOwnerId && wallOwnerId !== user.id) {
-    await admin.from('notifications').insert({
+    const { error: notifError } = await admin.from('notifications').insert({
       user_id: wallOwnerId,
       type: 'wall_post',
       actor_id: user.id,
       post_id: post.id,
     })
+    if (notifError) console.error('Wall post notification error:', notifError.message)
   }
 
   const validFiles = files.filter((f) => f && f.size > 0)

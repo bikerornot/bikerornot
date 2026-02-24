@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx supabase:*)",
+      "Bash(curl:*)",
+      "Bash(cd:*)",
+      "Bash(head:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\" && cd /c/Users/17276/projects/bikerornot && node node_modules/.bin/tsc --noEmit 2>&1)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\" && cd /c/Users/17276/projects/bikerornot && node node_modules/typescript/bin/tsc --noEmit 2>&1)",
+      "Bash(export:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(python3:*)",
+      "Bash(grep:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\" && cd /c/Users/17276/projects/bikerornot && node_modules/.bin/tsc --noEmit 2>&1)"
+    ]
+  }
+}

@@ -300,6 +300,41 @@ export async function approveRequest(groupId: string, userId: string): Promise<v
   if (error) throw new Error(error.message)
 }
 
+export async function removeMember(groupId: string, userId: string): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const admin = getServiceClient()
+
+  const { data: membership } = await admin
+    .from('group_members')
+    .select('role')
+    .eq('group_id', groupId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (membership?.role !== 'admin') throw new Error('Not authorized')
+
+  // Prevent removing another admin
+  const { data: target } = await admin
+    .from('group_members')
+    .select('role')
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+    .single()
+
+  if (target?.role === 'admin') throw new Error('Cannot remove another admin')
+
+  const { error } = await admin
+    .from('group_members')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('user_id', userId)
+
+  if (error) throw new Error(error.message)
+}
+
 export async function denyRequest(groupId: string, userId: string): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

@@ -125,7 +125,7 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-2xl">
-                        {rider.first_name?.[0]?.toUpperCase() ?? '?'}
+                        {rider.username?.[0]?.toUpperCase() ?? '?'}
                       </div>
                     )}
                   </div>
@@ -145,8 +145,8 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
               {/* Info */}
               <div className="px-2 pt-2 pb-2.5 flex flex-col gap-1.5 flex-1">
                 <div>
-                  <p className="text-white text-xs font-semibold leading-tight truncate">
-                    {rider.first_name} {rider.last_name}
+                  <p className="text-zinc-400 text-xs font-medium leading-tight truncate">
+                    @{rider.username ?? 'unknown'}
                   </p>
                   {location && (
                     <p className="text-zinc-500 text-xs truncate leading-tight mt-0.5">{location}</p>

@@ -57,6 +57,7 @@ export interface ReportRow {
   content_preview: string | null
   content_author_id: string | null
   content_author_username: string | null
+  content_images: string[]
 }
 
 export async function getReports(): Promise<ReportRow[]> {
@@ -90,18 +91,27 @@ export async function getReports(): Promise<ReportRow[]> {
         content_preview: null,
         content_author_id: null,
         content_author_username: null,
+        content_images: [],
       }
 
       if (r.reported_type === 'post') {
-        const { data } = await admin
-          .from('posts')
-          .select('content, author_id, author:profiles!author_id(username)')
-          .eq('id', r.reported_id)
-          .single()
+        const [{ data }, { data: images }] = await Promise.all([
+          admin
+            .from('posts')
+            .select('content, author_id, author:profiles!author_id(username)')
+            .eq('id', r.reported_id)
+            .single(),
+          admin
+            .from('post_images')
+            .select('storage_path')
+            .eq('post_id', r.reported_id)
+            .order('order_index'),
+        ])
         if (data) {
-          row.content_preview = data.content?.slice(0, 120) ?? '[image post]'
+          row.content_preview = data.content?.slice(0, 500) ?? null
           row.content_author_id = data.author_id
           row.content_author_username = (data.author as unknown as { username: string | null } | null)?.username ?? null
+          row.content_images = (images ?? []).map((img) => img.storage_path)
         }
       } else if (r.reported_type === 'comment') {
         const { data } = await admin

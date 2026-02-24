@@ -1,8 +1,15 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { dismissReport, actionReport, type ReportRow } from '@/app/actions/reports'
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+
+function postImageUrl(path: string) {
+  return `${SUPABASE_URL}/storage/v1/object/public/posts/${path}`
+}
 
 const REASON_LABELS: Record<string, string> = {
   spam:         'Spam',
@@ -95,7 +102,7 @@ export default function ReportQueue({ initialReports }: { initialReports: Report
             </div>
 
             {/* Reported content preview */}
-            <div className="bg-zinc-800 rounded-xl p-3 space-y-1">
+            <div className="bg-zinc-800 rounded-xl p-3 space-y-2">
               {r.content_author_username && (
                 <p className="text-xs text-zinc-500">
                   Author:{' '}
@@ -109,12 +116,30 @@ export default function ReportQueue({ initialReports }: { initialReports: Report
                 </p>
               )}
               {r.content_preview ? (
-                <p className="text-sm text-zinc-200 leading-relaxed">
-                  {r.content_preview}
-                  {r.content_preview.length === 120 && <span className="text-zinc-500">…</span>}
-                </p>
-              ) : (
+                <p className="text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap">{r.content_preview}</p>
+              ) : r.content_images.length === 0 ? (
                 <p className="text-sm text-zinc-500 italic">Content not found (may have been deleted)</p>
+              ) : null}
+              {r.content_images.length > 0 && (
+                <div className={`grid gap-1.5 mt-1 ${r.content_images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                  {r.content_images.map((path, i) => (
+                    <a
+                      key={i}
+                      href={postImageUrl(path)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block rounded-lg overflow-hidden bg-zinc-900 aspect-square"
+                    >
+                      <Image
+                        src={postImageUrl(path)}
+                        alt={`Post image ${i + 1}`}
+                        width={300}
+                        height={300}
+                        className="object-cover w-full h-full hover:opacity-90 transition-opacity"
+                      />
+                    </a>
+                  ))}
+                </div>
               )}
             </div>
 

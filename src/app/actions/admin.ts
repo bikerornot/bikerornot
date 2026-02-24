@@ -149,7 +149,7 @@ export interface AdminUserDetail {
     id: string
     content: string | null
     created_at: string
-    image_count: number
+    images: string[]
   }>
   recent_reports: Array<{
     id: string
@@ -229,15 +229,17 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
 
   const postIds = (posts ?? []).map((p) => p.id)
 
-  // Image counts per post
-  let imageCountMap: Record<string, number> = {}
+  // Images for recent posts
+  let imageMap: Record<string, string[]> = {}
   if (postIds.length > 0) {
     const { data: images } = await admin
       .from('post_images')
-      .select('post_id')
-      .in('post_id', postIds.slice(0, 50))
+      .select('post_id, storage_path')
+      .in('post_id', postIds.slice(0, 10))
+      .order('order_index')
     for (const img of images ?? []) {
-      imageCountMap[img.post_id] = (imageCountMap[img.post_id] ?? 0) + 1
+      if (!imageMap[img.post_id]) imageMap[img.post_id] = []
+      imageMap[img.post_id].push(img.storage_path)
     }
   }
 
@@ -280,11 +282,11 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     ban_reason: profile.ban_reason ?? null,
     post_count: (posts ?? []).length,
     report_count: (profileReports ?? 0) + (postReports ?? 0),
-    recent_posts: (posts ?? []).slice(0, 5).map((p) => ({
+    recent_posts: (posts ?? []).slice(0, 10).map((p) => ({
       id: p.id,
       content: p.content,
       created_at: p.created_at,
-      image_count: imageCountMap[p.id] ?? 0,
+      images: imageMap[p.id] ?? [],
     })),
     recent_reports: (recentReports ?? []).map((r: any) => ({
       id: r.id,

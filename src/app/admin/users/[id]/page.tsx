@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 import { createClient } from '@/lib/supabase/server'
 import { getUserDetail } from '@/app/actions/admin'
 import { getImageUrl } from '@/lib/supabase/image'
@@ -222,7 +224,7 @@ export default async function UserDetailPage({
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
             <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
               <h2 className="text-white font-semibold text-sm">Recent Posts</h2>
-              <span className="text-zinc-600 text-xs">{user.post_count} total</span>
+              <span className="text-zinc-600 text-xs">{user.recent_posts.length} shown · {user.post_count} total</span>
             </div>
             {user.recent_posts.length === 0 ? (
               <p className="text-center text-zinc-600 text-sm py-8">No posts yet</p>
@@ -231,21 +233,48 @@ export default async function UserDetailPage({
                 {user.recent_posts.map((p, i) => (
                   <li
                     key={p.id}
-                    className={`px-5 py-3 ${i < user.recent_posts.length - 1 ? 'border-b border-zinc-800/50' : ''}`}
+                    className={`px-5 py-4 space-y-2.5 ${i < user.recent_posts.length - 1 ? 'border-b border-zinc-800/50' : ''}`}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <p className="text-zinc-300 text-sm leading-relaxed flex-1 min-w-0">
-                        {p.content
-                          ? p.content.slice(0, 120) + (p.content.length > 120 ? '…' : '')
-                          : <span className="text-zinc-500 italic">Image post</span>
-                        }
-                      </p>
-                      <div className="flex-shrink-0 text-right">
-                        <p className="text-zinc-500 text-xs whitespace-nowrap">{formatTimeAgo(p.created_at)}</p>
-                        {p.image_count > 0 && (
-                          <p className="text-zinc-600 text-xs mt-0.5">{p.image_count} image{p.image_count !== 1 ? 's' : ''}</p>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        {p.content && (
+                          <p className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">{p.content}</p>
+                        )}
+                        {p.images.length > 0 && (
+                          <div className={`grid gap-1.5 ${
+                            p.images.length === 1 ? 'grid-cols-1 max-w-xs' :
+                            p.images.length === 2 ? 'grid-cols-2 max-w-xs' :
+                            'grid-cols-3 max-w-sm'
+                          }`}>
+                            {p.images.slice(0, 4).map((path, idx) => (
+                              <a
+                                key={idx}
+                                href={`${SUPABASE_URL}/storage/v1/object/public/posts/${path}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="relative block aspect-square rounded-lg overflow-hidden bg-zinc-800 hover:opacity-90 transition-opacity"
+                              >
+                                <Image
+                                  src={`${SUPABASE_URL}/storage/v1/object/public/posts/${path}`}
+                                  alt=""
+                                  fill
+                                  className="object-cover"
+                                  sizes="120px"
+                                />
+                                {idx === 3 && p.images.length > 4 && (
+                                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                    <span className="text-white text-sm font-semibold">+{p.images.length - 4}</span>
+                                  </div>
+                                )}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        {!p.content && p.images.length === 0 && (
+                          <p className="text-zinc-500 text-sm italic">No content</p>
                         )}
                       </div>
+                      <p className="text-zinc-500 text-xs whitespace-nowrap flex-shrink-0">{formatTimeAgo(p.created_at)}</p>
                     </div>
                   </li>
                 ))}

@@ -35,7 +35,7 @@ export default function WallTab({
 
       const base = supabase
         .from('posts')
-        .select('*, author:profiles!author_id(*), images:post_images(*), shared_post:posts!shared_post_id(*, author:profiles!author_id(*), images:post_images(*))')
+        .select('*, author:profiles!author_id(*), images:post_images(*)')
         .eq('wall_owner_id', profileId)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
@@ -49,8 +49,9 @@ export default function WallTab({
       if (!data || data.length === 0) return []
 
       const postIds = data.map((p) => p.id)
+      const sharedPostIds = data.map((p) => p.shared_post_id).filter(Boolean) as string[]
 
-      const [{ data: likeCounts }, { data: commentCounts }, { data: myLikes }] =
+      const [{ data: likeCounts }, { data: commentCounts }, { data: myLikes }, { data: sharedPostsData }] =
         await Promise.all([
           supabase.from('post_likes').select('post_id').in('post_id', postIds),
           supabase
@@ -65,6 +66,12 @@ export default function WallTab({
                 .in('post_id', postIds)
                 .eq('user_id', currentUserId)
             : Promise.resolve({ data: [] }),
+          sharedPostIds.length > 0
+            ? supabase
+                .from('posts')
+                .select('*, author:profiles!author_id(*), images:post_images(*)')
+                .in('id', sharedPostIds)
+            : Promise.resolve({ data: [] }),
         ])
 
       const likeMap = (likeCounts ?? []).reduce<Record<string, number>>((acc, r) => {
@@ -76,12 +83,17 @@ export default function WallTab({
         return acc
       }, {})
       const myLikeSet = new Set((myLikes ?? []).map((l) => l.post_id))
+      const sharedPostMap: Record<string, Post> = {}
+      for (const p of sharedPostsData ?? []) {
+        sharedPostMap[p.id] = p as Post
+      }
 
       return data.map((post) => ({
         ...post,
         like_count: likeMap[post.id] ?? 0,
         comment_count: commentMap[post.id] ?? 0,
         is_liked_by_me: myLikeSet.has(post.id),
+        shared_post: post.shared_post_id ? (sharedPostMap[post.shared_post_id] ?? null) : null,
       })) as Post[]
     },
     [profileId, currentUserId]

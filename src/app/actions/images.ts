@@ -31,7 +31,7 @@ export interface AdminImage {
   created_at: string
 }
 
-export const IMAGES_PAGE_SIZE = 40
+const IMAGES_PAGE_SIZE = 40
 
 export async function getPostImages(page = 1): Promise<{ images: AdminImage[]; hasMore: boolean }> {
   await requireAdminOrMod()

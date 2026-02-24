@@ -21,7 +21,7 @@ export async function getNotifications(): Promise<Notification[]> {
   const admin = getServiceClient()
   const { data } = await admin
     .from('notifications')
-    .select('*, actor:profiles!actor_id(*)')
+    .select('*, actor:profiles!actor_id(*), group:groups!group_id(id, name, slug)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
     .limit(30)

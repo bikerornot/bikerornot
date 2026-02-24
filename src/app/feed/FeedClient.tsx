@@ -11,9 +11,10 @@ const PAGE_SIZE = 10
 interface Props {
   currentUserId: string
   currentUserProfile: Profile
+  userGroupIds?: string[]
 }
 
-export default function FeedClient({ currentUserId, currentUserProfile }: Props) {
+export default function FeedClient({ currentUserId, currentUserProfile, userGroupIds = [] }: Props) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -25,12 +26,19 @@ export default function FeedClient({ currentUserId, currentUserProfile }: Props)
     async (cursor?: string): Promise<Post[]> => {
       const supabase = createClient()
 
-      const base = supabase
+      let base = supabase
         .from('posts')
         .select('*, author:profiles!author_id(*), images:post_images(*)')
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(PAGE_SIZE)
+
+      // Show non-group posts plus posts from groups the user is in.
+      // Only apply group_id filter if user has group memberships (column may not
+      // exist yet if migration hasn't run, so we skip the filter when the list is empty).
+      if (userGroupIds.length > 0) {
+        base = base.or(`group_id.is.null,group_id.in.(${userGroupIds.join(',')})`) as typeof base
+      }
 
       const { data, error } = cursor ? await base.lt('created_at', cursor) : await base
 
@@ -71,7 +79,8 @@ export default function FeedClient({ currentUserId, currentUserProfile }: Props)
         is_liked_by_me: myLikeSet.has(post.id),
       })) as Post[]
     },
-    [currentUserId]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentUserId, userGroupIds.join(',')]
   )
 
   useEffect(() => {

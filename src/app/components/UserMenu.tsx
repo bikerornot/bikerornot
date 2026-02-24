@@ -11,9 +11,10 @@ interface Props {
   displayName: string
   avatarUrl: string | null
   firstInitial: string
+  role?: string
 }
 
-export default function UserMenu({ username, displayName, avatarUrl, firstInitial }: Props) {
+export default function UserMenu({ username, displayName, avatarUrl, firstInitial, role }: Props) {
   const [open, setOpen] = useState(false)
   const [loggingOut, startLogout] = useTransition()
   const ref = useRef<HTMLDivElement>(null)
@@ -69,6 +70,18 @@ export default function UserMenu({ username, displayName, avatarUrl, firstInitia
           >
             Settings
           </Link>
+          {(role === 'admin' || role === 'moderator') && (
+            <>
+              <div className="border-t border-zinc-800" />
+              <Link
+                href="/admin/reports"
+                onClick={() => setOpen(false)}
+                className="block px-4 py-2.5 text-sm text-orange-400 hover:bg-zinc-800 transition-colors"
+              >
+                Mod Queue
+              </Link>
+            </>
+          )}
           <div className="border-t border-zinc-800" />
           <button
             onClick={handleLogout}

@@ -9,10 +9,11 @@ import { createPost } from '@/app/actions/posts'
 interface Props {
   currentUserProfile: Profile
   wallOwnerId?: string
+  groupId?: string
   onPostCreated?: (postId: string) => void
 }
 
-export default function PostComposer({ currentUserProfile, wallOwnerId, onPostCreated }: Props) {
+export default function PostComposer({ currentUserProfile, wallOwnerId, groupId, onPostCreated }: Props) {
   const [content, setContent] = useState('')
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
@@ -59,6 +60,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, onPostCr
       const formData = new FormData()
       if (content.trim()) formData.set('content', content.trim())
       if (wallOwnerId) formData.set('wallOwnerId', wallOwnerId)
+      if (groupId) formData.set('groupId', groupId)
       images.forEach((file) => formData.append('images', file))
 
       const postId = await createPost(formData)

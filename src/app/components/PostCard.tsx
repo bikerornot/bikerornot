@@ -8,6 +8,7 @@ import { getImageUrl } from '@/lib/supabase/image'
 import { likePost, unlikePost, deletePost } from '@/app/actions/posts'
 import PostImages from './PostImages'
 import CommentSection from './CommentSection'
+import ContentMenu from './ContentMenu'
 
 interface Props {
   post: Post
@@ -95,7 +96,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile }: Pr
           )}
         </div>
 
-        {currentUserId === post.author_id && (
+        {currentUserId === post.author_id ? (
           <button
             onClick={handleDelete}
             className="text-zinc-600 hover:text-red-400 transition-colors text-xs flex-shrink-0 p-1"
@@ -103,7 +104,13 @@ export default function PostCard({ post, currentUserId, currentUserProfile }: Pr
           >
             ✕
           </button>
-        )}
+        ) : currentUserId ? (
+          <ContentMenu
+            reportType="post"
+            reportTargetId={post.id}
+            blockUserId={post.author_id}
+          />
+        ) : null}
       </div>
 
       {/* Content */}

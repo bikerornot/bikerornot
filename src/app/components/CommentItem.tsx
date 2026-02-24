@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Comment, Profile } from '@/lib/supabase/types'
 import { getImageUrl } from '@/lib/supabase/image'
 import { likeComment, unlikeComment, deleteComment, createComment } from '@/app/actions/comments'
+import ContentMenu from './ContentMenu'
 
 interface Props {
   comment: Comment
@@ -104,14 +105,20 @@ function ReplyItem({
               {likeCount > 0 ? ` ${likeCount}` : ''}
             </button>
           )}
-          {currentUserId === reply.author_id && (
+          {currentUserId === reply.author_id ? (
             <button
               onClick={handleDelete}
               className="text-xs text-zinc-500 hover:text-red-400 transition-colors"
             >
               Delete
             </button>
-          )}
+          ) : currentUserId ? (
+            <ContentMenu
+              reportType="comment"
+              reportTargetId={reply.id}
+              blockUserId={reply.author_id}
+            />
+          ) : null}
         </div>
       </div>
     </div>
@@ -232,14 +239,20 @@ export default function CommentItem({
               Reply
             </button>
           )}
-          {currentUserId === comment.author_id && (
+          {currentUserId === comment.author_id ? (
             <button
               onClick={handleDelete}
               className="text-xs text-zinc-500 hover:text-red-400 transition-colors"
             >
               Delete
             </button>
-          )}
+          ) : currentUserId ? (
+            <ContentMenu
+              reportType="comment"
+              reportTargetId={comment.id}
+              blockUserId={comment.author_id}
+            />
+          ) : null}
         </div>
 
         {/* Inline reply composer */}

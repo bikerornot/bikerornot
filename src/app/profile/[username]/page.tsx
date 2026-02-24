@@ -9,6 +9,9 @@ import ProfileTabs from './ProfileTabs'
 import FriendButton, { type FriendshipStatus } from './FriendButton'
 import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
+import MessagesLink from '@/app/components/MessagesLink'
+import MessageButton from '@/app/components/MessageButton'
+import ContentMenu from '@/app/components/ContentMenu'
 
 export async function generateMetadata({
   params,
@@ -118,14 +121,19 @@ export default async function ProfilePage({
             <Link href="/people" className="text-sm text-zinc-400 hover:text-orange-400 transition-colors hidden sm:block">
               Find Riders
             </Link>
+            <Link href="/groups" className="text-sm text-zinc-400 hover:text-orange-400 transition-colors hidden sm:block">
+              Groups
+            </Link>
             {user && currentUserProfile && (
               <>
+                <MessagesLink userId={user.id} />
                 <NotificationBell userId={user.id} username={currentUserProfile.username!} />
                 <UserMenu
                   username={currentUserProfile.username!}
                   displayName={currentUserProfile.username ?? 'Unknown'}
                   avatarUrl={currentUserProfile.profile_photo_url ? getImageUrl('avatars', currentUserProfile.profile_photo_url, undefined, currentUserProfile.updated_at) : null}
                   firstInitial={(currentUserProfile.first_name?.[0] ?? '?').toUpperCase()}
+                  role={currentUserProfile.role}
                 />
               </>
             )}
@@ -191,9 +199,17 @@ export default async function ProfilePage({
                     initialStatus={friendshipStatus}
                   />
                 )}
-                <button className="bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors border border-zinc-700">
-                  Message
-                </button>
+                {friendshipStatus === 'accepted' && (
+                  <MessageButton profileId={profile.id} />
+                )}
+                {user && (
+                  <ContentMenu
+                    reportType="profile"
+                    reportTargetId={profile.id}
+                    blockUserId={profile.id}
+                    buttonClassName="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors border border-zinc-700"
+                  />
+                )}
               </>
             )}
           </div>

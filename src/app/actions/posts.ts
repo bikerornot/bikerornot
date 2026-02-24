@@ -21,6 +21,7 @@ export async function createPost(formData: FormData): Promise<string> {
 
   const content = formData.get('content') as string | null
   const wallOwnerId = formData.get('wallOwnerId') as string | null
+  const groupId = formData.get('groupId') as string | null
   const files = formData.getAll('images') as File[]
 
   // If posting on someone else's wall, require an accepted friendship
@@ -37,17 +38,41 @@ export async function createPost(formData: FormData): Promise<string> {
     if (!friendship) throw new Error('You must be friends to post on this wall')
   }
 
+  // If posting in a group, verify active membership
+  if (groupId) {
+    const { data: membership } = await admin
+      .from('group_members')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .single()
+
+    if (!membership) throw new Error('You must be an active group member to post here')
+  }
+
   const { data: post, error: postError } = await admin
     .from('posts')
     .insert({
       author_id: user.id,
       wall_owner_id: wallOwnerId || null,
+      group_id: groupId || null,
       content: content?.trim() || null,
     })
     .select()
     .single()
 
   if (postError) throw new Error(postError.message)
+
+  // Notify wall owner when someone else posts on their wall
+  if (wallOwnerId && wallOwnerId !== user.id) {
+    await admin.from('notifications').insert({
+      user_id: wallOwnerId,
+      type: 'wall_post',
+      actor_id: user.id,
+      post_id: post.id,
+    })
+  }
 
   const validFiles = files.filter((f) => f && f.size > 0)
   if (validFiles.length > 0) {

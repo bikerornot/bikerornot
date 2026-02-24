@@ -5,6 +5,7 @@ import { getImageUrl } from '@/lib/supabase/image'
 import PeopleSearch from './PeopleSearch'
 import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
+import MessagesLink from '@/app/components/MessagesLink'
 
 export const metadata = { title: 'Find Riders — BikerOrNot' }
 
@@ -36,12 +37,17 @@ export default async function PeoplePage() {
             BikerOrNot
           </Link>
           <div className="flex items-center gap-2">
+            <Link href="/groups" className="text-sm text-zinc-400 hover:text-orange-400 transition-colors hidden sm:block">
+              Groups
+            </Link>
+            <MessagesLink userId={user.id} />
             <NotificationBell userId={user.id} username={profile.username!} />
             <UserMenu
               username={profile.username!}
               displayName={displayName}
               avatarUrl={avatarUrl}
               firstInitial={(profile.first_name?.[0] ?? '?').toUpperCase()}
+              role={profile.role}
             />
           </div>
         </div>

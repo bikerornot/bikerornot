@@ -7,6 +7,8 @@ import FeedClient from './FeedClient'
 import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
 import MessagesLink from '@/app/components/MessagesLink'
+import RidersWidget from '@/app/components/RidersWidget'
+import { getNearbyRiders } from '@/app/actions/suggestions'
 
 export const metadata = { title: 'Feed — BikerOrNot' }
 
@@ -34,6 +36,9 @@ export default async function FeedPage() {
     .eq('status', 'active')
 
   const userGroupIds = (groupMemberships ?? []).map((m) => m.group_id)
+
+  // Fetch rider suggestions (only used when friendCount < 15)
+  const { riders: nearbyRiders, friendCount } = await getNearbyRiders()
 
   const avatarUrl = profile.profile_photo_url
     ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
@@ -71,6 +76,7 @@ export default async function FeedPage() {
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
+        <RidersWidget initialRiders={nearbyRiders} friendCount={friendCount} />
         <FeedClient currentUserId={user.id} currentUserProfile={profile} userGroupIds={userGroupIds} />
       </div>
     </div>

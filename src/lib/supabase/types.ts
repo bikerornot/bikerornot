@@ -20,6 +20,9 @@ export interface Profile {
   onboarding_complete: boolean
   latitude: number | null
   longitude: number | null
+  signup_ip: string | null
+  signup_country: string | null
+  signup_region: string | null
   created_at: string
   updated_at: string
 }

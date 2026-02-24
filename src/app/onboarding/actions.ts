@@ -1,8 +1,38 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { geocodeZip } from '@/lib/geocode'
+
+async function getSignupLocation(): Promise<{
+  ip: string | null
+  country: string | null
+  region: string | null
+}> {
+  const headersList = await headers()
+  const forwarded = headersList.get('x-forwarded-for')
+  const ip = forwarded?.split(',')[0]?.trim() ?? headersList.get('x-real-ip') ?? null
+
+  // Skip geo lookup for local/private IPs
+  if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+    return { ip, country: null, region: null }
+  }
+
+  try {
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName`, {
+      next: { revalidate: 0 },
+    })
+    const data = await res.json()
+    if (data.status === 'success') {
+      return { ip, country: data.country ?? null, region: data.regionName ?? null }
+    }
+  } catch {
+    // Geo lookup is best-effort — never block signup
+  }
+
+  return { ip, country: null, region: null }
+}
 
 function getServiceClient() {
   return createServiceClient(
@@ -56,23 +86,29 @@ export async function completeOnboarding(
     throw new Error(profileError.message)
   }
 
-  // Geocode zip and store coordinates + city; also store gender from signup metadata
+  // Geocode zip, capture IP, and store gender from signup metadata
   const zipCode = user.user_metadata?.zip_code as string | undefined
   const gender = user.user_metadata?.gender as string | undefined
   const geoUpdate: Record<string, unknown> = {}
   if (gender) geoUpdate.gender = gender
-  if (zipCode) {
-    const geo = await geocodeZip(zipCode)
-    if (geo) {
-      geoUpdate.latitude = geo.lat
-      geoUpdate.longitude = geo.lng
-      geoUpdate.city = geo.city
-      geoUpdate.state = geo.state
-    }
+
+  const [geo, location] = await Promise.all([
+    zipCode ? geocodeZip(zipCode) : Promise.resolve(null),
+    getSignupLocation(),
+  ])
+
+  if (geo) {
+    geoUpdate.latitude = geo.lat
+    geoUpdate.longitude = geo.lng
+    geoUpdate.city = geo.city
+    geoUpdate.state = geo.state
   }
-  if (Object.keys(geoUpdate).length > 0) {
-    await admin.from('profiles').update(geoUpdate).eq('id', user.id)
-  }
+
+  geoUpdate.signup_ip = location.ip
+  geoUpdate.signup_country = location.country
+  geoUpdate.signup_region = location.region
+
+  await admin.from('profiles').update(geoUpdate).eq('id', user.id)
 
   if (bikes.length > 0) {
     const { error: bikesError } = await admin

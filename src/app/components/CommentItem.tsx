@@ -108,11 +108,11 @@ function ReplyItem({
         <div className="bg-zinc-800 rounded-xl px-3 py-1.5">
           <Link
             href={`/profile/${author?.username}`}
-            className="font-semibold text-white text-xs hover:underline"
+            className="font-semibold text-white text-sm hover:underline"
           >
             {displayName}
           </Link>
-          <p className="text-zinc-200 text-xs mt-0.5 whitespace-pre-wrap">{renderWithLinks(reply.content)}</p>
+          <p className="text-zinc-200 text-sm mt-0.5 whitespace-pre-wrap">{renderWithLinks(reply.content)}</p>
         </div>
         <div className="flex items-center gap-3 mt-0.5 pl-1">
           <span className="text-zinc-500 text-xs">{formatTimeAgo(reply.created_at)}</span>
@@ -235,7 +235,7 @@ export default function CommentItem({
           >
             {displayName}
           </Link>
-          <p className="text-zinc-200 text-sm mt-0.5 whitespace-pre-wrap">{renderWithLinks(comment.content)}</p>
+          <p className="text-zinc-200 text-base mt-0.5 whitespace-pre-wrap">{renderWithLinks(comment.content)}</p>
         </div>
 
         <div className="flex items-center gap-4 mt-1 pl-1">
@@ -301,12 +301,12 @@ export default function CommentItem({
               placeholder={`Reply to @${displayName}…`}
               autoFocus
               disabled={submittingReply}
-              className="flex-1 bg-zinc-800 border border-zinc-700 rounded-full px-3 py-1 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-transparent"
+              className="flex-1 bg-zinc-800 border border-zinc-700 rounded-full px-3 py-1 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-transparent"
             />
             <button
               type="submit"
               disabled={!replyText.trim() || submittingReply}
-              className="text-orange-400 hover:text-orange-300 disabled:opacity-40 text-xs font-semibold transition-colors"
+              className="text-orange-400 hover:text-orange-300 disabled:opacity-40 text-sm font-semibold transition-colors"
             >
               {submittingReply ? '…' : 'Post'}
             </button>

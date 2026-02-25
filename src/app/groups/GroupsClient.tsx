@@ -145,56 +145,51 @@ export default function GroupsClient({ initialGroups, currentUserId }: Props) {
               </Link>
 
               <div className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <Link href={`/groups/${group.slug}`} className="hover:text-orange-400 transition-colors">
-                      <h3 className="text-white font-semibold truncate">{group.name}</h3>
-                    </Link>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-zinc-500">
-                        {group.privacy === 'private' ? '🔒 Private' : '🌐 Public'}
-                      </span>
-                      <span className="text-zinc-700">·</span>
-                      <span className="text-xs text-zinc-500">
-                        {group.member_count ?? 0} member{group.member_count !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    {group.description && (
-                      <p className="text-zinc-400 text-sm mt-1.5 line-clamp-2">{group.description}</p>
-                    )}
-                  </div>
-
-                  <div className="flex-shrink-0">
-                    {isAdmin ? (
-                      <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2.5 py-1 rounded-full font-medium">
-                        Admin
-                      </span>
-                    ) : isActiveMember ? (
-                      <button
-                        onClick={() => handleLeave(group.id)}
-                        disabled={isLoading}
-                        className="text-xs bg-zinc-800 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 text-zinc-300 border border-zinc-700 px-3 py-1.5 rounded-full font-medium transition-colors disabled:opacity-40"
-                      >
-                        {isLoading ? '…' : 'Leave'}
-                      </button>
-                    ) : isPending ? (
-                      <button
-                        onClick={() => handleLeave(group.id)}
-                        disabled={isLoading}
-                        className="text-xs bg-zinc-800 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded-full font-medium transition-colors disabled:opacity-40"
-                      >
-                        {isLoading ? '…' : 'Pending'}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleJoin(group.id, group.privacy)}
-                        disabled={isLoading}
-                        className="text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-full font-medium transition-colors disabled:opacity-40"
-                      >
-                        {isLoading ? '…' : group.privacy === 'private' ? 'Request' : 'Join'}
-                      </button>
-                    )}
-                  </div>
+                <Link href={`/groups/${group.slug}`} className="hover:text-orange-400 transition-colors">
+                  <h3 className="text-white font-semibold">{group.name}</h3>
+                </Link>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-zinc-500">
+                    {group.privacy === 'private' ? '🔒 Private' : '🌐 Public'}
+                  </span>
+                  <span className="text-zinc-700">·</span>
+                  <span className="text-xs text-zinc-500">
+                    {group.member_count ?? 0} member{group.member_count !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                {group.description && (
+                  <p className="text-zinc-400 text-sm mt-1.5 line-clamp-2">{group.description}</p>
+                )}
+                <div className="mt-3">
+                  {isAdmin ? (
+                    <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2.5 py-1 rounded-full font-medium">
+                      Admin
+                    </span>
+                  ) : isActiveMember ? (
+                    <button
+                      onClick={() => handleLeave(group.id)}
+                      disabled={isLoading}
+                      className="text-xs bg-zinc-800 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 text-zinc-300 border border-zinc-700 px-3 py-1.5 rounded-full font-medium transition-colors disabled:opacity-40"
+                    >
+                      {isLoading ? '…' : 'Leave'}
+                    </button>
+                  ) : isPending ? (
+                    <button
+                      onClick={() => handleLeave(group.id)}
+                      disabled={isLoading}
+                      className="text-xs bg-zinc-800 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded-full font-medium transition-colors disabled:opacity-40"
+                    >
+                      {isLoading ? '…' : 'Pending'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleJoin(group.id, group.privacy)}
+                      disabled={isLoading}
+                      className="text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-full font-medium transition-colors disabled:opacity-40"
+                    >
+                      {isLoading ? '…' : group.privacy === 'private' ? 'Request' : 'Join'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

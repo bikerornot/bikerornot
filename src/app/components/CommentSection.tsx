@@ -148,7 +148,7 @@ export default function CommentSection({ postId, currentUserId, currentUserProfi
               onChange={(e) => setText(e.target.value)}
               placeholder="Write a comment…"
               disabled={submitting}
-              className="flex-1 bg-zinc-800 border border-zinc-700 rounded-full px-4 py-1.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="flex-1 bg-zinc-800 border border-zinc-700 rounded-full px-4 py-1.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
             <button
               type="submit"

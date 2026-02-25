@@ -94,25 +94,22 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
 
       <div className="max-w-2xl mx-auto px-4">
         {/* Group header */}
-        <div className="py-4 flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-white">{group.name}</h1>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-sm text-zinc-400">
-                {group.privacy === 'private' ? '🔒 Private' : '🌐 Public'}
-              </span>
-              <span className="text-zinc-700">·</span>
-              <span className="text-sm text-zinc-400">
-                {group.member_count ?? 0} member{group.member_count !== 1 ? 's' : ''}
-              </span>
-            </div>
-            {group.description && (
-              <p className="text-zinc-300 text-sm mt-2">{group.description}</p>
-            )}
+        <div className="py-4">
+          <h1 className="text-2xl font-bold text-white">{group.name}</h1>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-sm text-zinc-400">
+              {group.privacy === 'private' ? '🔒 Private' : '🌐 Public'}
+            </span>
+            <span className="text-zinc-700">·</span>
+            <span className="text-sm text-zinc-400">
+              {group.member_count ?? 0} member{group.member_count !== 1 ? 's' : ''}
+            </span>
           </div>
-
+          {group.description && (
+            <p className="text-zinc-300 text-sm mt-2">{group.description}</p>
+          )}
           {user && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mt-3">
               {isAdmin && <InviteButton groupId={group.id} />}
               <JoinButton
                 groupId={group.id}

@@ -74,7 +74,7 @@ function SharedPostEmbed({ post }: { post: Omit<Post, 'shared_post'> }) {
       </div>
       {post.content && (
         <div className="px-3 py-2 bg-zinc-800/30">
-          <p className="text-zinc-200 text-sm leading-relaxed whitespace-pre-wrap">
+          <p className="text-zinc-200 text-base leading-relaxed whitespace-pre-wrap">
             {renderWithLinks(post.content)}
           </p>
         </div>
@@ -202,7 +202,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile }: Pr
       {(post.content || post.shared_post_id) && (
         <div className="px-4 pb-3">
           {post.content && (
-            <p className="text-zinc-200 text-sm leading-relaxed whitespace-pre-wrap">
+            <p className="text-zinc-200 text-base leading-relaxed whitespace-pre-wrap">
               {renderWithLinks(post.content)}
             </p>
           )}
@@ -278,7 +278,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile }: Pr
                 onChange={(e) => setShareCaption(e.target.value)}
                 placeholder="Say something about this post… (optional)"
                 rows={3}
-                className="w-full bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500 transition-colors resize-none"
+                className="w-full bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:border-orange-500 transition-colors resize-none"
               />
               <div className="border border-zinc-700 rounded-xl overflow-hidden opacity-75">
                 <SharedPostEmbed post={post} />

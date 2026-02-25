@@ -117,7 +117,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
               placeholder="What's on your mind?"
               rows={3}
               disabled={submitting}
-              className="w-full bg-transparent text-white placeholder-zinc-500 focus:outline-none text-sm resize-none"
+              className="w-full bg-transparent text-white placeholder-zinc-500 focus:outline-none text-base resize-none"
             />
 
             {imagePreviews.length > 0 && (
@@ -174,7 +174,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
               <button
                 type="submit"
                 disabled={(!content.trim() && images.length === 0) || submitting || compressing}
-                className="bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors"
+                className="bg-orange-400 hover:bg-orange-500 disabled:opacity-30 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors"
               >
                 {submitting ? 'Posting…' : 'Post'}
               </button>

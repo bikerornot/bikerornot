@@ -11,7 +11,7 @@ function getServiceClient() {
   )
 }
 
-export async function uploadProfilePhoto(formData: FormData): Promise<void> {
+export async function uploadProfilePhoto(formData: FormData): Promise<{ error: string } | null> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
@@ -28,7 +28,7 @@ export async function uploadProfilePhoto(formData: FormData): Promise<void> {
   // Moderate before storing
   const moderation = await moderateImage(arrayBuffer, file.type)
   if (moderation === 'rejected') {
-    throw new Error('This image was rejected by our content filter. Please choose a different photo.')
+    return { error: 'This image was rejected by our content filter. Please choose a different photo.' }
   }
 
   const { error: uploadError } = await admin.storage
@@ -47,6 +47,7 @@ export async function uploadProfilePhoto(formData: FormData): Promise<void> {
     .eq('id', user.id)
 
   if (updateError) throw new Error(updateError.message)
+  return null
 }
 
 export async function uploadCoverPhoto(formData: FormData): Promise<void> {

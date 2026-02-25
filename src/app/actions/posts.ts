@@ -11,7 +11,7 @@ function getServiceClient() {
   )
 }
 
-export async function createPost(formData: FormData): Promise<string> {
+export async function createPost(formData: FormData): Promise<{ postId: string } | { error: string }> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -61,7 +61,7 @@ export async function createPost(formData: FormData): Promise<string> {
     const bytes = await file.arrayBuffer()
     const moderation = await moderateImage(bytes, file.type)
     if (moderation === 'rejected') {
-      throw new Error('One or more images were rejected by our content filter. Please review our community guidelines.')
+      return { error: 'One or more images were rejected by our content filter. Please review our community guidelines.' }
     }
     checkedFiles.push({ file, bytes, moderation })
   }
@@ -116,7 +116,7 @@ export async function createPost(formData: FormData): Promise<string> {
     if (imgError) throw new Error(imgError.message)
   }
 
-  return post.id
+  return { postId: post.id }
 }
 
 export async function sharePost(postId: string, caption?: string): Promise<string> {

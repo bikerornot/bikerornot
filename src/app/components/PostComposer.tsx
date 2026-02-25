@@ -63,13 +63,18 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
       if (groupId) formData.set('groupId', groupId)
       images.forEach((file) => formData.append('images', file))
 
-      const postId = await createPost(formData)
+      const result = await createPost(formData)
+
+      if ('error' in result) {
+        setError(result.error)
+        return
+      }
 
       setContent('')
       setImages([])
       imagePreviews.forEach((url) => URL.revokeObjectURL(url))
       setImagePreviews([])
-      onPostCreated?.(postId)
+      onPostCreated?.(result.postId)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create post')
     } finally {

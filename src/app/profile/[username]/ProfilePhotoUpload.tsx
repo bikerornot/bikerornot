@@ -25,7 +25,11 @@ export default function ProfilePhotoUpload({ userId }: { userId: string }) {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      await uploadProfilePhoto(formData)
+      const result = await uploadProfilePhoto(formData)
+      if (result?.error) {
+        setError(result.error)
+        return
+      }
       router.refresh()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Upload failed')

@@ -30,7 +30,7 @@ export async function moderateImage(
 
   const form = new FormData()
   form.append('media', new Blob([bytes], { type: contentType }), 'image')
-  form.append('models', 'nudity,gore,weapon,drugs')
+  form.append('models', 'nudity,gore,weapon')
   form.append('api_user', apiUser)
   form.append('api_secret', apiSecret)
 
@@ -56,7 +56,6 @@ export async function moderateImage(
   const nudity = data.nudity ?? {}
   const gore = data.gore?.prob ?? 0
   const weapon = data.weapon?.prob ?? 0
-  const drugs = data.drug?.prob ?? 0
 
   // ── Hard rejections ───────────────────────────────────────────────────────
   if (
@@ -73,8 +72,7 @@ export async function moderateImage(
     (nudity.very_suggestive ?? 0) > 0.6 ||
     (nudity.suggestive ?? 0) > 0.75 ||
     gore > 0.5 ||
-    weapon > 0.85 ||
-    drugs > 0.8
+    weapon > 0.85
   ) {
     return 'pending'
   }

@@ -221,38 +221,40 @@ export default function PostCard({ post, currentUserId, currentUserProfile }: Pr
       <div className="flex items-center gap-1 px-3 py-2 border-t border-zinc-800">
         <button
           onClick={handleLike}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-base font-medium transition-colors ${
             liked
               ? 'text-orange-400 bg-orange-500/10'
               : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
           }`}
         >
           {liked ? '♥' : '♡'}
-          {likeCount > 0 && <span>{likeCount}</span>}
+          {likeCount > 0 && <span className="text-sm">{likeCount}</span>}
         </button>
 
         <button
           onClick={() => {
             setShowComments(!showComments)
-            setCommentCount((c) => c) // keep count
+            setCommentCount((c) => c)
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-base font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
         >
           💬
-          {commentCount > 0 && <span>{commentCount}</span>}
+          {commentCount > 0 && <span className="text-sm">{commentCount}</span>}
         </button>
 
         {currentUserId && !post.shared_post_id && (
           <button
             onClick={() => setShowShareModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors ml-auto"
+            className="flex items-center px-3 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors ml-auto"
+            title="Share"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-              <polyline points="16 6 12 2 8 6" />
-              <line x1="12" y1="2" x2="12" y2="15" />
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
             </svg>
-            <span>Share</span>
           </button>
         )}
       </div>

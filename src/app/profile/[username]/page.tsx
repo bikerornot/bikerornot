@@ -169,8 +169,8 @@ export default async function ProfilePage({
 
       {/* Profile body */}
       <div className="max-w-4xl mx-auto px-4">
-        {/* Avatar + name row */}
-        <div className="flex flex-wrap items-end gap-4 -mt-16 mb-4">
+        {/* Avatar + action buttons row */}
+        <div className="flex items-end justify-between -mt-16 mb-3">
           {/* Avatar */}
           <div className="relative w-32 h-32 rounded-full border-4 border-zinc-950 bg-zinc-800 overflow-hidden flex-shrink-0">
             {avatarUrl ? (
@@ -187,11 +187,6 @@ export default async function ProfilePage({
               </div>
             )}
             {isOwnProfile && <ProfilePhotoUpload userId={profile.id} />}
-          </div>
-
-          {/* Name + username */}
-          <div className="flex-1 min-w-0 pb-2">
-            <h1 className="text-2xl font-bold text-white truncate">@{profile.username}</h1>
           </div>
 
           {/* Action buttons */}
@@ -225,6 +220,11 @@ export default async function ProfilePage({
               </>
             )}
           </div>
+        </div>
+
+        {/* Username — full width so it never gets truncated on mobile */}
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-white">@{profile.username}</h1>
         </div>
 
         {/* Stats */}

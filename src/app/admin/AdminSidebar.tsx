@@ -83,11 +83,9 @@ export default function AdminSidebar({ username, role, pendingReports }: Props) 
             return (
               <Link
                 key={item.href}
-                href={item.soon ? '#' : item.href}
+                href={item.href}
                 className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  item.soon
-                    ? 'text-zinc-600 cursor-not-allowed'
-                    : isActive
+                  isActive
                     ? 'bg-orange-500/15 text-orange-400'
                     : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
                 }`}
@@ -95,9 +93,6 @@ export default function AdminSidebar({ username, role, pendingReports }: Props) 
                 <span className="flex items-center gap-2.5">
                   {item.icon}
                   {item.label}
-                  {item.soon && (
-                    <span className="text-zinc-700 text-xs font-normal">soon</span>
-                  )}
                 </span>
                 {badge != null && (
                   <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
@@ -135,7 +130,7 @@ export default function AdminSidebar({ username, role, pendingReports }: Props) 
           <span className="ml-2 text-orange-400 text-xs font-semibold">Admin</span>
         </div>
         <div className="flex items-center gap-1">
-          {navItems.filter((i) => !i.soon).map((item) => {
+          {navItems.map((item) => {
             const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
             const badge = item.href === '/admin/reports' && pendingReports > 0 ? pendingReports : null
             return (

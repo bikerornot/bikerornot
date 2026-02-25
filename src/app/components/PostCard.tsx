@@ -194,23 +194,28 @@ export default function PostCard({ post, currentUserId, currentUserProfile }: Pr
         ) : null}
       </div>
 
-      {/* Content */}
-      <div className="px-4 pb-3">
-        {post.content && (
-          <p className="text-zinc-200 text-sm leading-relaxed whitespace-pre-wrap">
-            {renderWithLinks(post.content)}
-          </p>
-        )}
-        {/* Shared post embed */}
-        {post.shared_post_id && (
-          post.shared_post
-            ? <SharedPostEmbed post={post.shared_post} />
-            : <div className="border border-zinc-700 rounded-xl px-4 py-3 mt-2 text-zinc-500 text-sm italic">Original post was deleted.</div>
-        )}
-        {post.images && post.images.length > 0 && (
+      {/* Text content */}
+      {(post.content || post.shared_post_id) && (
+        <div className="px-4 pb-3">
+          {post.content && (
+            <p className="text-zinc-200 text-sm leading-relaxed whitespace-pre-wrap">
+              {renderWithLinks(post.content)}
+            </p>
+          )}
+          {post.shared_post_id && (
+            post.shared_post
+              ? <SharedPostEmbed post={post.shared_post} />
+              : <div className="border border-zinc-700 rounded-xl px-4 py-3 mt-2 text-zinc-500 text-sm italic">Original post was deleted.</div>
+          )}
+        </div>
+      )}
+
+      {/* Images — edge to edge, no horizontal padding */}
+      {post.images && post.images.length > 0 && (
+        <div className="pb-3">
           <PostImages images={post.images} />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Action bar */}
       <div className="flex items-center gap-1 px-3 py-2 border-t border-zinc-800">

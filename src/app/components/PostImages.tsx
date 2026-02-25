@@ -23,11 +23,11 @@ export default function PostImages({ images }: { images: PostImage[] }) {
 
   return (
     <>
-      <div className={`grid gap-1 mt-3 ${gridClass}`}>
+      <div className={`grid gap-1 ${gridClass}`}>
         {images.slice(0, 4).map((img, i) => (
           <div
             key={img.id}
-            className="relative aspect-square overflow-hidden rounded-lg cursor-pointer bg-zinc-800"
+            className="relative aspect-square overflow-hidden cursor-pointer bg-zinc-800"
             onClick={() => setLightboxIndex(i)}
           >
             <Image

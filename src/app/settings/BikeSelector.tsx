@@ -16,53 +16,29 @@ interface Props {
 const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: CURRENT_YEAR - 1979 }, (_, i) => CURRENT_YEAR - i)
 
+const MAKES_BY_COUNTRY: Record<string, string[]> = {
+  'American':  ['Buell', 'Harley-Davidson', 'Indian', 'Victory', 'Zero'],
+  'British':   ['BSA', 'Norton', 'Triumph'],
+  'German':    ['BMW'],
+  'Italian':   ['Aprilia', 'Ducati', 'Moto Guzzi'],
+  'Japanese':  ['Honda', 'Kawasaki', 'Suzuki', 'Yamaha'],
+}
+
 const selectClass =
   'w-full bg-zinc-900 border border-zinc-600 rounded-md px-2 py-1.5 text-white focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm disabled:opacity-50'
 const inputClass =
   'w-full bg-zinc-900 border border-zinc-600 rounded-md px-2 py-1.5 text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm disabled:opacity-50'
 
-// Shared cache so makes are only fetched once per page load
-let makesCache: string[] | null = null
-let makesFetch: Promise<string[]> | null = null
-
-async function fetchMakes(): Promise<string[]> {
-  if (makesCache) return makesCache
-  if (!makesFetch) {
-    makesFetch = fetch(
-      'https://vpic.nhtsa.dot.gov/api/vehicles/GetMakesForVehicleType/Motorcycle?format=json'
-    )
-      .then((r) => r.json())
-      .then((data) => {
-        const names: string[] = data.Results.map((r: { MakeName: string }) => r.MakeName).sort()
-        makesCache = names
-        return names
-      })
-  }
-  return makesFetch
-}
+const ALL_MAKES = Object.values(MAKES_BY_COUNTRY).flat()
 
 export default function BikeSelector({ value, onChange }: Props) {
-  const [makes, setMakes] = useState<string[]>(makesCache ?? [])
   const [models, setModels] = useState<string[]>([])
-  const [loadingMakes, setLoadingMakes] = useState(!makesCache)
   const [loadingModels, setLoadingModels] = useState(false)
+  const isOtherMake = !!value.make && !ALL_MAKES.includes(value.make)
 
-  // Fetch motorcycle makes once
+  // Fetch models whenever year + make change (skip for "Other")
   useEffect(() => {
-    if (makesCache) {
-      setMakes(makesCache)
-      return
-    }
-    setLoadingMakes(true)
-    fetchMakes()
-      .then(setMakes)
-      .catch(() => {})
-      .finally(() => setLoadingMakes(false))
-  }, [])
-
-  // Fetch models whenever year + make change
-  useEffect(() => {
-    if (!value.year || !value.make) {
+    if (!value.year || !value.make || isOtherMake) {
       setModels([])
       return
     }
@@ -78,48 +54,71 @@ export default function BikeSelector({ value, onChange }: Props) {
       })
       .catch(() => setModels([]))
       .finally(() => setLoadingModels(false))
-  }, [value.year, value.make])
+  }, [value.year, value.make, isOtherMake])
 
   function setYear(year: string) {
     onChange({ year, make: value.make, model: '' })
   }
 
-  function setMake(make: string) {
-    onChange({ year: value.year, make, model: '' })
+  function handleMakeSelect(selected: string) {
+    if (selected === '__other__') {
+      onChange({ year: value.year, make: '', model: '' })
+    } else {
+      onChange({ year: value.year, make: selected, model: '' })
+    }
   }
 
   function setModel(model: string) {
     onChange({ ...value, model })
   }
 
+  // The select value when "Other" is active
+  const makeSelectValue = isOtherMake ? '__other__' : value.make
+
   return (
-    <div className="grid grid-cols-3 gap-2">
-      {/* Year */}
-      <select value={value.year} onChange={(e) => setYear(e.target.value)} className={selectClass}>
-        <option value="">Year</option>
-        {YEARS.map((y) => (
-          <option key={y} value={String(y)}>
-            {y}
-          </option>
-        ))}
-      </select>
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        {/* Year */}
+        <select value={value.year} onChange={(e) => setYear(e.target.value)} className={selectClass}>
+          <option value="">Year</option>
+          {YEARS.map((y) => (
+            <option key={y} value={String(y)}>{y}</option>
+          ))}
+        </select>
 
-      {/* Make */}
-      <select
-        value={value.make}
-        onChange={(e) => setMake(e.target.value)}
-        disabled={loadingMakes}
-        className={selectClass}
-      >
-        <option value="">{loadingMakes ? 'Loading…' : 'Make'}</option>
-        {makes.map((m) => (
-          <option key={m} value={m}>
-            {m}
-          </option>
-        ))}
-      </select>
+        {/* Make */}
+        <select
+          value={makeSelectValue}
+          onChange={(e) => handleMakeSelect(e.target.value)}
+          className={selectClass}
+        >
+          <option value="">Make</option>
+          {Object.entries(MAKES_BY_COUNTRY).map(([country, makes]) => (
+            <optgroup key={country} label={country}>
+              {makes.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </optgroup>
+          ))}
+          <optgroup label="──────────">
+            <option value="__other__">Other…</option>
+          </optgroup>
+        </select>
+      </div>
 
-      {/* Model — dropdown if NHTSA has data, text input fallback for older bikes */}
+      {/* Other make text input */}
+      {isOtherMake || makeSelectValue === '__other__' ? (
+        <input
+          type="text"
+          value={isOtherMake ? value.make : ''}
+          onChange={(e) => onChange({ year: value.year, make: e.target.value, model: '' })}
+          placeholder="Enter make"
+          autoFocus
+          className={inputClass}
+        />
+      ) : null}
+
+      {/* Model */}
       {models.length > 0 ? (
         <select
           value={value.model}
@@ -129,9 +128,7 @@ export default function BikeSelector({ value, onChange }: Props) {
         >
           <option value="">Model</option>
           {models.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
+            <option key={m} value={m}>{m}</option>
           ))}
         </select>
       ) : (
@@ -139,7 +136,7 @@ export default function BikeSelector({ value, onChange }: Props) {
           type="text"
           value={value.model}
           onChange={(e) => setModel(e.target.value)}
-          placeholder={loadingModels ? 'Loading…' : 'Model'}
+          placeholder={loadingModels ? 'Loading models…' : 'Model'}
           disabled={loadingModels}
           className={inputClass}
         />

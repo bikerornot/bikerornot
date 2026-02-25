@@ -205,7 +205,7 @@ export async function getContentReports(
     group.report_count++
     group.report_ids.push(r.id)
     if (!group.reasons.includes(r.reason)) group.reasons.push(r.reason)
-    const reporter = r.reporter as { username: string | null } | null
+    const reporter = r.reporter as unknown as { username: string | null } | null
     if (reporter) group.reporters.push(reporter)
     if (r.created_at < group.first_reported_at) group.first_reported_at = r.created_at
     if (r.created_at > group.latest_reported_at) group.latest_reported_at = r.created_at

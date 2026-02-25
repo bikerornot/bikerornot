@@ -253,7 +253,7 @@ export default function PeopleSearch({ defaultZip }: { defaultZip: string }) {
       <form onSubmit={handleSearch} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
-            <label className="block text-xs font-medium text-zinc-400 mb-1">Zip code</label>
+            <label className="block text-sm font-medium text-zinc-400 mb-1">Zip code</label>
             <input
               type="text"
               value={zip}
@@ -264,7 +264,7 @@ export default function PeopleSearch({ defaultZip }: { defaultZip: string }) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-1">Radius</label>
+            <label className="block text-sm font-medium text-zinc-400 mb-1">Radius</label>
             <select
               value={radius}
               onChange={(e) => setRadius(Number(e.target.value))}

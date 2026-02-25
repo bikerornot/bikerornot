@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { uploadCoverPhoto } from './actions'
+import { compressImage } from '@/lib/compress'
 
 export default function CoverPhotoUpload({ userId }: { userId: string }) {
   const [uploading, setUploading] = useState(false)
@@ -14,17 +15,13 @@ export default function CoverPhotoUpload({ userId }: { userId: string }) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (file.size > 10 * 1024 * 1024) {
-      setError('Cover image must be under 10 MB')
-      return
-    }
-
     setUploading(true)
     setError(null)
 
     try {
+      const compressed = await compressImage(file, 1, 1920)
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', compressed)
       await uploadCoverPhoto(formData)
       router.refresh()
     } catch (err: unknown) {

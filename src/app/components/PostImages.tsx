@@ -5,29 +5,12 @@ import Image from 'next/image'
 import { getImageUrl } from '@/lib/supabase/image'
 import { PostImage } from '@/lib/supabase/types'
 
-interface ImageDimensions {
-  width: number
-  height: number
-}
-
 export default function PostImages({ images }: { images: PostImage[] }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
-  const [dimensions, setDimensions] = useState<(ImageDimensions | null)[]>(
-    () => Array(images.length).fill(null)
-  )
 
   if (images.length === 0) return null
 
   const urls = images.map((img) => getImageUrl('posts', img.storage_path))
-
-  function handleLoad(i: number, e: React.SyntheticEvent<HTMLImageElement>) {
-    const { naturalWidth, naturalHeight } = e.currentTarget
-    setDimensions((prev) => {
-      const next = [...prev]
-      next[i] = { width: naturalWidth, height: naturalHeight }
-      return next
-    })
-  }
 
   const gridClass =
     images.length === 1
@@ -42,23 +25,30 @@ export default function PostImages({ images }: { images: PostImage[] }) {
     <>
       <div className={`grid gap-1 ${gridClass}`}>
         {images.slice(0, 4).map((img, i) => {
-          const dim = dimensions[i]
-
-          // Single image: natural aspect ratio, no cropping, no bars
-          // Multi-image grid: fixed square cells for uniform grid appearance
           const singleImage = images.length === 1
+
+          if (singleImage) {
+            return (
+              <div
+                key={img.id}
+                className="bg-zinc-800 flex justify-center items-center w-full overflow-hidden cursor-pointer"
+                onClick={() => setLightboxIndex(i)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={urls[i]}
+                  alt="Image 1"
+                  className="max-h-[600px] max-w-full w-auto h-auto hover:opacity-90 transition-opacity"
+                />
+              </div>
+            )
+          }
 
           return (
             <div
               key={img.id}
               className="relative overflow-hidden cursor-pointer bg-zinc-800"
-              style={
-                singleImage && dim
-                  ? { aspectRatio: `${dim.width} / ${dim.height}` }
-                  : singleImage
-                    ? { aspectRatio: '4 / 5' } // placeholder until loaded
-                    : { aspectRatio: '1 / 1' }  // square cells for grid
-              }
+              style={{ aspectRatio: '1 / 1' }}
               onClick={() => setLightboxIndex(i)}
             >
               <Image
@@ -66,7 +56,6 @@ export default function PostImages({ images }: { images: PostImage[] }) {
                 alt={`Image ${i + 1}`}
                 fill
                 className="object-cover hover:opacity-90 transition-opacity"
-                onLoad={(e) => handleLoad(i, e)}
               />
               {i === 3 && images.length > 4 && (
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-xl font-bold">

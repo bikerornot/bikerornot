@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Profile } from '@/lib/supabase/types'
 import { getImageUrl } from '@/lib/supabase/image'
 import { createPost } from '@/app/actions/posts'
+import { compressImage } from '@/lib/compress'
 
 interface Props {
   currentUserProfile: Profile
@@ -18,6 +19,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [compressing, setCompressing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -26,21 +28,27 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
     : null
   const displayName = currentUserProfile.username ?? 'Unknown'
 
-  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
+    e.target.value = ''
     if (images.length + files.length > 4) {
       setError('Maximum 4 images per post')
-      e.target.value = ''
       return
     }
-    const validFiles = files.filter((f) => f.size <= 10 * 1024 * 1024)
-    if (validFiles.length < files.length) setError('Some images exceed the 10 MB limit')
 
-    setImages((prev) => [...prev, ...validFiles])
-    validFiles.forEach((file) => {
-      setImagePreviews((prev) => [...prev, URL.createObjectURL(file)])
-    })
-    e.target.value = ''
+    setCompressing(true)
+    setError(null)
+    try {
+      const compressed = await Promise.all(files.map((f) => compressImage(f)))
+      setImages((prev) => [...prev, ...compressed])
+      compressed.forEach((file) => {
+        setImagePreviews((prev) => [...prev, URL.createObjectURL(file)])
+      })
+    } catch {
+      setError('Failed to process images')
+    } finally {
+      setCompressing(false)
+    }
   }
 
   function removeImage(index: number) {
@@ -134,6 +142,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
               </div>
             )}
 
+            {compressing && <p className="text-zinc-400 text-xs mt-2">Compressing images…</p>}
             {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
 
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-800">
@@ -164,7 +173,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
 
               <button
                 type="submit"
-                disabled={(!content.trim() && images.length === 0) || submitting}
+                disabled={(!content.trim() && images.length === 0) || submitting || compressing}
                 className="bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors"
               >
                 {submitting ? 'Posting…' : 'Post'}

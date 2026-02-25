@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { uploadProfilePhoto } from './actions'
+import { compressImage } from '@/lib/compress'
 
 export default function ProfilePhotoUpload({ userId }: { userId: string }) {
   const [uploading, setUploading] = useState(false)
@@ -14,17 +15,13 @@ export default function ProfilePhotoUpload({ userId }: { userId: string }) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be under 5 MB')
-      return
-    }
-
     setUploading(true)
     setError(null)
 
     try {
+      const compressed = await compressImage(file, 0.5, 800)
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', compressed)
       const result = await uploadProfilePhoto(formData)
       if (result?.error) {
         setError(result.error)

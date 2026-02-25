@@ -84,7 +84,7 @@ export default function FriendButton({ profileId, initialStatus }: Props) {
         disabled={loading}
         className="bg-green-500/20 hover:bg-green-500/30 disabled:opacity-50 text-green-400 text-sm font-semibold px-4 py-2 rounded-lg transition-colors border border-green-500/40"
       >
-        Friends ✓
+        Friends
       </button>
     )
   }

@@ -59,20 +59,20 @@ export async function moderateImage(
 
   // ── Hard rejections ───────────────────────────────────────────────────────
   if (
-    (nudity.sexual_activity ?? 0) > 0.5 ||
-    (nudity.sexual_display ?? 0) > 0.5 ||
-    (nudity.erotica ?? 0) > 0.65 ||
-    gore > 0.85
+    (nudity.sexual_activity ?? 0) > 0.4 ||
+    (nudity.sexual_display ?? 0) > 0.4 ||
+    (nudity.erotica ?? 0) > 0.4 ||
+    (nudity.very_suggestive ?? 0) > 0.5 ||
+    gore > 0.75
   ) {
     return 'rejected'
   }
 
   // ── Flag for human review (borderline) ───────────────────────────────────
   if (
-    (nudity.very_suggestive ?? 0) > 0.6 ||
-    (nudity.suggestive ?? 0) > 0.75 ||
-    gore > 0.5 ||
-    weapon > 0.85
+    (nudity.suggestive ?? 0) > 0.6 ||
+    gore > 0.4 ||
+    weapon > 0.75
   ) {
     return 'pending'
   }

@@ -214,7 +214,7 @@ export default async function ProfilePage({
                     reportType="profile"
                     reportTargetId={profile.id}
                     blockUserId={profile.id}
-                    buttonClassName="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors border border-zinc-700"
+                    buttonClassName="bg-white/10 hover:bg-white/20 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors border border-white/20"
                   />
                 )}
               </>

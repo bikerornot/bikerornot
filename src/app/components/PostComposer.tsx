@@ -140,7 +140,11 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
                     className="text-zinc-400 hover:text-orange-400 transition-colors p-1.5 rounded-lg hover:bg-zinc-800"
                     title="Add photos (max 4)"
                   >
-                    📷
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
                   </button>
                 )}
                 <input

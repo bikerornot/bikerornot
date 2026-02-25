@@ -216,7 +216,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile }: Pr
 
       {/* Images — edge to edge, no horizontal padding */}
       {post.images && post.images.length > 0 && (
-        <div className="pb-3">
+        <div>
           <PostImages images={post.images} />
         </div>
       )}

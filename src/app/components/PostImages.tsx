@@ -5,16 +5,29 @@ import Image from 'next/image'
 import { getImageUrl } from '@/lib/supabase/image'
 import { PostImage } from '@/lib/supabase/types'
 
+interface ImageDimensions {
+  width: number
+  height: number
+}
+
 export default function PostImages({ images }: { images: PostImage[] }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
-  // Track orientation per image: 'landscape' | 'portrait' | null (unknown)
-  const [orientations, setOrientations] = useState<(string | null)[]>(
+  const [dimensions, setDimensions] = useState<(ImageDimensions | null)[]>(
     () => Array(images.length).fill(null)
   )
 
   if (images.length === 0) return null
 
   const urls = images.map((img) => getImageUrl('posts', img.storage_path))
+
+  function handleLoad(i: number, e: React.SyntheticEvent<HTMLImageElement>) {
+    const { naturalWidth, naturalHeight } = e.currentTarget
+    setDimensions((prev) => {
+      const next = [...prev]
+      next[i] = { width: naturalWidth, height: naturalHeight }
+      return next
+    })
+  }
 
   const gridClass =
     images.length === 1
@@ -25,40 +38,34 @@ export default function PostImages({ images }: { images: PostImage[] }) {
           ? 'grid-cols-3'
           : 'grid-cols-2'
 
-  function handleLoad(i: number, e: React.SyntheticEvent<HTMLImageElement>) {
-    const { naturalWidth, naturalHeight } = e.currentTarget
-    const orientation = naturalWidth > naturalHeight ? 'landscape' : 'portrait'
-    setOrientations((prev) => {
-      const next = [...prev]
-      next[i] = orientation
-      return next
-    })
-  }
-
   return (
     <>
       <div className={`grid gap-1 ${gridClass}`}>
         {images.slice(0, 4).map((img, i) => {
-          const orientation = orientations[i]
-          // Multi-image grids always cover. Single images: cover landscape, contain portrait.
-          const objectFit =
-            images.length > 1
-              ? 'object-cover'
-              : orientation === 'landscape'
-                ? 'object-cover'
-                : 'object-contain'
+          const dim = dimensions[i]
+
+          // Single image: natural aspect ratio, no cropping, no bars
+          // Multi-image grid: fixed square cells for uniform grid appearance
+          const singleImage = images.length === 1
 
           return (
             <div
               key={img.id}
-              className="relative aspect-[4/5] overflow-hidden cursor-pointer bg-zinc-800"
+              className="relative overflow-hidden cursor-pointer bg-zinc-800"
+              style={
+                singleImage && dim
+                  ? { aspectRatio: `${dim.width} / ${dim.height}` }
+                  : singleImage
+                    ? { aspectRatio: '4 / 5' } // placeholder until loaded
+                    : { aspectRatio: '1 / 1' }  // square cells for grid
+              }
               onClick={() => setLightboxIndex(i)}
             >
               <Image
                 src={urls[i]}
                 alt={`Image ${i + 1}`}
                 fill
-                className={`${objectFit} hover:opacity-90 transition-opacity`}
+                className="object-cover hover:opacity-90 transition-opacity"
                 onLoad={(e) => handleLoad(i, e)}
               />
               {i === 3 && images.length > 4 && (

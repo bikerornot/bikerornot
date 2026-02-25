@@ -7,6 +7,10 @@ import { PostImage } from '@/lib/supabase/types'
 
 export default function PostImages({ images }: { images: PostImage[] }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  // Track orientation per image: 'landscape' | 'portrait' | null (unknown)
+  const [orientations, setOrientations] = useState<(string | null)[]>(
+    () => Array(images.length).fill(null)
+  )
 
   if (images.length === 0) return null
 
@@ -21,28 +25,50 @@ export default function PostImages({ images }: { images: PostImage[] }) {
           ? 'grid-cols-3'
           : 'grid-cols-2'
 
+  function handleLoad(i: number, e: React.SyntheticEvent<HTMLImageElement>) {
+    const { naturalWidth, naturalHeight } = e.currentTarget
+    const orientation = naturalWidth > naturalHeight ? 'landscape' : 'portrait'
+    setOrientations((prev) => {
+      const next = [...prev]
+      next[i] = orientation
+      return next
+    })
+  }
+
   return (
     <>
       <div className={`grid gap-1 ${gridClass}`}>
-        {images.slice(0, 4).map((img, i) => (
-          <div
-            key={img.id}
-            className="relative aspect-[4/5] overflow-hidden cursor-pointer bg-zinc-800"
-            onClick={() => setLightboxIndex(i)}
-          >
-            <Image
-              src={urls[i]}
-              alt={`Image ${i + 1}`}
-              fill
-              className={`${images.length === 1 ? 'object-contain' : 'object-cover'} hover:opacity-90 transition-opacity`}
-            />
-            {i === 3 && images.length > 4 && (
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-xl font-bold">
-                +{images.length - 4}
-              </div>
-            )}
-          </div>
-        ))}
+        {images.slice(0, 4).map((img, i) => {
+          const orientation = orientations[i]
+          // Multi-image grids always cover. Single images: cover landscape, contain portrait.
+          const objectFit =
+            images.length > 1
+              ? 'object-cover'
+              : orientation === 'landscape'
+                ? 'object-cover'
+                : 'object-contain'
+
+          return (
+            <div
+              key={img.id}
+              className="relative aspect-[4/5] overflow-hidden cursor-pointer bg-zinc-800"
+              onClick={() => setLightboxIndex(i)}
+            >
+              <Image
+                src={urls[i]}
+                alt={`Image ${i + 1}`}
+                fill
+                className={`${objectFit} hover:opacity-90 transition-opacity`}
+                onLoad={(e) => handleLoad(i, e)}
+              />
+              {i === 3 && images.length > 4 && (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-xl font-bold">
+                  +{images.length - 4}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {lightboxIndex !== null && (

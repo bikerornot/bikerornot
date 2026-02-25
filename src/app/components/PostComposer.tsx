@@ -174,7 +174,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
               <button
                 type="submit"
                 disabled={(!content.trim() && images.length === 0) || submitting || compressing}
-                className="bg-orange-500 hover:bg-orange-600 disabled:opacity-30 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors"
+                className="bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors"
               >
                 {submitting ? 'Posting…' : 'Post'}
               </button>

@@ -72,19 +72,23 @@ function SharedPostEmbed({ post }: { post: Omit<Post, 'shared_post'> }) {
         </Link>
         <span className="text-zinc-500 text-xs">· {formatTimeAgo(post.created_at)}</span>
       </div>
-      <div className="px-3 py-2 bg-zinc-800/30">
-        {post.content && (
+      {post.content && (
+        <div className="px-3 py-2 bg-zinc-800/30">
           <p className="text-zinc-200 text-sm leading-relaxed whitespace-pre-wrap">
             {renderWithLinks(post.content)}
           </p>
-        )}
-        {post.images && post.images.length > 0 && (
+        </div>
+      )}
+      {post.images && post.images.length > 0 && (
+        <div className="bg-zinc-800/30">
           <PostImages images={post.images} />
-        )}
-        {!post.content && (!post.images || post.images.length === 0) && (
+        </div>
+      )}
+      {!post.content && (!post.images || post.images.length === 0) && (
+        <div className="px-3 py-2 bg-zinc-800/30">
           <p className="text-zinc-500 text-sm italic">No content</p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

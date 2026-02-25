@@ -27,14 +27,14 @@ export default function PostImages({ images }: { images: PostImage[] }) {
         {images.slice(0, 4).map((img, i) => (
           <div
             key={img.id}
-            className="relative aspect-square overflow-hidden cursor-pointer bg-zinc-800"
+            className="relative aspect-[4/5] overflow-hidden cursor-pointer bg-zinc-800"
             onClick={() => setLightboxIndex(i)}
           >
             <Image
               src={urls[i]}
               alt={`Image ${i + 1}`}
               fill
-              className="object-cover hover:opacity-90 transition-opacity"
+              className={`${images.length === 1 ? 'object-contain' : 'object-cover'} hover:opacity-90 transition-opacity`}
             />
             {i === 3 && images.length > 4 && (
               <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-xl font-bold">

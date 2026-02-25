@@ -142,7 +142,7 @@ function UserCard({
           </span>
         </div>
 
-        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-sm text-zinc-400">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-base text-zinc-400">
           {(profile.city || profile.state) && (
             <span>📍 {[profile.city, profile.state].filter(Boolean).join(', ')}</span>
           )}
@@ -186,7 +186,7 @@ function FilterCheckbox({
   onChange: () => void
 }) {
   return (
-    <label className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors text-sm ${
+    <label className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors text-base ${
       checked ? 'border-orange-500 bg-orange-500/10 text-white' : 'border-zinc-700 bg-zinc-800 text-zinc-400 hover:border-zinc-500'
     }`}>
       <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
@@ -260,7 +260,7 @@ export default function PeopleSearch({ defaultZip }: { defaultZip: string }) {
               onChange={(e) => setZip(e.target.value)}
               placeholder="e.g. 90210"
               maxLength={10}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
             />
           </div>
           <div>
@@ -268,7 +268,7 @@ export default function PeopleSearch({ defaultZip }: { defaultZip: string }) {
             <select
               value={radius}
               onChange={(e) => setRadius(Number(e.target.value))}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
             >
               {RADIUS_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -281,7 +281,7 @@ export default function PeopleSearch({ defaultZip }: { defaultZip: string }) {
             <button
               type="submit"
               disabled={searching || !zip.trim()}
-              className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-6 py-2 rounded-lg transition-colors text-sm"
+              className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-6 py-2 rounded-lg transition-colors text-base"
             >
               {searching ? 'Searching…' : 'Search'}
             </button>
@@ -350,7 +350,7 @@ export default function PeopleSearch({ defaultZip }: { defaultZip: string }) {
 
       {/* Error */}
       {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm mb-4">
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-base mb-4">
           {error}
         </div>
       )}
@@ -358,7 +358,7 @@ export default function PeopleSearch({ defaultZip }: { defaultZip: string }) {
       {/* Results */}
       {results !== null && (
         <>
-          <p className="text-zinc-500 text-sm mb-4">
+          <p className="text-zinc-500 text-base mb-4">
             {results.length === 0
               ? `No riders found within ${radius} miles of ${zip}.`
               : `${results.length} rider${results.length === 1 ? '' : 's'} found within ${radius} miles`}
@@ -379,7 +379,7 @@ export default function PeopleSearch({ defaultZip }: { defaultZip: string }) {
       {results === null && !error && !searching && (
         <div className="text-center py-16 text-zinc-600">
           <p className="text-4xl mb-3">🏍️</p>
-          <p className="text-sm">Enter a zip code to find riders near you</p>
+          <p className="text-base">Enter a zip code to find riders near you</p>
         </div>
       )}
     </div>

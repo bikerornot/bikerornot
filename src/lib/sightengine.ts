@@ -21,12 +21,7 @@ export async function moderateImage(
   const apiSecret = process.env.SIGHTENGINE_API_SECRET
 
   // Not configured — fall through to human review
-  if (!apiUser || !apiSecret) {
-    console.log('[Sightengine] env vars not set — skipping moderation')
-    return 'pending'
-  }
-
-  console.log('[Sightengine] calling API...')
+  if (!apiUser || !apiSecret) return 'pending'
 
   const form = new FormData()
   form.append('media', new Blob([bytes], { type: contentType }), 'image')
@@ -41,17 +36,12 @@ export async function moderateImage(
       body: form,
     })
     data = await res.json()
-    console.log('[Sightengine] response:', JSON.stringify(data))
-  } catch (err) {
+  } catch {
     // Network / parse error — fail open, send to human review
-    console.log('[Sightengine] fetch error:', err)
     return 'pending'
   }
 
-  if (data.status !== 'success') {
-    console.log('[Sightengine] non-success status:', data.status)
-    return 'pending'
-  }
+  if (data.status !== 'success') return 'pending'
 
   const nudityRaw = data.nudity?.raw ?? 0
   const nudityPartial = data.nudity?.partial ?? 0
@@ -76,6 +66,5 @@ export async function moderateImage(
   }
 
   // ── Auto-approve (clean) ──────────────────────────────────────────────────
-  console.log('[Sightengine] result: approved')
   return 'approved'
 }

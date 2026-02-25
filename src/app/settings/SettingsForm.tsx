@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Profile, UserBike, RELATIONSHIP_OPTIONS, GENDER_OPTIONS } from '@/lib/supabase/types'
 import { saveProfileSettings } from './actions'
+import BikeSelector from './BikeSelector'
 
 interface BikeRow {
   id?: string
@@ -224,31 +225,12 @@ export default function SettingsForm({ profile, initialBikes }: Props) {
                   Remove
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="number"
-                  value={bike.year}
-                  onChange={(e) => updateBike(index, 'year', e.target.value)}
-                  placeholder="Year"
-                  min={1900}
-                  max={new Date().getFullYear() + 1}
-                  className="bg-zinc-900 border border-zinc-600 rounded-md px-2 py-1.5 text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm"
-                />
-                <input
-                  type="text"
-                  value={bike.make}
-                  onChange={(e) => updateBike(index, 'make', e.target.value)}
-                  placeholder="Make"
-                  className="bg-zinc-900 border border-zinc-600 rounded-md px-2 py-1.5 text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm"
-                />
-                <input
-                  type="text"
-                  value={bike.model}
-                  onChange={(e) => updateBike(index, 'model', e.target.value)}
-                  placeholder="Model"
-                  className="bg-zinc-900 border border-zinc-600 rounded-md px-2 py-1.5 text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm"
-                />
-              </div>
+              <BikeSelector
+                value={bike}
+                onChange={(val) =>
+                  setBikes((prev) => prev.map((b, i) => (i === index ? { ...b, ...val } : b)))
+                }
+              />
             </div>
           ))}
           <button

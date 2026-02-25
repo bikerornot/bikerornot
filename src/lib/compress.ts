@@ -10,5 +10,5 @@ export async function compressImage(
   maxWidthOrHeight = 1920
 ): Promise<File> {
   if (file.size <= maxSizeMB * 1024 * 1024) return file
-  return imageCompression(file, { maxSizeMB, maxWidthOrHeight, useWebWorker: false })
+  return imageCompression(file, { maxSizeMB, maxWidthOrHeight, useWebWorker: true })
 }

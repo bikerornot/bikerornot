@@ -5,7 +5,7 @@ import { Profile } from '@/lib/supabase/types'
 import WallTab from './WallTab'
 import FriendsTab from './FriendsTab'
 
-const TABS = ['Wall', 'Photos', 'Friends', 'About'] as const
+const TABS = ['Wall', 'Photos', 'Friends'] as const
 type Tab = (typeof TABS)[number]
 
 interface Props {

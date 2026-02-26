@@ -61,18 +61,39 @@ export async function removeContentForDmca(url: string): Promise<RemoveResult> {
     // Session unavailable — still proceed with removal
   }
 
-  const postMatch = url.match(/\/posts\/([0-9a-f-]{36})/i)
+  // Resolve post ID — handles both post page URLs and Supabase storage image URLs
+  async function resolvePostId(): Promise<string | null> {
+    const trimmed = url.trim()
+
+    // Supabase storage URL: /storage/v1/object/public/posts/[user-id]/[post-id]/[file]
+    const storageMatch = trimmed.match(/\/storage\/v1\/object\/public\/posts\/(.+)/)
+    if (storageMatch) {
+      const storagePath = storageMatch[1].trim()
+      const { data: img } = await admin
+        .from('post_images')
+        .select('post_id')
+        .eq('storage_path', storagePath)
+        .single()
+      return img?.post_id ?? null
+    }
+
+    // BikerOrNot post page URL: /posts/[uuid]
+    const postPageMatch = trimmed.match(/\/posts\/([0-9a-f-]{36})(?:[/?#]|$)/i)
+    return postPageMatch?.[1] ?? null
+  }
+
+  const postId = await resolvePostId()
   const profileMatch = url.match(/\/profile\/([a-zA-Z0-9_.-]+)/)
 
-  if (postMatch) {
-    const postId = postMatch[1]
-
+  if (postId) {
     // Get author before deleting so we can notify them
     const { data: post } = await admin
       .from('posts')
       .select('author_id')
       .eq('id', postId)
       .single()
+
+    if (!post) throw new Error(`Post not found: ${postId}`)
 
     const { error } = await admin
       .from('posts')
@@ -81,7 +102,7 @@ export async function removeContentForDmca(url: string): Promise<RemoveResult> {
     if (error) throw new Error(`Failed to remove post: ${error.message}`)
 
     // Notify the post author (non-fatal)
-    if (post?.author_id && actorId && post.author_id !== actorId) {
+    if (post.author_id && actorId && post.author_id !== actorId) {
       admin.from('notifications').insert({
         user_id: post.author_id,
         type: 'dmca_takedown',
@@ -95,7 +116,7 @@ export async function removeContentForDmca(url: string): Promise<RemoveResult> {
       })
     }
 
-    return { type: 'post', id: postId, authorId: post?.author_id ?? '' }
+    return { type: 'post', id: postId, authorId: post.author_id ?? '' }
   }
 
   if (profileMatch) {

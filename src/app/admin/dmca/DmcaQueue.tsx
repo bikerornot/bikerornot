@@ -38,7 +38,10 @@ const CN_STATUS_COLORS: Record<string, string> = {
 
 function parseUrl(url: string): { type: 'post' | 'profile' | 'unknown'; label: string } {
   const trimmed = url.trim()
-  if (/\/posts\/[0-9a-f-]{36}/i.test(trimmed)) return { type: 'post', label: 'Post' }
+  // Supabase storage image URL pointing to a post image
+  if (trimmed.includes('/storage/v1/object/public/posts/')) return { type: 'post', label: 'Post Image' }
+  // BikerOrNot post page URL
+  if (/\/posts\/[0-9a-f-]{36}(?:[/?#]|$)/i.test(trimmed)) return { type: 'post', label: 'Post' }
   if (/\/profile\/[a-zA-Z0-9_.-]+/.test(trimmed)) {
     const match = trimmed.match(/\/profile\/([a-zA-Z0-9_.-]+)/)
     return { type: 'profile', label: `Profile (@${match?.[1] ?? '...'})` }

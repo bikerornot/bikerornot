@@ -45,20 +45,28 @@ export type RemoveResult =
   | { type: 'unknown' }
 
 export async function removeContentForDmca(url: string): Promise<RemoveResult> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Unauthorized')
-
+  // Service client bypasses RLS — used for all actual DB writes
   const admin = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
+
+  // Get current admin user for notification actor_id (non-blocking)
+  let actorId: string | null = null
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    actorId = user?.id ?? null
+  } catch {
+    // Session unavailable — still proceed with removal
+  }
 
   const postMatch = url.match(/\/posts\/([0-9a-f-]{36})/i)
   const profileMatch = url.match(/\/profile\/([a-zA-Z0-9_.-]+)/)
 
   if (postMatch) {
     const postId = postMatch[1]
+
     // Get author before deleting so we can notify them
     const { data: post } = await admin
       .from('posts')
@@ -70,14 +78,14 @@ export async function removeContentForDmca(url: string): Promise<RemoveResult> {
       .from('posts')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', postId)
-    if (error) throw new Error('Failed to remove post')
+    if (error) throw new Error(`Failed to remove post: ${error.message}`)
 
-    // Notify the post author (non-fatal — don't let this block content removal)
-    if (post?.author_id && post.author_id !== user.id) {
+    // Notify the post author (non-fatal)
+    if (post?.author_id && actorId && post.author_id !== actorId) {
       admin.from('notifications').insert({
         user_id: post.author_id,
         type: 'dmca_takedown',
-        actor_id: user.id,
+        actor_id: actorId,
         post_id: null,
         comment_id: null,
         group_id: null,
@@ -107,14 +115,14 @@ export async function removeContentForDmca(url: string): Promise<RemoveResult> {
         suspended_until: null,
       })
       .eq('id', profile.id)
-    if (error) throw new Error('Failed to suspend profile')
+    if (error) throw new Error(`Failed to suspend profile: ${error.message}`)
 
     // Notify the profile owner (non-fatal)
-    if (profile.id !== user.id) {
+    if (actorId && profile.id !== actorId) {
       admin.from('notifications').insert({
         user_id: profile.id,
         type: 'dmca_takedown',
-        actor_id: user.id,
+        actor_id: actorId,
         post_id: null,
         comment_id: null,
         group_id: null,

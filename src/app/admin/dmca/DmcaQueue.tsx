@@ -111,7 +111,11 @@ function UrlRow({ url, noticeId, onRemoved }: {
               : `This will suspend the user's account. You can reinstate them later from the Users panel.`}
             {' '}The notice will automatically be marked as Actioned.
           </p>
-          {error && <p className="text-red-400 text-xs">{error}</p>}
+          {error && (
+            <div className="bg-red-500/20 border border-red-500/40 rounded-lg px-3 py-2">
+              <p className="text-red-300 text-xs font-semibold">Error: {error}</p>
+            </div>
+          )}
           <div className="flex gap-2">
             <button
               onClick={handleRemove}
@@ -246,7 +250,11 @@ function CounterNoticeCard({
             <p className="text-zinc-300 text-xs italic">{cn.electronic_signature}</p>
           </div>
 
-          {error && <p className="text-red-400 text-xs">{error}</p>}
+          {error && (
+            <div className="bg-red-500/20 border border-red-500/40 rounded-lg px-3 py-2">
+              <p className="text-red-300 text-xs font-semibold">Error: {error}</p>
+            </div>
+          )}
 
           {cn.status === 'received' && confirm === null && (
             <div className="flex flex-wrap gap-2 pt-1">

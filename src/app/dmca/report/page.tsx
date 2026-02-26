@@ -50,11 +50,15 @@ export default function DmcaReportPage() {
         <DmcaForm />
       </div>
 
-      <footer className="border-t border-zinc-800 py-6 px-6 text-center mt-12">
-        <p className="text-zinc-600 text-sm">
-          © {new Date().getFullYear()} BikerOrNot.{' '}
-          <Link href="/dmca" className="hover:text-zinc-400 transition-colors">DMCA Policy</Link>
-        </p>
+      <footer className="border-t border-zinc-800 py-8 px-6 mt-16">
+        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-zinc-600">
+          <p>&copy; {new Date().getFullYear()} BikerOrNot.com. All rights reserved.</p>
+          <div className="flex items-center gap-4">
+            <Link href="/privacy" className="hover:text-zinc-400 transition-colors">Privacy Policy</Link>
+            <Link href="/dmca" className="hover:text-zinc-400 transition-colors">DMCA Policy</Link>
+            <Link href="/terms" className="hover:text-zinc-400 transition-colors">Terms of Service</Link>
+          </div>
+        </div>
       </footer>
     </div>
   )

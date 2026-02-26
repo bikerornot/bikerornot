@@ -123,16 +123,15 @@ export default async function HomePage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-zinc-800/60 py-8 px-6 text-center">
-        <p className="text-zinc-600 text-sm">
-          © {new Date().getFullYear()} BikerOrNot. Built for riders, by riders.
-          {' · '}
-          <Link href="/dmca" className="hover:text-zinc-400 transition-colors">DMCA Policy</Link>
-          {' · '}
-          <a href="mailto:dmca@bikerornot.com" className="hover:text-zinc-400 transition-colors">
-            dmca@bikerornot.com
-          </a>
-        </p>
+      <footer className="border-t border-zinc-800/60 py-8 px-6">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-zinc-600">
+          <p>&copy; {new Date().getFullYear()} BikerOrNot. Built for riders, by riders.</p>
+          <div className="flex items-center gap-4">
+            <Link href="/terms" className="hover:text-zinc-400 transition-colors">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-zinc-400 transition-colors">Privacy Policy</Link>
+            <Link href="/dmca" className="hover:text-zinc-400 transition-colors">DMCA Policy</Link>
+          </div>
+        </div>
       </footer>
 
     </div>

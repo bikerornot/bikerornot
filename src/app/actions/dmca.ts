@@ -73,7 +73,7 @@ export async function removeContentForDmca(url: string): Promise<RemoveResult> {
     if (error) throw new Error('Failed to remove post')
 
     // Notify the post author (non-fatal — don't let this block content removal)
-    if (post?.author_id) {
+    if (post?.author_id && post.author_id !== user.id) {
       admin.from('notifications').insert({
         user_id: post.author_id,
         type: 'dmca_takedown',

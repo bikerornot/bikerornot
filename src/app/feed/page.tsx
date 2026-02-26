@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getImageUrl } from '@/lib/supabase/image'
 import FeedClient from './FeedClient'
 import UserMenu from '@/app/components/UserMenu'
@@ -29,6 +30,18 @@ export default async function FeedPage() {
     .single()
 
   if (!profile?.onboarding_complete) redirect('/onboarding')
+
+  // Account deletion in progress — send to cancellation page
+  if (profile.deletion_scheduled_at) redirect('/account/reactivate')
+
+  // Previously deactivated — auto-reactivate now that they've logged back in
+  if (profile.deactivated_at) {
+    const admin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    await admin.from('profiles').update({ deactivated_at: null }).eq('id', user.id)
+  }
 
   // Fetch user's active group IDs for feed filtering
   const { data: groupMemberships } = await supabase

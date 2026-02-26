@@ -53,6 +53,7 @@ export async function findNearbyUsers(
     .select('*')
     .eq('onboarding_complete', true)
     .eq('status', 'active')
+    .is('deactivated_at', null)
     .not('latitude', 'is', null)
     .neq('id', user.id)
 

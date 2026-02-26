@@ -7,9 +7,10 @@ interface Props {
   prefillName?: string
   prefillEmail?: string
   prefillUrl?: string
+  postId?: string
 }
 
-export default function CounterNoticeForm({ prefillName = '', prefillEmail = '', prefillUrl = '' }: Props) {
+export default function CounterNoticeForm({ prefillName = '', prefillEmail = '', prefillUrl = '', postId }: Props) {
   const [form, setForm] = useState({
     fullName: prefillName,
     email: prefillEmail,
@@ -35,7 +36,6 @@ export default function CounterNoticeForm({ prefillName = '', prefillEmail = '',
     form.email.trim() &&
     form.address.trim() &&
     form.removedContentDescription.trim() &&
-    form.originalUrl.trim() &&
     form.goodFaithStatement &&
     form.jurisdictionConsent &&
     signatureMatch
@@ -47,12 +47,13 @@ export default function CounterNoticeForm({ prefillName = '', prefillEmail = '',
     setError(null)
     try {
       await submitCounterNotice({
+        originalNoticeId: undefined,
         fullName: form.fullName.trim(),
         email: form.email.trim(),
         address: form.address.trim(),
         phone: form.phone.trim() || undefined,
         removedContentDescription: form.removedContentDescription.trim(),
-        originalUrl: form.originalUrl.trim(),
+        originalUrl: form.originalUrl.trim() || (postId ? `https://bikerornot.com/posts/${postId}` : 'unknown'),
         goodFaithStatement: form.goodFaithStatement,
         jurisdictionConsent: form.jurisdictionConsent,
         electronicSignature: form.electronicSignature.trim(),
@@ -164,13 +165,17 @@ export default function CounterNoticeForm({ prefillName = '', prefillEmail = '',
 
         <div>
           <label className="block text-zinc-400 text-xs mb-1.5">
-            URL of the removed content *
+            URL of the removed content
+            {prefillUrl ? (
+              <span className="ml-1.5 text-green-400">(auto-filled)</span>
+            ) : (
+              <span className="ml-1.5 text-zinc-500">(optional — leave blank if unknown)</span>
+            )}
           </label>
           <input
             type="text"
             value={form.originalUrl}
             onChange={(e) => set('originalUrl', e.target.value)}
-            required
             className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white text-sm font-mono placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
             placeholder="https://bikerornot.com/posts/..."
           />

@@ -42,7 +42,7 @@ export default async function FeedPage() {
   // Fetch unread DMCA takedown notifications for this user
   const { data: dmcaTakedowns } = await supabase
     .from('notifications')
-    .select('id')
+    .select('id, post_id')
     .eq('user_id', user.id)
     .eq('type', 'dmca_takedown')
     .is('read_at', null)
@@ -100,7 +100,11 @@ export default async function FeedPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         <DmcaBanner
-          takedowns={(dmcaTakedowns ?? []).map((n) => ({ ...n, profile_username: profile.username }))}
+          takedowns={(dmcaTakedowns ?? []).map((n) => ({
+            id: n.id,
+            post_id: n.post_id,
+            profile_username: profile.username,
+          }))}
         />
         <RidersWidget initialRiders={nearbyRiders} friendCount={friendCount} />
         <FeedClient currentUserId={user.id} currentUserProfile={profile} userGroupIds={userGroupIds} />

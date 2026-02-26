@@ -72,9 +72,9 @@ export async function removeContentForDmca(url: string): Promise<RemoveResult> {
       .eq('id', postId)
     if (error) throw new Error('Failed to remove post')
 
-    // Notify the post author
+    // Notify the post author (non-fatal — don't let this block content removal)
     if (post?.author_id) {
-      await admin.from('notifications').insert({
+      admin.from('notifications').insert({
         user_id: post.author_id,
         type: 'dmca_takedown',
         actor_id: user.id,
@@ -82,6 +82,8 @@ export async function removeContentForDmca(url: string): Promise<RemoveResult> {
         comment_id: null,
         group_id: null,
         content_url: url.trim(),
+      }).then(({ error: nErr }) => {
+        if (nErr) console.error('DMCA notification failed:', nErr.message)
       })
     }
 
@@ -107,9 +109,9 @@ export async function removeContentForDmca(url: string): Promise<RemoveResult> {
       .eq('id', profile.id)
     if (error) throw new Error('Failed to suspend profile')
 
-    // Notify the profile owner
+    // Notify the profile owner (non-fatal)
     if (profile.id !== user.id) {
-      await admin.from('notifications').insert({
+      admin.from('notifications').insert({
         user_id: profile.id,
         type: 'dmca_takedown',
         actor_id: user.id,
@@ -117,6 +119,8 @@ export async function removeContentForDmca(url: string): Promise<RemoveResult> {
         comment_id: null,
         group_id: null,
         content_url: url.trim(),
+      }).then(({ error: nErr }) => {
+        if (nErr) console.error('DMCA notification failed:', nErr.message)
       })
     }
 

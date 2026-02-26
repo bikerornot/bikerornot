@@ -125,7 +125,7 @@ export default async function HomePage() {
       {/* ── Footer ── */}
       <footer className="border-t border-zinc-800/60 py-8 px-6">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-zinc-600">
-          <p>&copy; {new Date().getFullYear()} BikerOrNot. Built for riders, by riders.</p>
+          <p>&copy; {new Date().getFullYear()} BikerOrNot. Where the ride never ends.</p>
           <div className="flex items-center gap-4">
             <Link href="/terms" className="hover:text-zinc-400 transition-colors">Terms of Service</Link>
             <Link href="/privacy" className="hover:text-zinc-400 transition-colors">Privacy Policy</Link>

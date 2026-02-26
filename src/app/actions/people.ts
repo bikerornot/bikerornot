@@ -24,7 +24,7 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
 
 export interface NearbyUser {
   profile: Profile
-  distanceMiles: number
+  distanceMiles: number | null
   friendshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'accepted'
 }
 
@@ -108,4 +108,101 @@ export async function findNearbyUsers(
   }))
 
   return { users, error: null }
+}
+
+/**
+ * Default results shown before the user searches.
+ * If the current user has stored coordinates, returns the 10 nearest riders.
+ * Otherwise returns the 10 most recently joined members.
+ */
+export async function getDefaultPeopleResults(): Promise<NearbyUser[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const admin = getServiceClient()
+
+  // Fetch current user's stored coordinates
+  const { data: me } = await admin
+    .from('profiles')
+    .select('latitude, longitude')
+    .eq('id', user.id)
+    .single()
+
+  // Fetch up to 50 eligible profiles, most recently active first
+  const { data: raw } = await admin
+    .from('profiles')
+    .select('*')
+    .eq('onboarding_complete', true)
+    .eq('status', 'active')
+    .is('deactivated_at', null)
+    .neq('id', user.id)
+    .not('last_seen_at', 'is', null)
+    .order('last_seen_at', { ascending: false })
+    .limit(50)
+
+  if (!raw || raw.length === 0) return []
+  const profiles = raw as Profile[]
+
+  // Sort by distance when we have the user's coordinates
+  const distanceMap = new Map<string, number | null>()
+  let sorted: Profile[]
+
+  if (me?.latitude && me?.longitude) {
+    const withCoords = profiles
+      .filter((p) => p.latitude && p.longitude)
+      .map((p) => ({
+        profile: p,
+        distance: Math.round(haversine(me.latitude!, me.longitude!, p.latitude!, p.longitude!) * 10) / 10,
+      }))
+      .sort((a, b) => a.distance - b.distance)
+
+    const top = withCoords.slice(0, 10)
+    sorted = top.map((w) => w.profile)
+    top.forEach((w) => distanceMap.set(w.profile.id, w.distance))
+
+    // Pad with newest if fewer than 10 have coordinates
+    if (sorted.length < 10) {
+      const seen = new Set(sorted.map((p) => p.id))
+      const rest = profiles.filter((p) => !seen.has(p.id)).slice(0, 10 - sorted.length)
+      sorted = [...sorted, ...rest]
+      rest.forEach((p) => distanceMap.set(p.id, null))
+    }
+  } else {
+    sorted = profiles.slice(0, 10)
+    sorted.forEach((p) => distanceMap.set(p.id, null))
+  }
+
+  if (sorted.length === 0) return []
+
+  // Fetch friendship statuses in one query
+  const ids = sorted.map((p) => p.id)
+  const { data: friendships } = await admin
+    .from('friendships')
+    .select('requester_id, addressee_id, status')
+    .or(
+      ids
+        .map((id) =>
+          `and(requester_id.eq.${user.id},addressee_id.eq.${id}),and(requester_id.eq.${id},addressee_id.eq.${user.id})`
+        )
+        .join(',')
+    )
+
+  const friendshipMap = new Map<string, NearbyUser['friendshipStatus']>()
+  for (const f of friendships ?? []) {
+    const otherId = f.requester_id === user.id ? f.addressee_id : f.requester_id
+    if (f.status === 'accepted') {
+      friendshipMap.set(otherId, 'accepted')
+    } else if (f.requester_id === user.id) {
+      friendshipMap.set(otherId, 'pending_sent')
+    } else {
+      friendshipMap.set(otherId, 'pending_received')
+    }
+  }
+
+  return sorted.map((p) => ({
+    profile: p,
+    distanceMiles: distanceMap.get(p.id) ?? null,
+    friendshipStatus: friendshipMap.get(p.id) ?? 'none',
+  }))
 }

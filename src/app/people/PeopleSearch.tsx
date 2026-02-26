@@ -137,9 +137,11 @@ function UserCard({
           >
             @{profile.username}
           </Link>
-          <span className="text-xs text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 flex-shrink-0">
-            {distanceMiles < 1 ? '< 1 mi' : `${distanceMiles} mi`}
-          </span>
+          {distanceMiles !== null && (
+            <span className="text-xs text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 flex-shrink-0">
+              {distanceMiles < 1 ? '< 1 mi' : `${distanceMiles} mi`}
+            </span>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-base text-zinc-400">
@@ -204,15 +206,26 @@ function FilterCheckbox({
   )
 }
 
-export default function PeopleSearch({ defaultZip }: { defaultZip: string }) {
+export default function PeopleSearch({
+  defaultZip,
+  initialResults = [],
+}: {
+  defaultZip: string
+  initialResults?: NearbyUser[]
+}) {
   const [zip, setZip] = useState(defaultZip)
   const [radius, setRadius] = useState(50)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [genderFilter, setGenderFilter] = useState<string[]>([])
   const [relationshipFilter, setRelationshipFilter] = useState<string[]>([])
+  // null = no search run yet (shows defaults); array = search has been run
   const [results, setResults] = useState<NearbyUser[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [searching, startSearch] = useTransition()
+
+  // Derive label for default results
+  const defaultHasDistances = initialResults.some((u) => u.distanceMiles !== null)
+  const defaultLabel = defaultHasDistances ? 'Riders near you' : 'Recently active'
 
   // Local optimistic friendship status updates
   const [statusOverrides, setStatusOverrides] = useState<
@@ -355,7 +368,7 @@ export default function PeopleSearch({ defaultZip }: { defaultZip: string }) {
         </div>
       )}
 
-      {/* Results */}
+      {/* Search results */}
       {results !== null && (
         <>
           <p className="text-zinc-500 text-base mb-4">
@@ -375,8 +388,27 @@ export default function PeopleSearch({ defaultZip }: { defaultZip: string }) {
         </>
       )}
 
-      {/* Initial state */}
-      {results === null && !error && !searching && (
+      {/* Default results — shown before any search is run */}
+      {results === null && !error && !searching && initialResults.length > 0 && (
+        <>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-zinc-400">{defaultLabel}</p>
+            <p className="text-xs text-zinc-600">Search above to find riders near you</p>
+          </div>
+          <div className="space-y-3">
+            {initialResults.map((user) => (
+              <UserCard
+                key={user.profile.id}
+                user={{ ...user, friendshipStatus: statusOverrides[user.profile.id] ?? user.friendshipStatus }}
+                onStatusChange={handleStatusChange}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Truly empty state — no defaults and no search run */}
+      {results === null && !error && !searching && initialResults.length === 0 && (
         <div className="text-center py-16 text-zinc-600">
           <p className="text-4xl mb-3">🏍️</p>
           <p className="text-base">Enter a zip code to find riders near you</p>

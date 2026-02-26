@@ -7,6 +7,7 @@ import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
 import LastSeenTracker from '@/app/components/LastSeenTracker'
 import MessagesLink from '@/app/components/MessagesLink'
+import { getDefaultPeopleResults } from '@/app/actions/people'
 
 export const metadata = { title: 'Find Riders — BikerOrNot' }
 
@@ -23,6 +24,8 @@ export default async function PeoplePage() {
     .single()
 
   if (!profile?.onboarding_complete) redirect('/onboarding')
+
+  const defaultResults = await getDefaultPeopleResults()
 
   const avatarUrl = profile.profile_photo_url
     ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
@@ -67,7 +70,7 @@ export default async function PeoplePage() {
       <div className="max-w-2xl mx-auto px-4 py-6">
         <h1 className="text-2xl font-bold text-white mb-1">Find Riders</h1>
         <p className="text-zinc-500 text-sm mb-6">Discover riders near you and send friend requests</p>
-        <PeopleSearch defaultZip={profile.zip_code ?? ''} />
+        <PeopleSearch defaultZip={profile.zip_code ?? ''} initialResults={defaultResults} />
       </div>
     </div>
   )

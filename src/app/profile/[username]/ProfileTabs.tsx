@@ -1,11 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Profile } from '@/lib/supabase/types'
+import { Profile, UserBike } from '@/lib/supabase/types'
 import WallTab from './WallTab'
 import FriendsTab from './FriendsTab'
+import GarageTab from './GarageTab'
+import PhotosTab from './PhotosTab'
 
-const TABS = ['Wall', 'Photos', 'Friends'] as const
+const TABS = ['Wall', 'Photos', 'Friends', 'Garage'] as const
 type Tab = (typeof TABS)[number]
 
 interface Props {
@@ -14,6 +16,9 @@ interface Props {
   isFriend: boolean
   currentUserId?: string
   currentUserProfile?: Profile | null
+  initialBikes: UserBike[]
+  ownerCounts: Record<string, number>
+  defaultTab?: string
 }
 
 export default function ProfileTabs({
@@ -22,8 +27,13 @@ export default function ProfileTabs({
   isFriend,
   currentUserId,
   currentUserProfile,
+  initialBikes,
+  ownerCounts,
+  defaultTab,
 }: Props) {
-  const [active, setActive] = useState<Tab>('Wall')
+  const resolvedDefault: Tab =
+    TABS.includes(defaultTab as Tab) ? (defaultTab as Tab) : 'Wall'
+  const [active, setActive] = useState<Tab>(resolvedDefault)
 
   return (
     <div>
@@ -53,14 +63,20 @@ export default function ProfileTabs({
         />
       )}
 
+      {active === 'Photos' && (
+        <PhotosTab
+          profileId={profileId}
+          currentUserId={currentUserId}
+          currentUserProfile={currentUserProfile}
+        />
+      )}
+
       {active === 'Friends' && (
         <FriendsTab profileId={profileId} isOwnProfile={isOwnProfile} />
       )}
 
-      {active !== 'Wall' && active !== 'Friends' && (
-        <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-10 text-center">
-          <p className="text-zinc-500 text-sm">{active} coming soon.</p>
-        </div>
+      {active === 'Garage' && (
+        <GarageTab isOwnProfile={isOwnProfile} initialBikes={initialBikes} ownerCounts={ownerCounts} />
       )}
     </div>
   )

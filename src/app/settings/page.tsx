@@ -18,12 +18,6 @@ export default async function SettingsPage() {
     .eq('id', user.id)
     .single()
 
-  const { data: bikes } = await supabase
-    .from('user_bikes')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: true })
-
   return (
     <div className="min-h-screen bg-zinc-950 py-8 px-4">
       <div className="max-w-2xl mx-auto">
@@ -34,7 +28,7 @@ export default async function SettingsPage() {
           </p>
         </div>
         <div className="bg-zinc-900 rounded-2xl border border-zinc-800 p-6">
-          <SettingsForm profile={profile!} initialBikes={bikes ?? []} />
+          <SettingsForm profile={profile!} />
         </div>
       </div>
     </div>

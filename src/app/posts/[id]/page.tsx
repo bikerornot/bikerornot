@@ -1,66 +1,85 @@
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { getImageUrl } from '@/lib/supabase/image'
-import FeedClient from './FeedClient'
+import PostCard from '@/app/components/PostCard'
 import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
 import LastSeenTracker from '@/app/components/LastSeenTracker'
 import MessagesLink from '@/app/components/MessagesLink'
-import RidersWidget from '@/app/components/RidersWidget'
-import DmcaBanner from '@/app/components/DmcaBanner'
-import { getNearbyRiders } from '@/app/actions/suggestions'
+import type { Post } from '@/lib/supabase/types'
 
-export const metadata = { title: 'Feed — BikerOrNot' }
-
-export default async function FeedPage() {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data } = await supabase
+    .from('posts')
+    .select('author:profiles!author_id(username)')
+    .eq('id', id)
+    .single()
+  const username = (data?.author as { username?: string } | null)?.username ?? 'Unknown'
+  return { title: `@${username}'s post — BikerOrNot` }
+}
+
+export default async function PostPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  const { data: currentUserProfile } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  if (!profile?.onboarding_complete) redirect('/onboarding')
+  if (!currentUserProfile?.onboarding_complete) redirect('/onboarding')
 
-  // Fetch user's active group IDs for feed filtering
-  const { data: groupMemberships } = await supabase
-    .from('group_members')
-    .select('group_id')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
+  const { data: post } = await supabase
+    .from('posts')
+    .select('*, author:profiles!author_id(*), images:post_images(*)')
+    .eq('id', id)
+    .is('deleted_at', null)
+    .single()
 
-  const userGroupIds = (groupMemberships ?? []).map((m) => m.group_id)
+  if (!post) notFound()
 
-  // Fetch unread DMCA takedown notifications for this user
-  const { data: dmcaTakedowns } = await supabase
-    .from('notifications')
-    .select('id, content_url')
-    .eq('user_id', user.id)
-    .eq('type', 'dmca_takedown')
-    .is('read_at', null)
+  const [
+    { data: likeCounts },
+    { data: commentCounts },
+    { data: myLikes },
+    sharedResult,
+  ] = await Promise.all([
+    supabase.from('post_likes').select('post_id').eq('post_id', id),
+    supabase.from('comments').select('post_id').eq('post_id', id).is('deleted_at', null),
+    supabase.from('post_likes').select('post_id').eq('post_id', id).eq('user_id', user.id),
+    post.shared_post_id
+      ? supabase
+          .from('posts')
+          .select('*, author:profiles!author_id(*), images:post_images(*)')
+          .eq('id', post.shared_post_id)
+          .single()
+      : Promise.resolve({ data: null }),
+  ])
 
-  // Fetch rider suggestions (only used when friendCount < 15)
-  const { riders: nearbyRiders, friendCount } = await getNearbyRiders()
+  const enrichedPost: Post = {
+    ...post,
+    like_count: likeCounts?.length ?? 0,
+    comment_count: commentCounts?.length ?? 0,
+    is_liked_by_me: (myLikes?.length ?? 0) > 0,
+    shared_post: (sharedResult.data as Post | null) ?? null,
+  }
 
-  const avatarUrl = profile.profile_photo_url
-    ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
+  const authorUsername = (post.author as { username?: string } | null)?.username ?? 'Unknown'
+
+  const avatarUrl = currentUserProfile.profile_photo_url
+    ? getImageUrl('avatars', currentUserProfile.profile_photo_url, undefined, currentUserProfile.updated_at)
     : null
-
-  const displayName =
-    profile.username ?? 'Unknown'
 
   return (
     <div className="min-h-screen bg-zinc-950">
       <LastSeenTracker />
-      {/* Header */}
       <header className="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-40">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/feed" className="text-xl font-bold text-white tracking-tight">
@@ -86,22 +105,35 @@ export default async function FeedPage() {
               <span className="hidden sm:block text-sm">Bikes</span>
             </Link>
             <MessagesLink userId={user.id} />
-            <NotificationBell userId={user.id} username={profile.username!} />
+            <NotificationBell userId={user.id} username={currentUserProfile.username!} />
             <UserMenu
-              username={profile.username!}
-              displayName={displayName}
+              username={currentUserProfile.username!}
+              displayName={currentUserProfile.username ?? 'Unknown'}
               avatarUrl={avatarUrl}
-              firstInitial={(profile.first_name?.[0] ?? '?').toUpperCase()}
-              role={profile.role}
+              firstInitial={(currentUserProfile.first_name?.[0] ?? '?').toUpperCase()}
+              role={currentUserProfile.role}
             />
           </div>
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        <DmcaBanner takedowns={dmcaTakedowns ?? []} />
-        <RidersWidget initialRiders={nearbyRiders} friendCount={friendCount} />
-        <FeedClient currentUserId={user.id} currentUserProfile={profile} userGroupIds={userGroupIds} />
+      <div className="max-w-2xl mx-auto px-4 py-4">
+        <Link
+          href={`/profile/${authorUsername}`}
+          className="inline-flex items-center gap-1.5 text-zinc-400 hover:text-zinc-200 text-sm mb-4 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+          @{authorUsername}
+        </Link>
+
+        <PostCard
+          post={enrichedPost}
+          currentUserId={user.id}
+          currentUserProfile={currentUserProfile}
+          initialShowComments
+        />
       </div>
     </div>
   )

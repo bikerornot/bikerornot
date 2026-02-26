@@ -2,26 +2,17 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Profile, UserBike, RELATIONSHIP_OPTIONS, GENDER_OPTIONS } from '@/lib/supabase/types'
+import { Profile, RELATIONSHIP_OPTIONS, GENDER_OPTIONS } from '@/lib/supabase/types'
 import { saveProfileSettings } from './actions'
-import BikeSelector from './BikeSelector'
-
-interface BikeRow {
-  id?: string
-  year: string
-  make: string
-  model: string
-}
 
 interface Props {
   profile: Profile
-  initialBikes: UserBike[]
 }
 
 const inputClass =
   'w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm'
 
-export default function SettingsForm({ profile, initialBikes }: Props) {
+export default function SettingsForm({ profile }: Props) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -34,31 +25,6 @@ export default function SettingsForm({ profile, initialBikes }: Props) {
   const [relationshipStatus, setRelationshipStatus] = useState(
     profile.relationship_status ?? ''
   )
-  const [bikes, setBikes] = useState<BikeRow[]>(
-    initialBikes.map((b) => ({
-      id: b.id,
-      year: String(b.year ?? ''),
-      make: b.make ?? '',
-      model: b.model ?? '',
-    }))
-  )
-  const [deletedBikeIds, setDeletedBikeIds] = useState<string[]>([])
-
-  function addBike() {
-    setBikes((prev) => [...prev, { year: '', make: '', model: '' }])
-  }
-
-  function removeBike(index: number) {
-    const bike = bikes[index]
-    if (bike.id) setDeletedBikeIds((prev) => [...prev, bike.id!])
-    setBikes((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  function updateBike(index: number, field: 'year' | 'make' | 'model', value: string) {
-    setBikes((prev) =>
-      prev.map((b, i) => (i === index ? { ...b, [field]: value } : b))
-    )
-  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -76,13 +42,9 @@ export default function SettingsForm({ profile, initialBikes }: Props) {
           relationship_status: relationshipStatus || null,
           riding_style: null,
         },
-        bikes
-          .filter((b) => !b.id && b.year.trim() && b.make.trim() && b.model.trim())
-          .map((b) => ({ year: parseInt(b.year), make: b.make.trim(), model: b.model.trim() })),
-        deletedBikeIds
+        [],
+        []
       )
-
-      setDeletedBikeIds([])
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
       router.refresh()
@@ -202,44 +164,6 @@ export default function SettingsForm({ profile, initialBikes }: Props) {
               <span className="text-sm">{opt.label}</span>
             </label>
           ))}
-        </div>
-      </div>
-
-      {/* Bikes */}
-      <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-2">
-          Your garage
-        </label>
-        <div className="space-y-2">
-          {bikes.map((bike, index) => (
-            <div key={index} className="bg-zinc-800 rounded-lg p-3 border border-zinc-700">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-zinc-500 text-xs font-medium uppercase tracking-wider">
-                  Bike {index + 1}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeBike(index)}
-                  className="text-zinc-500 hover:text-red-400 text-xs transition-colors"
-                >
-                  Remove
-                </button>
-              </div>
-              <BikeSelector
-                value={bike}
-                onChange={(val) =>
-                  setBikes((prev) => prev.map((b, i) => (i === index ? { ...b, ...val } : b)))
-                }
-              />
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={addBike}
-            className="text-orange-400 hover:text-orange-300 text-sm font-medium flex items-center gap-1 transition-colors"
-          >
-            + Add a bike
-          </button>
         </div>
       </div>
 

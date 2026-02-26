@@ -6,6 +6,7 @@ import { getImageUrl } from '@/lib/supabase/image'
 import { getGroup, getGroupPosts, getGroupMembers, getPendingRequests } from '@/app/actions/groups'
 import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
+import LastSeenTracker from '@/app/components/LastSeenTracker'
 import MessagesLink from '@/app/components/MessagesLink'
 import JoinButton from './JoinButton'
 import InviteButton from './InviteButton'
@@ -50,6 +51,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
 
   return (
     <div className="min-h-screen bg-zinc-950">
+      <LastSeenTracker />
       {/* Header */}
       <header className="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-40">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">

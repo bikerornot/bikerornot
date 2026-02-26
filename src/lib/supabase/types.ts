@@ -28,6 +28,7 @@ export interface Profile {
   ban_reason: string | null
   created_at: string
   updated_at: string
+  last_seen_at?: string | null
 }
 
 export interface UserBike {
@@ -36,6 +37,7 @@ export interface UserBike {
   year: number | null
   make: string | null
   model: string | null
+  photo_url: string | null
   created_at: string
 }
 
@@ -119,15 +121,36 @@ export interface Comment {
 export interface Notification {
   id: string
   user_id: string
-  type: 'friend_request' | 'friend_accepted' | 'post_like' | 'post_comment' | 'comment_reply' | 'comment_like' | 'group_invite' | 'wall_post'
+  type: 'friend_request' | 'friend_accepted' | 'post_like' | 'post_comment' | 'comment_reply' | 'comment_like' | 'group_invite' | 'wall_post' | 'dmca_takedown'
   actor_id: string
   post_id: string | null
   comment_id: string | null
   group_id: string | null
+  content_url: string | null
   read_at: string | null
   created_at: string
   actor?: Profile
   group?: { id: string; name: string; slug: string } | null
+}
+
+export interface DmcaCounterNotice {
+  id: string
+  original_notice_id: string | null
+  user_id: string | null
+  full_name: string
+  email: string
+  address: string
+  phone: string | null
+  removed_content_description: string
+  original_url: string
+  good_faith_statement: boolean
+  jurisdiction_consent: boolean
+  electronic_signature: string
+  status: 'received' | 'forwarded' | 'restored' | 'dismissed'
+  notes: string | null
+  created_at: string
+  reviewed_at: string | null
+  profile?: Profile | null
 }
 
 export interface Conversation {

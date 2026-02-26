@@ -14,6 +14,7 @@ interface Props {
   post: Post
   currentUserId?: string
   currentUserProfile?: Profile | null
+  initialShowComments?: boolean
 }
 
 const URL_REGEX = /(https?:\/\/[^\s]+)/g
@@ -93,11 +94,11 @@ function SharedPostEmbed({ post }: { post: Omit<Post, 'shared_post'> }) {
   )
 }
 
-export default function PostCard({ post, currentUserId, currentUserProfile }: Props) {
+export default function PostCard({ post, currentUserId, currentUserProfile, initialShowComments }: Props) {
   const [liked, setLiked] = useState(post.is_liked_by_me ?? false)
   const [likeCount, setLikeCount] = useState(post.like_count ?? 0)
   const [commentCount, setCommentCount] = useState(post.comment_count ?? 0)
-  const [showComments, setShowComments] = useState(false)
+  const [showComments, setShowComments] = useState(initialShowComments ?? false)
   const [deleted, setDeleted] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
   const [shareCaption, setShareCaption] = useState('')

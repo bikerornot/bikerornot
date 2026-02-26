@@ -6,7 +6,7 @@ import { markRead } from '@/app/actions/notifications'
 
 interface TakedownNotification {
   id: string
-  content_url: string | null
+  profile_username: string | null
 }
 
 export default function DmcaBanner({
@@ -49,23 +49,29 @@ export default function DmcaBanner({
           {/* Text */}
           <div className="flex-1 min-w-0">
             <p className="text-amber-300 text-sm font-semibold leading-snug">
-              Content removed — copyright complaint
+              One of your posts was removed — copyright complaint
             </p>
             <p className="text-amber-400/80 text-xs mt-0.5 leading-relaxed">
-              A piece of content you posted was removed following a DMCA takedown notice.
-              {' '}If you believe this was a mistake, you have the right to submit a counter-notice.
+              A post was removed from your profile following a DMCA takedown notice.
+              {' '}Visit your profile to see what's missing. If you believe this was
+              a mistake, you have the right to file a counter-notice.
             </p>
-            {n.content_url && (
-              <p className="text-amber-500/60 text-xs mt-1 font-mono truncate">
-                {n.content_url}
-              </p>
-            )}
-            <Link
-              href="/dmca/counter-notice"
-              className="inline-block mt-2 text-xs font-semibold text-amber-300 hover:text-amber-200 underline underline-offset-2 transition-colors"
-            >
-              Learn about your rights &amp; submit a counter-notice →
-            </Link>
+            <div className="flex flex-wrap gap-3 mt-2">
+              {n.profile_username && (
+                <Link
+                  href={`/profile/${n.profile_username}`}
+                  className="text-xs font-semibold text-amber-200 hover:text-white underline underline-offset-2 transition-colors"
+                >
+                  View your profile →
+                </Link>
+              )}
+              <Link
+                href="/dmca/counter-notice"
+                className="text-xs font-semibold text-amber-300 hover:text-amber-200 underline underline-offset-2 transition-colors"
+              >
+                File a counter-notice →
+              </Link>
+            </div>
           </div>
 
           {/* Dismiss */}

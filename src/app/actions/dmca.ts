@@ -107,7 +107,7 @@ export async function removeContentForDmca(url: string): Promise<RemoveResult> {
         user_id: post.author_id,
         type: 'dmca_takedown',
         actor_id: actorId,
-        post_id: null,
+        post_id: postId,
         comment_id: null,
         group_id: null,
         content_url: url.trim(),

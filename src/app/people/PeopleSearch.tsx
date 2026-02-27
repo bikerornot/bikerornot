@@ -264,23 +264,18 @@ export default function PeopleSearch({
     Record<string, NearbyUser['friendshipStatus']>
   >({})
 
-  function toggleFilter(list: string[], setList: (v: string[]) => void, value: string) {
-    setList(list.includes(value) ? list.filter((v) => v !== value) : [...list, value])
-  }
-
   function handleStatusChange(id: string, status: NearbyUser['friendshipStatus']) {
     setStatusOverrides((prev) => ({ ...prev, [id]: status }))
   }
 
   const activeFilterCount = genderFilter.length + relationshipFilter.length
 
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
-    setError(null)
+  function triggerSearch(rawFilters: { gender?: string[]; relationshipStatus?: string[] }) {
     const filters: SearchFilters = {}
-    if (genderFilter.length) filters.gender = genderFilter
-    if (relationshipFilter.length) filters.relationshipStatus = relationshipFilter
+    if (rawFilters.gender?.length) filters.gender = rawFilters.gender
+    if (rawFilters.relationshipStatus?.length) filters.relationshipStatus = rawFilters.relationshipStatus
 
+    setError(null)
     startSearch(async () => {
       let result: { users: NearbyUser[]; error: string | null }
       if (searchMode === 'city') {
@@ -298,6 +293,27 @@ export default function PeopleSearch({
         setStatusOverrides({})
       }
     })
+  }
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    triggerSearch({ gender: genderFilter, relationshipStatus: relationshipFilter })
+  }
+
+  function handleGenderToggle(value: string) {
+    const newList = genderFilter.includes(value)
+      ? genderFilter.filter((v) => v !== value)
+      : [...genderFilter, value]
+    setGenderFilter(newList)
+    if (results !== null) triggerSearch({ gender: newList, relationshipStatus: relationshipFilter })
+  }
+
+  function handleRelationshipToggle(value: string) {
+    const newList = relationshipFilter.includes(value)
+      ? relationshipFilter.filter((v) => v !== value)
+      : [...relationshipFilter, value]
+    setRelationshipFilter(newList)
+    if (results !== null) triggerSearch({ gender: genderFilter, relationshipStatus: newList })
   }
 
   function switchMode(mode: 'zip' | 'city') {
@@ -447,7 +463,7 @@ export default function PeopleSearch({
                       key={f.value}
                       label={f.label}
                       checked={genderFilter.includes(f.value)}
-                      onChange={() => toggleFilter(genderFilter, setGenderFilter, f.value)}
+                      onChange={() => handleGenderToggle(f.value)}
                     />
                   ))}
                 </div>
@@ -461,7 +477,7 @@ export default function PeopleSearch({
                       key={f.value}
                       label={f.label}
                       checked={relationshipFilter.includes(f.value)}
-                      onChange={() => toggleFilter(relationshipFilter, setRelationshipFilter, f.value)}
+                      onChange={() => handleRelationshipToggle(f.value)}
                     />
                   ))}
                 </div>
@@ -470,7 +486,11 @@ export default function PeopleSearch({
               {activeFilterCount > 0 && (
                 <button
                   type="button"
-                  onClick={() => { setGenderFilter([]); setRelationshipFilter([]) }}
+                  onClick={() => {
+                    setGenderFilter([])
+                    setRelationshipFilter([])
+                    if (results !== null) triggerSearch({})
+                  }}
                   className="text-xs text-zinc-500 hover:text-red-400 transition-colors"
                 >
                   Clear filters

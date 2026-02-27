@@ -110,7 +110,7 @@ export async function findUsersByUsername(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { users: [], error: 'Not authenticated' }
 
-  const clean = query.trim().replace(/^@/, '')
+  const clean = query.trim().replace(/^@/, '').replace(/\s+/g, '')
   if (!clean) return { users: [], error: 'Please enter a username to search' }
 
   const admin = getServiceClient()

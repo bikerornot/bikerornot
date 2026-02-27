@@ -21,6 +21,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
   const [hasMore, setHasMore] = useState(true)
   const [newPostCount, setNewPostCount] = useState(0)
   const cursorRef = useRef<string | null>(null)
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   const fetchPosts = useCallback(
     async (cursor?: string): Promise<Post[]> => {
@@ -137,7 +138,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  async function loadMore() {
+  const loadMore = useCallback(async () => {
     if (!hasMore || loadingMore || !cursorRef.current) return
     setLoadingMore(true)
     const data = await fetchPosts(cursorRef.current)
@@ -145,7 +146,19 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
     if (data.length > 0) cursorRef.current = data[data.length - 1].created_at
     setHasMore(data.length === PAGE_SIZE)
     setLoadingMore(false)
-  }
+  }, [hasMore, loadingMore, fetchPosts])
+
+  // Infinite scroll — fire loadMore when sentinel enters the viewport
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMore() },
+      { rootMargin: '300px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [loadMore])
 
   return (
     <div className="space-y-2 sm:space-y-4">
@@ -182,15 +195,18 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
         />
       ))}
 
-      {hasMore && !loading && (
-        <div className="text-center py-2">
-          <button
-            onClick={loadMore}
-            disabled={loadingMore}
-            className="text-orange-400 hover:text-orange-300 disabled:opacity-40 text-sm font-medium transition-colors"
-          >
-            {loadingMore ? 'Loading…' : 'Load more'}
-          </button>
+      {/* Sentinel — IntersectionObserver watches this to trigger next page */}
+      <div ref={sentinelRef} />
+
+      {loadingMore && (
+        <div className="py-6 text-center">
+          <p className="text-zinc-500 text-sm">Loading…</p>
+        </div>
+      )}
+
+      {!hasMore && !loading && posts.length > 0 && (
+        <div className="py-6 text-center">
+          <p className="text-zinc-600 text-xs">You're all caught up</p>
         </div>
       )}
     </div>

@@ -112,8 +112,22 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
             <p className="text-zinc-300 text-sm mt-2">{group.description}</p>
           )}
           {user && (
-            <div className="flex items-center gap-2 mt-3">
-              {isAdmin && <InviteButton groupId={group.id} />}
+            <div className="mt-3 space-y-3">
+              <div className="flex items-center gap-2">
+                {isAdmin && <InviteButton groupId={group.id} />}
+                <JoinButton
+                  groupId={group.id}
+                  privacy={group.privacy}
+                  initialStatus={
+                    group.member_status === 'active'
+                      ? 'active'
+                      : group.member_status === 'pending'
+                      ? 'pending'
+                      : 'none'
+                  }
+                  initialRole={group.member_role ?? null}
+                />
+              </div>
               {isAdmin && (
                 <EditGroupPanel
                   groupId={group.id}
@@ -122,18 +136,6 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
                   currentCoverUrl={coverUrl}
                 />
               )}
-              <JoinButton
-                groupId={group.id}
-                privacy={group.privacy}
-                initialStatus={
-                  group.member_status === 'active'
-                    ? 'active'
-                    : group.member_status === 'pending'
-                    ? 'pending'
-                    : 'none'
-                }
-                initialRole={group.member_role ?? null}
-              />
             </div>
           )}
         </div>

@@ -481,11 +481,11 @@ export default function PeopleSearch({
         )}
 
         {/* Advanced search toggle — location modes only */}
-        <div className={`mt-3 ${searchMode === 'username' ? 'hidden' : ''}`}>
+        <div className={`mt-6 ${searchMode === 'username' ? 'hidden' : ''}`}>
           <button
             type="button"
             onClick={() => setShowAdvanced((v) => !v)}
-            className="text-sm text-zinc-500 hover:text-orange-400 transition-colors flex items-center gap-1"
+            className="text-base text-zinc-500 hover:text-orange-400 transition-colors flex items-center gap-1 py-1"
           >
             <span>{showAdvanced ? '▾' : '▸'}</span>
             Advanced Search

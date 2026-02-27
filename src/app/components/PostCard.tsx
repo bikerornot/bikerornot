@@ -271,7 +271,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
         return (
           <div className="px-4 pb-3 space-y-2">
             {post.content && (
-              <p className="text-zinc-200 text-base leading-relaxed whitespace-pre-wrap">
+              <p className="text-zinc-200 text-lg leading-relaxed whitespace-pre-wrap">
                 {renderWithLinks(post.content, ytVideo?.fullUrl)}
               </p>
             )}

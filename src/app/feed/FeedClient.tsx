@@ -148,7 +148,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 sm:space-y-4">
       <PostComposer currentUserProfile={currentUserProfile} onPostCreated={refresh} />
 
       {newPostCount > 0 && (
@@ -161,13 +161,13 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       )}
 
       {loading && (
-        <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-8 text-center">
+        <div className="bg-zinc-900 sm:rounded-xl sm:border sm:border-zinc-800 p-8 text-center">
           <p className="text-zinc-500 text-sm">Loading…</p>
         </div>
       )}
 
       {!loading && posts.length === 0 && (
-        <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-8 text-center">
+        <div className="bg-zinc-900 sm:rounded-xl sm:border sm:border-zinc-800 p-8 text-center">
           <p className="text-zinc-400 text-sm">No posts yet.</p>
           <p className="text-zinc-600 text-xs mt-1">Be the first to share something!</p>
         </div>

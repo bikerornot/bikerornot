@@ -103,7 +103,7 @@ export default async function FeedPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-6">
+      <div className="max-w-2xl mx-auto sm:px-4 py-6">
         <DmcaBanner
           takedowns={(dmcaTakedowns ?? []).map((n) => ({
             id: n.id,

@@ -211,7 +211,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
   }
 
   return (
-    <div className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden">
+    <div className="bg-zinc-900 sm:rounded-xl sm:border sm:border-zinc-800 overflow-hidden">
       {/* Header */}
       <div className="flex items-start gap-3 p-4">
         <Link href={`/profile/${author?.username}`} className="flex-shrink-0">

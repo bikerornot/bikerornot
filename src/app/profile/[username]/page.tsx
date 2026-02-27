@@ -48,6 +48,32 @@ export default async function ProfilePage({
   } = await supabase.auth.getUser()
   const isOwnProfile = user?.id === profile.id
 
+  // Deactivated accounts are invisible to everyone except their owner
+  if (profile.deactivated_at && !isOwnProfile) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-5">
+            <svg className="w-7 h-7 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+            </svg>
+          </div>
+          <p className="text-zinc-500 text-sm mb-1">@{username}</p>
+          <h1 className="text-white text-xl font-bold mb-3">Account deactivated</h1>
+          <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+            This account has been temporarily deactivated. If the owner logs back in, their profile will be restored.
+          </p>
+          <Link
+            href="/feed"
+            className="inline-block bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors"
+          >
+            Back to feed
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   const { data: currentUserProfile } = user
     ? await supabase.from('profiles').select('*').eq('id', user.id).single()
     : { data: null }

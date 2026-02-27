@@ -114,10 +114,11 @@ export default function FriendsTab({ profileId, isOwnProfile }: Props) {
         f.requester_id === profileId ? f.addressee : f.requester
       ) as Profile[]
 
-      // Deduplicate in case both directions of a friendship exist
+      // Deduplicate and hide deactivated accounts
       const seen = new Set<string>()
       const friendProfiles = rawFriends.filter((p) => {
         if (seen.has(p.id)) return false
+        if (p.deactivated_at) return false
         seen.add(p.id)
         return true
       })

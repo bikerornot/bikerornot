@@ -422,7 +422,7 @@ export default function PeopleSearch({
             <button
               type="button"
               onClick={() => switchMode('city')}
-              className="text-xs text-zinc-500 hover:text-orange-400 transition-colors"
+              className="text-sm text-zinc-500 hover:text-orange-400 transition-colors"
             >
               Don't know the zip? Search by city →
             </button>
@@ -430,7 +430,7 @@ export default function PeopleSearch({
             <button
               type="button"
               onClick={() => switchMode('zip')}
-              className="text-xs text-zinc-500 hover:text-orange-400 transition-colors"
+              className="text-sm text-zinc-500 hover:text-orange-400 transition-colors"
             >
               ← Search by zip code instead
             </button>
@@ -442,7 +442,7 @@ export default function PeopleSearch({
           <button
             type="button"
             onClick={() => setShowAdvanced((v) => !v)}
-            className="text-xs text-zinc-500 hover:text-orange-400 transition-colors flex items-center gap-1"
+            className="text-sm text-zinc-500 hover:text-orange-400 transition-colors flex items-center gap-1"
           >
             <span>{showAdvanced ? '▾' : '▸'}</span>
             Advanced Search

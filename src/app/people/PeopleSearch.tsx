@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { findNearbyUsers, findNearbyUsersByCity, type NearbyUser, type SearchFilters } from '@/app/actions/people'
+import { findNearbyUsers, findNearbyUsersByCity, findUsersByUsername, type NearbyUser, type SearchFilters } from '@/app/actions/people'
 import { sendFriendRequest, cancelFriendRequest, acceptFriendRequest } from '@/app/actions/friends'
 import { getImageUrl } from '@/lib/supabase/image'
 
@@ -241,10 +241,11 @@ export default function PeopleSearch({
   defaultZip: string
   initialResults?: NearbyUser[]
 }) {
-  const [searchMode, setSearchMode] = useState<'zip' | 'city'>('zip')
+  const [searchMode, setSearchMode] = useState<'zip' | 'city' | 'username'>('zip')
   const [zip, setZip] = useState(defaultZip)
   const [city, setCity] = useState('')
   const [stateAbbr, setStateAbbr] = useState('')
+  const [usernameQuery, setUsernameQuery] = useState('')
   const [radius, setRadius] = useState(50)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [genderFilter, setGenderFilter] = useState<string[]>([])
@@ -295,8 +296,27 @@ export default function PeopleSearch({
     })
   }
 
+  function handleUsernameSearch() {
+    setError(null)
+    startSearch(async () => {
+      const result = await findUsersByUsername(usernameQuery)
+      if (result.error) {
+        setError(result.error)
+        setResults(null)
+      } else {
+        setResults(result.users)
+        setSearchLabel(usernameQuery.trim().replace(/^@/, ''))
+        setStatusOverrides({})
+      }
+    })
+  }
+
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
+    if (searchMode === 'username') {
+      handleUsernameSearch()
+      return
+    }
     triggerSearch({ gender: genderFilter, relationshipStatus: relationshipFilter })
   }
 
@@ -316,7 +336,7 @@ export default function PeopleSearch({
     if (results !== null) triggerSearch({ gender: genderFilter, relationshipStatus: newList })
   }
 
-  function switchMode(mode: 'zip' | 'city') {
+  function switchMode(mode: 'zip' | 'city' | 'username') {
     setSearchMode(mode)
     setResults(null)
     setError(null)
@@ -327,6 +347,24 @@ export default function PeopleSearch({
     <div>
       {/* Search form */}
       <form onSubmit={handleSearch} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-6">
+
+        {/* Mode pill selector */}
+        <div className="flex gap-1.5 mb-4">
+          {(['zip', 'city', 'username'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => switchMode(mode)}
+              className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                searchMode === mode
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              {mode === 'zip' ? 'Zip Code' : mode === 'city' ? 'City & State' : 'Username'}
+            </button>
+          ))}
+        </div>
 
         {/* Zip mode */}
         {searchMode === 'zip' && (
@@ -416,29 +454,34 @@ export default function PeopleSearch({
           </div>
         )}
 
-        {/* Mode toggle */}
-        <div className="mt-2.5">
-          {searchMode === 'zip' ? (
-            <button
-              type="button"
-              onClick={() => switchMode('city')}
-              className="text-sm text-zinc-500 hover:text-orange-400 transition-colors"
-            >
-              Don't know the zip? Search by city →
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => switchMode('zip')}
-              className="text-sm text-zinc-500 hover:text-orange-400 transition-colors"
-            >
-              ← Search by zip code instead
-            </button>
-          )}
-        </div>
+        {/* Username mode */}
+        {searchMode === 'username' && (
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-zinc-400 mb-1">Username</label>
+              <input
+                type="text"
+                value={usernameQuery}
+                onChange={(e) => setUsernameQuery(e.target.value)}
+                placeholder="e.g. jakethrottle"
+                maxLength={50}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
+              />
+            </div>
+            <div className="flex items-end">
+              <button
+                type="submit"
+                disabled={searching || !usernameQuery.trim()}
+                className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-6 py-2 rounded-lg transition-colors text-base"
+              >
+                {searching ? 'Searching…' : 'Search'}
+              </button>
+            </div>
+          </div>
+        )}
 
-        {/* Advanced search toggle */}
-        <div className="mt-3">
+        {/* Advanced search toggle — location modes only */}
+        <div className={`mt-3 ${searchMode === 'username' ? 'hidden' : ''}`}>
           <button
             type="button"
             onClick={() => setShowAdvanced((v) => !v)}
@@ -512,7 +555,11 @@ export default function PeopleSearch({
       {results !== null && (
         <>
           <p className="text-zinc-500 text-base mb-4">
-            {results.length === 0
+            {searchMode === 'username'
+              ? results.length === 0
+                ? `No riders found matching "@${searchLabel}".`
+                : `${results.length} rider${results.length === 1 ? '' : 's'} found matching "@${searchLabel}"`
+              : results.length === 0
               ? `No riders found within ${radius} miles of ${searchLabel}.`
               : `${results.length} rider${results.length === 1 ? '' : 's'} found within ${radius} miles of ${searchLabel}`}
           </p>

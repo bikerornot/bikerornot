@@ -103,6 +103,65 @@ async function searchNearCoords(
   }
 }
 
+export async function findUsersByUsername(
+  query: string
+): Promise<{ users: NearbyUser[]; error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { users: [], error: 'Not authenticated' }
+
+  const clean = query.trim().replace(/^@/, '')
+  if (!clean) return { users: [], error: 'Please enter a username to search' }
+
+  const admin = getServiceClient()
+
+  const { data: profiles, error: profilesError } = await admin
+    .from('profiles')
+    .select('*')
+    .ilike('username', `%${clean}%`)
+    .eq('onboarding_complete', true)
+    .eq('status', 'active')
+    .is('deactivated_at', null)
+    .neq('id', user.id)
+    .limit(20)
+
+  if (profilesError) return { users: [], error: profilesError.message }
+  if (!profiles || profiles.length === 0) return { users: [], error: null }
+
+  const ids = (profiles as Profile[]).map((p) => p.id)
+  const { data: friendships } = await admin
+    .from('friendships')
+    .select('requester_id, addressee_id, status')
+    .or(
+      ids
+        .map((id) =>
+          `and(requester_id.eq.${user.id},addressee_id.eq.${id}),and(requester_id.eq.${id},addressee_id.eq.${user.id})`
+        )
+        .join(',')
+    )
+
+  const friendshipMap = new Map<string, NearbyUser['friendshipStatus']>()
+  for (const f of friendships ?? []) {
+    const otherId = f.requester_id === user.id ? f.addressee_id : f.requester_id
+    if (f.status === 'accepted') {
+      friendshipMap.set(otherId, 'accepted')
+    } else if (f.requester_id === user.id) {
+      friendshipMap.set(otherId, 'pending_sent')
+    } else {
+      friendshipMap.set(otherId, 'pending_received')
+    }
+  }
+
+  return {
+    users: (profiles as Profile[]).map((profile) => ({
+      profile,
+      distanceMiles: null,
+      friendshipStatus: friendshipMap.get(profile.id) ?? 'none',
+    })),
+    error: null,
+  }
+}
+
 export async function findNearbyUsers(
   zipCode: string,
   radiusMiles: number,

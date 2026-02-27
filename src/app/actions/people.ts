@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { geocodeZip } from '@/lib/geocode'
+import { geocodeZip, geocodeCity } from '@/lib/geocode'
 import type { Profile } from '@/lib/supabase/types'
 
 function getServiceClient() {
@@ -33,21 +33,15 @@ export interface SearchFilters {
   relationshipStatus?: string[]
 }
 
-export async function findNearbyUsers(
-  zipCode: string,
+/** Shared core: given a lat/lng, find and return nearby users with friendship statuses. */
+async function searchNearCoords(
+  userId: string,
+  coords: { lat: number; lng: number },
   radiusMiles: number,
-  filters: SearchFilters = {}
+  filters: SearchFilters
 ): Promise<{ users: NearbyUser[]; error: string | null }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { users: [], error: 'Not authenticated' }
-
-  const coords = await geocodeZip(zipCode)
-  if (!coords) return { users: [], error: 'Could not find that zip code. Please check and try again.' }
-
   const admin = getServiceClient()
 
-  // Fetch all profiles with coordinates, excluding self
   const { data: profiles, error: profilesError } = await admin
     .from('profiles')
     .select('*')
@@ -55,12 +49,11 @@ export async function findNearbyUsers(
     .eq('status', 'active')
     .is('deactivated_at', null)
     .not('latitude', 'is', null)
-    .neq('id', user.id)
+    .neq('id', userId)
 
   if (profilesError) return { users: [], error: profilesError.message }
   if (!profiles || profiles.length === 0) return { users: [], error: null }
 
-  // Filter by radius, distance, and advanced filters
   const nearby = (profiles as Profile[])
     .filter((p) => {
       if (filters.gender?.length && !filters.gender.includes(p.gender ?? '')) return false
@@ -76,7 +69,6 @@ export async function findNearbyUsers(
 
   if (nearby.length === 0) return { users: [], error: null }
 
-  // Fetch friendship statuses for all nearby users in one query
   const nearbyIds = nearby.map((n) => n.profile.id)
   const { data: friendships } = await admin
     .from('friendships')
@@ -84,30 +76,62 @@ export async function findNearbyUsers(
     .or(
       nearbyIds
         .map((id) =>
-          `and(requester_id.eq.${user.id},addressee_id.eq.${id}),and(requester_id.eq.${id},addressee_id.eq.${user.id})`
+          `and(requester_id.eq.${userId},addressee_id.eq.${id}),and(requester_id.eq.${id},addressee_id.eq.${userId})`
         )
         .join(',')
     )
 
   const friendshipMap = new Map<string, NearbyUser['friendshipStatus']>()
   for (const f of friendships ?? []) {
-    const otherId = f.requester_id === user.id ? f.addressee_id : f.requester_id
+    const otherId = f.requester_id === userId ? f.addressee_id : f.requester_id
     if (f.status === 'accepted') {
       friendshipMap.set(otherId, 'accepted')
-    } else if (f.requester_id === user.id) {
+    } else if (f.requester_id === userId) {
       friendshipMap.set(otherId, 'pending_sent')
     } else {
       friendshipMap.set(otherId, 'pending_received')
     }
   }
 
-  const users: NearbyUser[] = nearby.map(({ profile, distanceMiles }) => ({
-    profile,
-    distanceMiles: Math.round(distanceMiles * 10) / 10,
-    friendshipStatus: friendshipMap.get(profile.id) ?? 'none',
-  }))
+  return {
+    users: nearby.map(({ profile, distanceMiles }) => ({
+      profile,
+      distanceMiles: Math.round(distanceMiles * 10) / 10,
+      friendshipStatus: friendshipMap.get(profile.id) ?? 'none',
+    })),
+    error: null,
+  }
+}
 
-  return { users, error: null }
+export async function findNearbyUsers(
+  zipCode: string,
+  radiusMiles: number,
+  filters: SearchFilters = {}
+): Promise<{ users: NearbyUser[]; error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { users: [], error: 'Not authenticated' }
+
+  const coords = await geocodeZip(zipCode)
+  if (!coords) return { users: [], error: 'Could not find that zip code. Please check and try again.' }
+
+  return searchNearCoords(user.id, coords, radiusMiles, filters)
+}
+
+export async function findNearbyUsersByCity(
+  city: string,
+  stateAbbr: string,
+  radiusMiles: number,
+  filters: SearchFilters = {}
+): Promise<{ users: NearbyUser[]; error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { users: [], error: 'Not authenticated' }
+
+  const coords = await geocodeCity(city, stateAbbr)
+  if (!coords) return { users: [], error: `Could not find "${city}, ${stateAbbr}". Please check the city and state and try again.` }
+
+  return searchNearCoords(user.id, coords, radiusMiles, filters)
 }
 
 /**

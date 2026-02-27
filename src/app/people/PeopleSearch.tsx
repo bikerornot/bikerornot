@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { findNearbyUsers, type NearbyUser, type SearchFilters } from '@/app/actions/people'
+import { findNearbyUsers, findNearbyUsersByCity, type NearbyUser, type SearchFilters } from '@/app/actions/people'
 import { sendFriendRequest, cancelFriendRequest, acceptFriendRequest } from '@/app/actions/friends'
 import { getImageUrl } from '@/lib/supabase/image'
 
@@ -12,6 +12,34 @@ const RADIUS_OPTIONS = [
   { label: '50 mi', value: 50 },
   { label: '100 mi', value: 100 },
   { label: '200 mi', value: 200 },
+]
+
+const US_STATES = [
+  { abbr: 'AL', name: 'Alabama' }, { abbr: 'AK', name: 'Alaska' },
+  { abbr: 'AZ', name: 'Arizona' }, { abbr: 'AR', name: 'Arkansas' },
+  { abbr: 'CA', name: 'California' }, { abbr: 'CO', name: 'Colorado' },
+  { abbr: 'CT', name: 'Connecticut' }, { abbr: 'DE', name: 'Delaware' },
+  { abbr: 'FL', name: 'Florida' }, { abbr: 'GA', name: 'Georgia' },
+  { abbr: 'HI', name: 'Hawaii' }, { abbr: 'ID', name: 'Idaho' },
+  { abbr: 'IL', name: 'Illinois' }, { abbr: 'IN', name: 'Indiana' },
+  { abbr: 'IA', name: 'Iowa' }, { abbr: 'KS', name: 'Kansas' },
+  { abbr: 'KY', name: 'Kentucky' }, { abbr: 'LA', name: 'Louisiana' },
+  { abbr: 'ME', name: 'Maine' }, { abbr: 'MD', name: 'Maryland' },
+  { abbr: 'MA', name: 'Massachusetts' }, { abbr: 'MI', name: 'Michigan' },
+  { abbr: 'MN', name: 'Minnesota' }, { abbr: 'MS', name: 'Mississippi' },
+  { abbr: 'MO', name: 'Missouri' }, { abbr: 'MT', name: 'Montana' },
+  { abbr: 'NE', name: 'Nebraska' }, { abbr: 'NV', name: 'Nevada' },
+  { abbr: 'NH', name: 'New Hampshire' }, { abbr: 'NJ', name: 'New Jersey' },
+  { abbr: 'NM', name: 'New Mexico' }, { abbr: 'NY', name: 'New York' },
+  { abbr: 'NC', name: 'North Carolina' }, { abbr: 'ND', name: 'North Dakota' },
+  { abbr: 'OH', name: 'Ohio' }, { abbr: 'OK', name: 'Oklahoma' },
+  { abbr: 'OR', name: 'Oregon' }, { abbr: 'PA', name: 'Pennsylvania' },
+  { abbr: 'RI', name: 'Rhode Island' }, { abbr: 'SC', name: 'South Carolina' },
+  { abbr: 'SD', name: 'South Dakota' }, { abbr: 'TN', name: 'Tennessee' },
+  { abbr: 'TX', name: 'Texas' }, { abbr: 'UT', name: 'Utah' },
+  { abbr: 'VT', name: 'Vermont' }, { abbr: 'VA', name: 'Virginia' },
+  { abbr: 'WA', name: 'Washington' }, { abbr: 'WV', name: 'West Virginia' },
+  { abbr: 'WI', name: 'Wisconsin' }, { abbr: 'WY', name: 'Wyoming' },
 ]
 
 function Avatar({ profile }: { profile: NearbyUser['profile'] }) {
@@ -213,13 +241,17 @@ export default function PeopleSearch({
   defaultZip: string
   initialResults?: NearbyUser[]
 }) {
+  const [searchMode, setSearchMode] = useState<'zip' | 'city'>('zip')
   const [zip, setZip] = useState(defaultZip)
+  const [city, setCity] = useState('')
+  const [stateAbbr, setStateAbbr] = useState('')
   const [radius, setRadius] = useState(50)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [genderFilter, setGenderFilter] = useState<string[]>([])
   const [relationshipFilter, setRelationshipFilter] = useState<string[]>([])
   // null = no search run yet (shows defaults); array = search has been run
   const [results, setResults] = useState<NearbyUser[] | null>(null)
+  const [searchLabel, setSearchLabel] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [searching, startSearch] = useTransition()
 
@@ -248,57 +280,145 @@ export default function PeopleSearch({
     const filters: SearchFilters = {}
     if (genderFilter.length) filters.gender = genderFilter
     if (relationshipFilter.length) filters.relationshipStatus = relationshipFilter
+
     startSearch(async () => {
-      const { users, error } = await findNearbyUsers(zip.trim(), radius, filters)
-      if (error) {
-        setError(error)
+      let result: { users: NearbyUser[]; error: string | null }
+      if (searchMode === 'city') {
+        result = await findNearbyUsersByCity(city.trim(), stateAbbr, radius, filters)
+        setSearchLabel(`${city.trim()}, ${stateAbbr}`)
+      } else {
+        result = await findNearbyUsers(zip.trim(), radius, filters)
+        setSearchLabel(zip.trim())
+      }
+      if (result.error) {
+        setError(result.error)
         setResults(null)
       } else {
-        setResults(users)
+        setResults(result.users)
         setStatusOverrides({})
       }
     })
+  }
+
+  function switchMode(mode: 'zip' | 'city') {
+    setSearchMode(mode)
+    setResults(null)
+    setError(null)
+    setSearchLabel('')
   }
 
   return (
     <div>
       {/* Search form */}
       <form onSubmit={handleSearch} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-zinc-400 mb-1">Zip code</label>
-            <input
-              type="text"
-              value={zip}
-              onChange={(e) => setZip(e.target.value)}
-              placeholder="e.g. 90210"
-              maxLength={10}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
-            />
+
+        {/* Zip mode */}
+        {searchMode === 'zip' && (
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-zinc-400 mb-1">Zip code</label>
+              <input
+                type="text"
+                value={zip}
+                onChange={(e) => setZip(e.target.value)}
+                placeholder="e.g. 90210"
+                maxLength={10}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-1">Radius</label>
+              <select
+                value={radius}
+                onChange={(e) => setRadius(Number(e.target.value))}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
+              >
+                {RADIUS_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-end">
+              <button
+                type="submit"
+                disabled={searching || !zip.trim()}
+                className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-6 py-2 rounded-lg transition-colors text-base"
+              >
+                {searching ? 'Searching…' : 'Search'}
+              </button>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1">Radius</label>
-            <select
-              value={radius}
-              onChange={(e) => setRadius(Number(e.target.value))}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
-            >
-              {RADIUS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+        )}
+
+        {/* City mode */}
+        {searchMode === 'city' && (
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-zinc-400 mb-1">City</label>
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="e.g. Denver"
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-1">State</label>
+              <select
+                value={stateAbbr}
+                onChange={(e) => setStateAbbr(e.target.value)}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
+              >
+                <option value="">State…</option>
+                {US_STATES.map((s) => (
+                  <option key={s.abbr} value={s.abbr}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-400 mb-1">Radius</label>
+              <select
+                value={radius}
+                onChange={(e) => setRadius(Number(e.target.value))}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
+              >
+                {RADIUS_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-end">
+              <button
+                type="submit"
+                disabled={searching || !city.trim() || !stateAbbr}
+                className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-6 py-2 rounded-lg transition-colors text-base"
+              >
+                {searching ? 'Searching…' : 'Search'}
+              </button>
+            </div>
           </div>
-          <div className="flex items-end">
+        )}
+
+        {/* Mode toggle */}
+        <div className="mt-2.5">
+          {searchMode === 'zip' ? (
             <button
-              type="submit"
-              disabled={searching || !zip.trim()}
-              className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-6 py-2 rounded-lg transition-colors text-base"
+              type="button"
+              onClick={() => switchMode('city')}
+              className="text-xs text-zinc-500 hover:text-orange-400 transition-colors"
             >
-              {searching ? 'Searching…' : 'Search'}
+              Don't know the zip? Search by city →
             </button>
-          </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => switchMode('zip')}
+              className="text-xs text-zinc-500 hover:text-orange-400 transition-colors"
+            >
+              ← Search by zip code instead
+            </button>
+          )}
         </div>
 
         {/* Advanced search toggle */}
@@ -373,8 +493,8 @@ export default function PeopleSearch({
         <>
           <p className="text-zinc-500 text-base mb-4">
             {results.length === 0
-              ? `No riders found within ${radius} miles of ${zip}.`
-              : `${results.length} rider${results.length === 1 ? '' : 's'} found within ${radius} miles`}
+              ? `No riders found within ${radius} miles of ${searchLabel}.`
+              : `${results.length} rider${results.length === 1 ? '' : 's'} found within ${radius} miles of ${searchLabel}`}
           </p>
           <div className="space-y-3">
             {results.map((user) => (

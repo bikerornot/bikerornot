@@ -11,6 +11,14 @@ import CommentSection from './CommentSection'
 import ContentMenu from './ContentMenu'
 import { extractYouTubeId, fetchYouTubeMeta } from '@/lib/youtube'
 
+function getPostTextSize(content: string): string {
+  const len = content.length
+  if (len <= 80)  return 'text-2xl font-bold leading-snug'
+  if (len <= 130) return 'text-xl font-semibold leading-snug'
+  if (len <= 280) return 'text-lg leading-relaxed'
+  return 'text-base leading-relaxed'
+}
+
 interface Props {
   post: Post
   currentUserId?: string
@@ -271,7 +279,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
         return (
           <div className="px-4 pb-3 space-y-2">
             {post.content && (
-              <p className="text-zinc-200 text-base leading-relaxed whitespace-pre-wrap">
+              <p className={`text-zinc-200 whitespace-pre-wrap ${getPostTextSize(post.content)}`}>
                 {renderWithLinks(post.content, ytVideo?.fullUrl)}
               </p>
             )}

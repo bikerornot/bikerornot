@@ -10,6 +10,7 @@ import LastSeenTracker from '@/app/components/LastSeenTracker'
 import MessagesLink from '@/app/components/MessagesLink'
 import JoinButton from './JoinButton'
 import InviteButton from './InviteButton'
+import EditGroupPanel from './EditGroupPanel'
 import GroupTabs from './GroupTabs'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
@@ -113,6 +114,14 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
           {user && (
             <div className="flex items-center gap-2 mt-3">
               {isAdmin && <InviteButton groupId={group.id} />}
+              {isAdmin && (
+                <EditGroupPanel
+                  groupId={group.id}
+                  currentDescription={group.description}
+                  currentPrivacy={group.privacy}
+                  currentCoverUrl={coverUrl}
+                />
+              )}
               <JoinButton
                 groupId={group.id}
                 privacy={group.privacy}

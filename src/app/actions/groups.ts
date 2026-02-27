@@ -458,6 +458,64 @@ export async function getFriendsNotInGroup(groupId: string): Promise<Profile[]> 
   return (profiles ?? []) as Profile[]
 }
 
+export async function updateGroup(
+  groupId: string,
+  updates: {
+    description?: string | null
+    coverFile?: File | null
+    privacy?: 'private'
+  }
+): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const admin = getServiceClient()
+
+  // Verify admin
+  const { data: membership } = await admin
+    .from('group_members')
+    .select('role')
+    .eq('group_id', groupId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (membership?.role !== 'admin') throw new Error('Not authorized')
+
+  // Fetch current group for slug + privacy guard
+  const { data: group } = await admin.from('groups').select('privacy, slug').eq('id', groupId).single()
+  if (!group) throw new Error('Group not found')
+
+  const patch: Record<string, unknown> = {}
+
+  if ('description' in updates) {
+    patch.description = updates.description
+  }
+
+  // Privacy: public → private only
+  if (updates.privacy === 'private' && group.privacy === 'public') {
+    patch.privacy = 'private'
+  }
+
+  // Cover photo upload
+  if (updates.coverFile && updates.coverFile.size > 0) {
+    const ext = updates.coverFile.name.split('.').pop() ?? 'jpg'
+    const path = `groups/${user.id}/${group.slug}.${ext}`
+    const bytes = await updates.coverFile.arrayBuffer()
+    const { error: uploadErr } = await admin.storage
+      .from('covers')
+      .upload(path, bytes, { contentType: updates.coverFile.type, upsert: true })
+    if (uploadErr) throw new Error(uploadErr.message)
+    patch.cover_photo_url = path
+  }
+
+  if (Object.keys(patch).length === 0) return
+
+  patch.updated_at = new Date().toISOString()
+  const { error } = await admin.from('groups').update(patch).eq('id', groupId)
+  if (error) throw new Error(error.message)
+}
+
 export async function inviteFriendsToGroup(groupId: string, userIds: string[]): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

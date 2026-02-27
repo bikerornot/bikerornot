@@ -120,9 +120,8 @@ export async function findUsersByUsername(
     .select('*')
     .ilike('username', `%${clean}%`)
     .eq('onboarding_complete', true)
-    .eq('status', 'active')
     .is('deactivated_at', null)
-    .neq('id', user.id)
+    .not('status', 'in', '("suspended","banned")')
     .limit(20)
 
   if (profilesError) return { users: [], error: profilesError.message }

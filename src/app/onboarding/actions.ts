@@ -8,6 +8,7 @@ import { geocodeZip } from '@/lib/geocode'
 async function getSignupLocation(): Promise<{
   ip: string | null
   country: string | null
+  countryCode: string | null
   region: string | null
 }> {
   const headersList = await headers()
@@ -16,22 +17,27 @@ async function getSignupLocation(): Promise<{
 
   // Skip geo lookup for local/private IPs
   if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
-    return { ip, country: null, region: null }
+    return { ip, country: null, countryCode: null, region: null }
   }
 
   try {
-    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName`, {
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName`, {
       next: { revalidate: 0 },
     })
     const data = await res.json()
     if (data.status === 'success') {
-      return { ip, country: data.country ?? null, region: data.regionName ?? null }
+      return {
+        ip,
+        country: data.country ?? null,
+        countryCode: data.countryCode ?? null,
+        region: data.regionName ?? null,
+      }
     }
   } catch {
     // Geo lookup is best-effort — never block signup
   }
 
-  return { ip, country: null, region: null }
+  return { ip, country: null, countryCode: null, region: null }
 }
 
 function getServiceClient() {
@@ -102,6 +108,10 @@ export async function completeOnboarding(
     geoUpdate.longitude = geo.lng
     geoUpdate.city = geo.city
     geoUpdate.state = geo.state
+    geoUpdate.country = 'US' // zip geocoding only works for US zips
+  } else {
+    // Fall back to IP-detected country code, default US
+    geoUpdate.country = location.countryCode ?? 'US'
   }
 
   geoUpdate.signup_ip = location.ip

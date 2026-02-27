@@ -48,7 +48,7 @@ export async function saveProfileSettings(
   if (geo) {
     await admin
       .from('profiles')
-      .update({ latitude: geo.lat, longitude: geo.lng, city: geo.city, state: geo.state })
+      .update({ latitude: geo.lat, longitude: geo.lng, city: geo.city, state: geo.state, country: 'US' })
       .eq('id', user.id)
   }
 

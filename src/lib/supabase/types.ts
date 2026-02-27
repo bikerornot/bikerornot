@@ -17,6 +17,7 @@ export interface Profile {
   gender: 'male' | 'female' | null
   city: string | null
   state: string | null
+  country: string
   onboarding_complete: boolean
   latitude: number | null
   longitude: number | null

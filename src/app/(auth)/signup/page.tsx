@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
+const MONTHS = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
+]
+const DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
+const MAX_YEAR = new Date().getFullYear() - 18
+const YEARS = Array.from({ length: 83 }, (_, i) => MAX_YEAR - i)
+
 const GENDER_OPTIONS = [
   { value: 'male', label: 'Male' },
   { value: 'female', label: 'Female' },
@@ -46,11 +54,20 @@ export default function SignupPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    dateOfBirth: '',
+    dobMonth: '',
+    dobDay: '',
+    dobYear: '',
     zipCode: '',
     gender: '',
     relationshipStatus: '',
   })
+
+  function getDOB() {
+    if (!form.dobMonth || !form.dobDay || !form.dobYear) return ''
+    const m = String(MONTHS.indexOf(form.dobMonth) + 1).padStart(2, '0')
+    const d = String(form.dobDay).padStart(2, '0')
+    return `${form.dobYear}-${m}-${d}`
+  }
 
   function set(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -76,9 +93,10 @@ export default function SignupPage() {
     if (!form.confirmPassword) errors.confirmPassword = 'Please confirm your password'
     else if (form.password !== form.confirmPassword) errors.confirmPassword = 'Passwords do not match'
 
-    if (!form.dateOfBirth) {
+    const dob = getDOB()
+    if (!dob) {
       errors.dateOfBirth = 'Date of birth is required'
-    } else if (form.dateOfBirth > getMinDOB()) {
+    } else if (dob > getMinDOB()) {
       errors.dateOfBirth = 'You must be at least 18 years old to register'
     }
 
@@ -115,7 +133,7 @@ export default function SignupPage() {
         data: {
           first_name: form.firstName.trim(),
           last_name: form.lastName.trim(),
-          date_of_birth: form.dateOfBirth,
+          date_of_birth: getDOB(),
           zip_code: form.zipCode.trim(),
           gender: form.gender,
           relationship_status: form.relationshipStatus,
@@ -204,30 +222,55 @@ export default function SignupPage() {
           {fieldErrors.confirmPassword && <p className="text-red-400 text-xs mt-1">{fieldErrors.confirmPassword}</p>}
         </div>
 
-        {/* Date of birth + Zip */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Date of birth</label>
-            <input
-              type="date"
-              value={form.dateOfBirth}
-              onChange={(e) => set('dateOfBirth', e.target.value)}
-              max={getMinDOB()}
+        {/* Date of birth */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Date of birth</label>
+          <div className="grid grid-cols-3 gap-2">
+            <select
+              value={form.dobMonth}
+              onChange={(e) => set('dobMonth', e.target.value)}
               className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
-            />
-            {fieldErrors.dateOfBirth && <p className="text-red-400 text-xs mt-1">{fieldErrors.dateOfBirth}</p>}
+            >
+              <option value="">Month</option>
+              {MONTHS.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <select
+              value={form.dobDay}
+              onChange={(e) => set('dobDay', e.target.value)}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+            >
+              <option value="">Day</option>
+              {DAYS.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+            <select
+              value={form.dobYear}
+              onChange={(e) => set('dobYear', e.target.value)}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+            >
+              <option value="">Year</option>
+              {YEARS.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Zip / Postal code</label>
-            <input
-              type="text"
-              value={form.zipCode}
-              onChange={(e) => set('zipCode', e.target.value)}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
-              placeholder="90210"
-            />
-            {fieldErrors.zipCode && <p className="text-red-400 text-xs mt-1">{fieldErrors.zipCode}</p>}
-          </div>
+          {fieldErrors.dateOfBirth && <p className="text-red-400 text-xs mt-1">{fieldErrors.dateOfBirth}</p>}
+        </div>
+
+        {/* Zip code */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Zip / Postal code</label>
+          <input
+            type="text"
+            value={form.zipCode}
+            onChange={(e) => set('zipCode', e.target.value)}
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+            placeholder="90210"
+          />
+          {fieldErrors.zipCode && <p className="text-red-400 text-xs mt-1">{fieldErrors.zipCode}</p>}
         </div>
 
         {/* Gender */}

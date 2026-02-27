@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { Profile } from '@/lib/supabase/types'
 import { getImageUrl } from '@/lib/supabase/image'
 import { createPost } from '@/app/actions/posts'
 import { compressImage } from '@/lib/compress'
+import { extractYouTubeId, fetchYouTubeMeta } from '@/lib/youtube'
 
 interface Props {
   currentUserProfile: Profile
@@ -21,7 +22,27 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
   const [submitting, setSubmitting] = useState(false)
   const [compressing, setCompressing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [ytPreview, setYtPreview] = useState<{ id: string; title: string; channel: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const ytIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const yt = extractYouTubeId(content)
+    if (!yt) {
+      setYtPreview(null)
+      ytIdRef.current = null
+      return
+    }
+    if (yt.id === ytIdRef.current) return
+    ytIdRef.current = yt.id
+    const timer = setTimeout(async () => {
+      const meta = await fetchYouTubeMeta(yt.id)
+      if (meta && yt.id === ytIdRef.current) {
+        setYtPreview({ id: yt.id, ...meta })
+      }
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [content])
 
   const avatarUrl = currentUserProfile.profile_photo_url
     ? getImageUrl('avatars', currentUserProfile.profile_photo_url)
@@ -82,6 +103,8 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
       setImages([])
       imagePreviews.forEach((url) => URL.revokeObjectURL(url))
       setImagePreviews([])
+      setYtPreview(null)
+      ytIdRef.current = null
       onPostCreated?.(result.postId)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create post')
@@ -139,6 +162,36 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
                     </button>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {ytPreview && (
+              <div className="mt-2 rounded-xl overflow-hidden border border-zinc-700">
+                <div className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`https://img.youtube.com/vi/${ytPreview.id}/hqdefault.jpg`}
+                    alt="YouTube preview"
+                    className="w-full object-cover"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+                    <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-lg">
+                      <svg className="w-5 h-5 text-white ml-0.5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-zinc-800 px-3 py-2.5 space-y-0.5">
+                  <p className="flex items-center gap-1.5 text-xs text-zinc-500">
+                    <svg className="w-3.5 h-3.5 text-red-500 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5a3 3 0 0 0-2.1 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.3 3.6-6.3 3.6z" />
+                    </svg>
+                    YouTube
+                  </p>
+                  <p className="text-white text-sm font-medium line-clamp-2">{ytPreview.title}</p>
+                  <p className="text-zinc-400 text-xs">{ytPreview.channel}</p>
+                </div>
               </div>
             )}
 

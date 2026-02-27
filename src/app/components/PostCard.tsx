@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Post, Profile } from '@/lib/supabase/types'
@@ -9,6 +9,7 @@ import { likePost, unlikePost, deletePost, sharePost } from '@/app/actions/posts
 import PostImages from './PostImages'
 import CommentSection from './CommentSection'
 import ContentMenu from './ContentMenu'
+import { extractYouTubeId, fetchYouTubeMeta } from '@/lib/youtube'
 
 interface Props {
   post: Post
@@ -39,56 +40,64 @@ function renderWithLinks(text: string, excludeUrl?: string) {
   })
 }
 
-function extractYouTubeId(text: string): { id: string; fullUrl: string } | null {
-  const patterns = [
-    /https?:\/\/(?:www\.)?youtube\.com\/watch\?[^\s]*v=([a-zA-Z0-9_-]{11})[^\s]*/i,
-    /https?:\/\/(?:www\.)?youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})[^\s]*/i,
-    /https?:\/\/youtu\.be\/([a-zA-Z0-9_-]{11})[^\s]*/i,
-  ]
-  for (const pattern of patterns) {
-    const match = text.match(pattern)
-    if (match) return { id: match[1], fullUrl: match[0] }
-  }
-  return null
-}
+const YT_ICON = (
+  <svg className="w-3.5 h-3.5 text-red-500 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5a3 3 0 0 0-2.1 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.3 3.6-6.3 3.6z" />
+  </svg>
+)
 
 function YouTubeEmbed({ videoId }: { videoId: string }) {
   const [playing, setPlaying] = useState(false)
+  const [meta, setMeta] = useState<{ title: string; channel: string } | null>(null)
 
-  if (playing) {
-    return (
-      <div className="relative w-full rounded-xl overflow-hidden" style={{ paddingBottom: '56.25%' }}>
-        <iframe
-          className="absolute inset-0 w-full h-full"
-          src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      </div>
-    )
-  }
+  useEffect(() => {
+    fetchYouTubeMeta(videoId).then((m) => { if (m) setMeta(m) }).catch(() => {})
+  }, [videoId])
 
   return (
-    <button
-      type="button"
-      onClick={() => setPlaying(true)}
-      className="relative w-full rounded-xl overflow-hidden group block"
-      aria-label="Play YouTube video"
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
-        alt="YouTube video thumbnail"
-        className="w-full object-cover"
-      />
-      <div className="absolute inset-0 flex items-center justify-center bg-black/25 group-hover:bg-black/35 transition-colors">
-        <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center shadow-xl">
-          <svg className="w-7 h-7 text-white ml-1" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8 5v14l11-7z" />
-          </svg>
+    <div className="rounded-xl overflow-hidden border border-zinc-700">
+      {playing ? (
+        <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+          <iframe
+            className="absolute inset-0 w-full h-full"
+            src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
         </div>
-      </div>
-    </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setPlaying(true)}
+          className="relative w-full group block"
+          aria-label="Play YouTube video"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+            alt="YouTube video thumbnail"
+            className="w-full object-cover"
+          />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/25 group-hover:bg-black/35 transition-colors">
+            <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center shadow-xl">
+              <svg className="w-7 h-7 text-white ml-1" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+          </div>
+        </button>
+      )}
+      {meta && (
+        <div className="bg-zinc-800 px-3 py-2.5 space-y-0.5">
+          <p className="flex items-center gap-1.5 text-xs text-zinc-500">
+            {YT_ICON}
+            YouTube
+          </p>
+          <p className="text-white text-sm font-medium line-clamp-2">{meta.title}</p>
+          <p className="text-zinc-400 text-xs">{meta.channel}</p>
+        </div>
+      )}
+    </div>
   )
 }
 

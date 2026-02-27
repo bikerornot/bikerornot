@@ -19,10 +19,12 @@ interface Props {
 
 const URL_REGEX = /(https?:\/\/[^\s]+)/g
 
-function renderWithLinks(text: string) {
+function renderWithLinks(text: string, excludeUrl?: string) {
   const parts = text.split(URL_REGEX)
-  return parts.map((part, i) =>
-    URL_REGEX.test(part) ? (
+  return parts.map((part, i) => {
+    if (!URL_REGEX.test(part)) return part
+    if (excludeUrl && part === excludeUrl) return null
+    return (
       <a
         key={i}
         href={part}
@@ -33,9 +35,60 @@ function renderWithLinks(text: string) {
       >
         {part}
       </a>
-    ) : (
-      part
     )
+  })
+}
+
+function extractYouTubeId(text: string): { id: string; fullUrl: string } | null {
+  const patterns = [
+    /https?:\/\/(?:www\.)?youtube\.com\/watch\?[^\s]*v=([a-zA-Z0-9_-]{11})[^\s]*/i,
+    /https?:\/\/(?:www\.)?youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})[^\s]*/i,
+    /https?:\/\/youtu\.be\/([a-zA-Z0-9_-]{11})[^\s]*/i,
+  ]
+  for (const pattern of patterns) {
+    const match = text.match(pattern)
+    if (match) return { id: match[1], fullUrl: match[0] }
+  }
+  return null
+}
+
+function YouTubeEmbed({ videoId }: { videoId: string }) {
+  const [playing, setPlaying] = useState(false)
+
+  if (playing) {
+    return (
+      <div className="relative w-full rounded-xl overflow-hidden" style={{ paddingBottom: '56.25%' }}>
+        <iframe
+          className="absolute inset-0 w-full h-full"
+          src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1`}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setPlaying(true)}
+      className="relative w-full rounded-xl overflow-hidden group block"
+      aria-label="Play YouTube video"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+        alt="YouTube video thumbnail"
+        className="w-full object-cover"
+      />
+      <div className="absolute inset-0 flex items-center justify-center bg-black/25 group-hover:bg-black/35 transition-colors">
+        <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center shadow-xl">
+          <svg className="w-7 h-7 text-white ml-1" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </div>
+      </div>
+    </button>
   )
 }
 
@@ -73,13 +126,17 @@ function SharedPostEmbed({ post }: { post: Omit<Post, 'shared_post'> }) {
         </Link>
         <span className="text-zinc-500 text-xs">· {formatTimeAgo(post.created_at)}</span>
       </div>
-      {post.content && (
-        <div className="px-3 py-2 bg-zinc-800/30">
-          <p className="text-zinc-200 text-base leading-relaxed whitespace-pre-wrap">
-            {renderWithLinks(post.content)}
-          </p>
-        </div>
-      )}
+      {post.content && (() => {
+        const ytVideo = extractYouTubeId(post.content)
+        return (
+          <div className="px-3 py-2 bg-zinc-800/30 space-y-2">
+            <p className="text-zinc-200 text-base leading-relaxed whitespace-pre-wrap">
+              {renderWithLinks(post.content, ytVideo?.fullUrl)}
+            </p>
+            {ytVideo && <YouTubeEmbed videoId={ytVideo.id} />}
+          </div>
+        )
+      })()}
       {post.images && post.images.length > 0 && (
         <div className="bg-zinc-800/30">
           <PostImages images={post.images} />
@@ -200,20 +257,24 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
       </div>
 
       {/* Text content */}
-      {(post.content || post.shared_post_id) && (
-        <div className="px-4 pb-3">
-          {post.content && (
-            <p className="text-zinc-200 text-base leading-relaxed whitespace-pre-wrap">
-              {renderWithLinks(post.content)}
-            </p>
-          )}
-          {post.shared_post_id && (
-            post.shared_post
-              ? <SharedPostEmbed post={post.shared_post} />
-              : <div className="border border-zinc-700 rounded-xl px-4 py-3 mt-2 text-zinc-500 text-sm italic">Original post was deleted.</div>
-          )}
-        </div>
-      )}
+      {(post.content || post.shared_post_id) && (() => {
+        const ytVideo = post.content ? extractYouTubeId(post.content) : null
+        return (
+          <div className="px-4 pb-3 space-y-2">
+            {post.content && (
+              <p className="text-zinc-200 text-base leading-relaxed whitespace-pre-wrap">
+                {renderWithLinks(post.content, ytVideo?.fullUrl)}
+              </p>
+            )}
+            {ytVideo && <YouTubeEmbed videoId={ytVideo.id} />}
+            {post.shared_post_id && (
+              post.shared_post
+                ? <SharedPostEmbed post={post.shared_post} />
+                : <div className="border border-zinc-700 rounded-xl px-4 py-3 text-zinc-500 text-sm italic">Original post was deleted.</div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Images — edge to edge, no horizontal padding */}
       {post.images && post.images.length > 0 && (

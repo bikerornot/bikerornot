@@ -5,14 +5,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December',
-]
-const DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
-const MAX_YEAR = new Date().getFullYear() - 18
-const YEARS = Array.from({ length: 83 }, (_, i) => MAX_YEAR - i)
-
 const GENDER_OPTIONS = [
   { value: 'male', label: 'Male' },
   { value: 'female', label: 'Female' },
@@ -54,19 +46,27 @@ export default function SignupPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    dobMonth: '',
-    dobDay: '',
-    dobYear: '',
+    dob: '',
     zipCode: '',
     gender: '',
     relationshipStatus: '',
   })
 
+  function handleDOBChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 8)
+    let formatted = digits
+    if (digits.length > 4) {
+      formatted = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4)
+    } else if (digits.length > 2) {
+      formatted = digits.slice(0, 2) + '/' + digits.slice(2)
+    }
+    set('dob', formatted)
+  }
+
   function getDOB() {
-    if (!form.dobMonth || !form.dobDay || !form.dobYear) return ''
-    const m = String(MONTHS.indexOf(form.dobMonth) + 1).padStart(2, '0')
-    const d = String(form.dobDay).padStart(2, '0')
-    return `${form.dobYear}-${m}-${d}`
+    const parts = form.dob.split('/')
+    if (parts.length !== 3 || parts[0].length !== 2 || parts[1].length !== 2 || parts[2].length !== 4) return ''
+    return `${parts[2]}-${parts[0]}-${parts[1]}`
   }
 
   function set(field: string, value: string) {
@@ -95,9 +95,14 @@ export default function SignupPage() {
 
     const dob = getDOB()
     if (!dob) {
-      errors.dateOfBirth = 'Date of birth is required'
-    } else if (dob > getMinDOB()) {
-      errors.dateOfBirth = 'You must be at least 18 years old to register'
+      errors.dateOfBirth = 'Enter your date of birth as MM/DD/YYYY'
+    } else {
+      const parsed = new Date(dob)
+      if (isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== dob) {
+        errors.dateOfBirth = 'Please enter a valid date'
+      } else if (dob > getMinDOB()) {
+        errors.dateOfBirth = 'You must be at least 18 years old to register'
+      }
     }
 
     if (!form.zipCode.trim()) {
@@ -225,38 +230,15 @@ export default function SignupPage() {
         {/* Date of birth */}
         <div>
           <label className="block text-sm font-medium text-zinc-300 mb-1">Date of birth</label>
-          <div className="grid grid-cols-3 gap-2">
-            <select
-              value={form.dobMonth}
-              onChange={(e) => set('dobMonth', e.target.value)}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
-            >
-              <option value="">Month</option>
-              {MONTHS.map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-            <select
-              value={form.dobDay}
-              onChange={(e) => set('dobDay', e.target.value)}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
-            >
-              <option value="">Day</option>
-              {DAYS.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-            <select
-              value={form.dobYear}
-              onChange={(e) => set('dobYear', e.target.value)}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
-            >
-              <option value="">Year</option>
-              {YEARS.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={form.dob}
+            onChange={handleDOBChange}
+            placeholder="MM/DD/YYYY"
+            maxLength={10}
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
+          />
           {fieldErrors.dateOfBirth && <p className="text-red-400 text-xs mt-1">{fieldErrors.dateOfBirth}</p>}
         </div>
 

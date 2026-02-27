@@ -170,7 +170,7 @@ export default function ChatWindow({ conversationId, initialMessages, currentUse
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
         {messages.length === 0 && !otherUserTyping && (
-          <p className="text-center text-zinc-600 text-sm py-8">
+          <p className="text-center text-zinc-600 text-base py-8">
             Say hello to @{otherUser.username}
           </p>
         )}
@@ -207,7 +207,7 @@ export default function ChatWindow({ conversationId, initialMessages, currentUse
 
                 <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[75%]`}>
                   <div
-                    className={`px-3 py-2 rounded-2xl text-sm leading-relaxed break-words ${
+                    className={`px-3 py-2 rounded-2xl text-base leading-relaxed break-words ${
                       isMe
                         ? 'bg-orange-600 text-white rounded-br-sm'
                         : 'bg-zinc-800 text-zinc-100 rounded-bl-sm'
@@ -216,9 +216,9 @@ export default function ChatWindow({ conversationId, initialMessages, currentUse
                     {msg.content}
                   </div>
                   <div className="flex items-center gap-1 mt-0.5 px-1">
-                    <span className="text-[10px] text-zinc-600">{formatTime(msg.created_at)}</span>
+                    <span className="text-xs text-zinc-600">{formatTime(msg.created_at)}</span>
                     {showSeen && (
-                      <span className="text-[10px] text-zinc-500">· Seen</span>
+                      <span className="text-xs text-zinc-500">· Seen</span>
                     )}
                   </div>
                 </div>
@@ -260,18 +260,18 @@ export default function ChatWindow({ conversationId, initialMessages, currentUse
             onKeyDown={handleKeyDown}
             placeholder="Message…"
             rows={1}
-            className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 text-sm rounded-xl px-4 py-2.5 resize-none outline-none focus:ring-1 focus:ring-orange-500 max-h-32 overflow-y-auto"
+            className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 text-base rounded-xl px-4 py-2.5 resize-none outline-none focus:ring-1 focus:ring-orange-500 max-h-32 overflow-y-auto"
             style={{ scrollbarWidth: 'none' }}
           />
           <button
             onClick={handleSend}
             disabled={!text.trim() || sending}
-            className="bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors flex-shrink-0"
+            className="bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl px-4 py-2.5 text-base font-semibold transition-colors flex-shrink-0"
           >
             Send
           </button>
         </div>
-        <p className="text-[10px] text-zinc-600 mt-1.5 text-right">Enter to send · Shift+Enter for newline</p>
+        <p className="text-xs text-zinc-600 mt-1.5 text-right">Enter to send · Shift+Enter for newline</p>
       </div>
     </div>
   )

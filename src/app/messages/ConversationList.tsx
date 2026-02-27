@@ -60,8 +60,8 @@ export default function ConversationList({ initialConversations, currentUserId }
     return (
       <div className="text-center py-16 text-zinc-600">
         <p className="text-4xl mb-3">💬</p>
-        <p className="text-sm">No conversations yet.</p>
-        <p className="text-xs mt-1">Visit someone's profile and hit Message to start one.</p>
+        <p className="text-base">No conversations yet.</p>
+        <p className="text-sm mt-1">Visit someone's profile and hit Message to start one.</p>
       </div>
     )
   }
@@ -92,15 +92,15 @@ export default function ConversationList({ initialConversations, currentUserId }
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
-                <span className={`text-sm truncate ${hasUnread ? 'text-white font-semibold' : 'text-zinc-300'}`}>
+                <span className={`text-base truncate ${hasUnread ? 'text-white font-semibold' : 'text-zinc-300'}`}>
                   @{c.other_user.username}
                 </span>
-                <span className="text-xs text-zinc-500 flex-shrink-0">
+                <span className="text-sm text-zinc-500 flex-shrink-0">
                   {formatTimeAgo(c.last_message_at)}
                 </span>
               </div>
               <div className="flex items-center gap-2 mt-0.5">
-                <p className={`text-xs truncate flex-1 ${hasUnread ? 'text-zinc-300' : 'text-zinc-500'}`}>
+                <p className={`text-sm truncate flex-1 ${hasUnread ? 'text-zinc-300' : 'text-zinc-500'}`}>
                   {c.last_message_preview ?? 'No messages yet'}
                 </p>
                 {hasUnread && (

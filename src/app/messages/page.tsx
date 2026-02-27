@@ -40,6 +40,9 @@ export default async function MessagesPage() {
             BikerOrNot
           </Link>
           <div className="flex items-center gap-2">
+            <Link href="/people" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors" title="Find Riders">
+              Find Riders
+            </Link>
             <Link href="/groups" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors" title="Groups">
               Groups
             </Link>

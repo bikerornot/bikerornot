@@ -169,7 +169,27 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
   const [showShareModal, setShowShareModal] = useState(false)
   const [shareCaption, setShareCaption] = useState('')
   const [sharing, setSharing] = useState(false)
-  const shareButtonRef = useRef<HTMLButtonElement>(null)
+  const shareModalRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showShareModal || typeof window === 'undefined') return
+    const vv = window.visualViewport
+    if (!vv) return
+
+    const update = () => {
+      if (!shareModalRef.current || vv.width >= 640) return
+      const keyboardHeight = window.innerHeight - vv.height
+      shareModalRef.current.style.transform = `translateY(-${keyboardHeight}px)`
+      shareModalRef.current.style.maxHeight = `${vv.height * 0.9}px`
+    }
+
+    vv.addEventListener('resize', update)
+    update()
+
+    return () => {
+      vv.removeEventListener('resize', update)
+    }
+  }, [showShareModal])
 
   if (deleted) return null
 
@@ -339,7 +359,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
       {showShareModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="absolute inset-0 bg-black/70" onClick={() => setShowShareModal(false)} />
-          <div className="relative w-full sm:max-w-md bg-zinc-900 border border-zinc-800 rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85dvh] flex flex-col">
+          <div ref={shareModalRef} className="relative w-full sm:max-w-md bg-zinc-900 border border-zinc-800 rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85dvh] flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 flex-shrink-0">
               <h2 className="text-white font-semibold">Share to Feed</h2>
               <button onClick={() => setShowShareModal(false)} className="text-zinc-500 hover:text-white transition-colors text-lg leading-none">✕</button>
@@ -351,17 +371,13 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
                 placeholder="Say something about this post… (optional)"
                 rows={3}
                 className="w-full bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:border-orange-500 transition-colors resize-none"
-                onFocus={() => {
-                  setTimeout(() => {
-                    shareButtonRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-                  }, 400)
-                }}
               />
               <div className="border border-zinc-700 rounded-xl overflow-hidden opacity-75">
                 <SharedPostEmbed post={post} />
               </div>
+            </div>
+            <div className="px-4 pb-4 pt-2 flex-shrink-0 border-t border-zinc-800">
               <button
-                ref={shareButtonRef}
                 onClick={handleShare}
                 disabled={sharing}
                 className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"

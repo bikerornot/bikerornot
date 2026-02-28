@@ -343,12 +343,12 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
               <h2 className="text-white font-semibold">Share to Feed</h2>
               <button onClick={() => setShowShareModal(false)} className="text-zinc-500 hover:text-white transition-colors text-lg leading-none">✕</button>
             </div>
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
               <textarea
                 value={shareCaption}
                 onChange={(e) => setShareCaption(e.target.value)}
                 placeholder="Say something about this post… (optional)"
-                rows={4}
+                rows={3}
                 className="w-full bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:border-orange-500 transition-colors resize-none"
               />
               <button

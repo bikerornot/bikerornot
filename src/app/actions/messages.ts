@@ -1,8 +1,10 @@
 'use server'
 
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { ConversationSummary, Message } from '@/lib/supabase/types'
+import { scanMessageForScam } from '@/app/actions/scam-scan'
 
 function getServiceClient() {
   return createServiceClient(
@@ -152,6 +154,9 @@ export async function sendMessage(conversationId: string, content: string): Prom
       last_message_preview: trimmed.slice(0, 100),
     })
     .eq('id', conversationId)
+
+  // Async scam scan — runs after response is sent, never blocks the user
+  after(() => scanMessageForScam(message.id, user.id, trimmed))
 
   return message as Message
 }

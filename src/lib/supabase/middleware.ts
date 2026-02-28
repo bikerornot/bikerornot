@@ -36,7 +36,7 @@ export async function updateSession(request: NextRequest) {
   // Protected routes that require authentication
   const protectedRoutes = ['/onboarding', '/settings', '/feed', '/messages', '/notifications']
   const adminRoutes = ['/admin']
-  const authRoutes = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email']
+  const authRoutes = ['/login', '/signup', '/forgot-password', '/verify-email']
 
   const isProtected = protectedRoutes.some((r) => pathname.startsWith(r))
   const isAdmin = adminRoutes.some((r) => pathname.startsWith(r))

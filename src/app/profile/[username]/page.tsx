@@ -49,6 +49,32 @@ export default async function ProfilePage({
   } = await supabase.auth.getUser()
   const isOwnProfile = user?.id === profile.id
 
+  // Banned accounts are hidden from everyone except their own view
+  if (profile.status === 'banned' && !isOwnProfile) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-5">
+            <svg className="w-7 h-7 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+          </div>
+          <p className="text-zinc-500 text-sm mb-1">@{username}</p>
+          <h1 className="text-white text-xl font-bold mb-3">Account banned</h1>
+          <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+            This account has been banned from BikerOrNot.
+          </p>
+          <Link
+            href="/feed"
+            className="inline-block bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors"
+          >
+            Back to feed
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   // Deactivated accounts are invisible to everyone except their owner
   if (profile.deactivated_at && !isOwnProfile) {
     return (

@@ -4,7 +4,8 @@ import Link from 'next/link'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 import { createClient } from '@/lib/supabase/server'
-import { getUserDetail, computeRiskFlags } from '@/app/actions/admin'
+import { getUserDetail } from '@/app/actions/admin'
+import { computeRiskFlags } from '@/lib/risk'
 import { getImageUrl } from '@/lib/supabase/image'
 import UserActions from './UserActions'
 

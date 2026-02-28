@@ -8,6 +8,7 @@ import { getUserDetail } from '@/app/actions/admin'
 import { computeRiskFlags } from '@/lib/risk'
 import { getImageUrl } from '@/lib/supabase/image'
 import UserActions from './UserActions'
+import AvatarPreview from './AvatarPreview'
 
 export const metadata = { title: 'User Detail — BikerOrNot Admin' }
 
@@ -71,22 +72,7 @@ export default async function UserDetailPage({
           {/* Profile card */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
             <div className="flex items-start gap-3 mb-4">
-              <div className="relative group flex-shrink-0 cursor-zoom-in">
-                <div className="w-14 h-14 rounded-full bg-zinc-700 overflow-hidden">
-                  {avatarUrl ? (
-                    <Image src={avatarUrl} alt="" width={56} height={56} className="object-cover w-full h-full" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-lg">
-                      {user.first_name?.[0]?.toUpperCase() ?? '?'}
-                    </div>
-                  )}
-                </div>
-                {avatarUrl && (
-                  <div className="absolute left-16 top-0 z-50 hidden group-hover:block pointer-events-none">
-                    <Image src={avatarUrl} alt="" width={500} height={500} className="rounded-xl object-cover shadow-2xl ring-1 ring-zinc-700" />
-                  </div>
-                )}
-              </div>
+              <AvatarPreview avatarUrl={avatarUrl} firstName={user.first_name} />
               <div className="flex-1 min-w-0">
                 <p className="text-white font-semibold">{user.first_name} {user.last_name}</p>
                 <p className="text-zinc-400 text-sm">@{user.username ?? 'no username'}</p>

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { checkEmail } from '@/app/actions/auth'
 
 const GENDER_OPTIONS = [
   { value: 'male', label: 'Male' },
@@ -128,6 +129,13 @@ export default function SignupPage() {
 
     // Store email for resend flow on verify-email page
     sessionStorage.setItem('signup_email', form.email.trim())
+
+    const { disposable } = await checkEmail(form.email.trim())
+    if (disposable) {
+      setFieldErrors({ email: 'Please use a permanent email address. Temporary or disposable emails are not allowed.' })
+      setLoading(false)
+      return
+    }
 
     const supabase = createClient()
     const { error: signUpError } = await supabase.auth.signUp({

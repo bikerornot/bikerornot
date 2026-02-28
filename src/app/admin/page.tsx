@@ -56,7 +56,19 @@ export default async function AdminDashboardPage() {
         <p className="text-zinc-500 text-sm mt-0.5">Platform overview</p>
       </div>
 
-      {/* Alert banner */}
+      {/* Alert banners */}
+      {stats.flaggedUsers > 0 && (
+        <Link
+          href="/admin/users?status=flagged"
+          className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-5 py-3 mb-3 hover:bg-red-500/15 transition-colors"
+        >
+          <span className="text-red-400 text-lg">🚩</span>
+          <span className="text-red-300 text-sm font-medium">
+            {stats.flaggedUsers} active account{stats.flaggedUsers !== 1 ? 's' : ''} from high-risk countries
+          </span>
+          <span className="ml-auto text-red-400 text-sm">Review →</span>
+        </Link>
+      )}
       {stats.pendingReports > 0 && (
         <Link
           href="/admin/reports"
@@ -79,12 +91,18 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Status row */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
           label="Pending Reports"
           value={stats.pendingReports}
           accent={stats.pendingReports > 0 ? 'orange' : 'default'}
           sub={stats.pendingReports > 0 ? 'Needs attention' : 'All clear'}
+        />
+        <StatCard
+          label="Flagged Users"
+          value={stats.flaggedUsers}
+          accent={stats.flaggedUsers > 0 ? 'red' : 'default'}
+          sub={stats.flaggedUsers > 0 ? 'High-risk IPs' : 'None detected'}
         />
         <StatCard
           label="Banned Users"

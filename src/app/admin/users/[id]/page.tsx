@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 import { createClient } from '@/lib/supabase/server'
-import { getUserDetail } from '@/app/actions/admin'
+import { getUserDetail, computeRiskFlags } from '@/app/actions/admin'
 import { getImageUrl } from '@/lib/supabase/image'
 import UserActions from './UserActions'
 
@@ -49,9 +49,7 @@ export default async function UserDetailPage({
     : null
 
   const isSuperAdmin = adminProfile?.role === 'super_admin'
-  const locationMismatch = user.signup_country &&
-    user.signup_country !== 'United States' &&
-    (user.state || user.city)
+  const riskFlags = computeRiskFlags(user)
 
   return (
     <div className="p-6 max-w-4xl">
@@ -132,7 +130,7 @@ export default async function UserDetailPage({
           </div>
 
           {/* IP / Signup location */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+          <div className={`bg-zinc-900 border rounded-xl p-5 ${riskFlags.length > 0 ? 'border-red-500/40' : 'border-zinc-800'}`}>
             <h3 className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-3">Signup Info</h3>
             <dl className="space-y-2 text-sm">
               <div>
@@ -141,8 +139,8 @@ export default async function UserDetailPage({
               </div>
               <div>
                 <dt className="text-zinc-600 text-xs mb-0.5">Country</dt>
-                <dd className={`text-sm font-medium ${locationMismatch ? 'text-orange-400' : 'text-zinc-300'}`}>
-                  {locationMismatch && '⚠ '}{user.signup_country ?? '—'}
+                <dd className={`text-sm font-medium ${riskFlags.length > 0 ? 'text-red-400' : 'text-zinc-300'}`}>
+                  {user.signup_country ?? '—'}
                 </dd>
               </div>
               <div>
@@ -150,10 +148,14 @@ export default async function UserDetailPage({
                 <dd className="text-zinc-300 text-sm">{user.signup_region ?? '—'}</dd>
               </div>
             </dl>
-            {locationMismatch && (
-              <p className="mt-3 text-xs text-orange-400/80 bg-orange-500/10 rounded-lg px-3 py-2">
-                Signup country doesn't match stated location.
-              </p>
+            {riskFlags.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                {riskFlags.map((flag, i) => (
+                  <p key={i} className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                    🚩 {flag}
+                  </p>
+                ))}
+              </div>
             )}
           </div>
 

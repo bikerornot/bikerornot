@@ -10,6 +10,7 @@ import { getImageUrl } from '@/lib/supabase/image'
 const STATUS_FILTERS = [
   { value: '', label: 'All' },
   { value: 'active', label: 'Active' },
+  { value: 'flagged', label: '🚩 Flagged' },
   { value: 'suspended', label: 'Suspended' },
   { value: 'banned', label: 'Banned' },
 ]
@@ -131,11 +132,6 @@ export default function UsersClient({
                   const avatarUrl = u.profile_photo_url
                     ? getImageUrl('avatars', u.profile_photo_url)
                     : null
-                  const locationMismatch =
-                    u.signup_country &&
-                    u.signup_country !== 'United States' &&
-                    (u.state || u.city)
-
                   return (
                     <tr
                       key={u.id}
@@ -165,13 +161,18 @@ export default function UsersClient({
                         {u.city && u.state ? `${u.city}, ${u.state}` : u.state ?? u.city ?? '—'}
                       </td>
                       <td className="px-4 py-3">
-                        {u.signup_country ? (
-                          <span className={`text-xs font-medium ${locationMismatch ? 'text-orange-400' : 'text-zinc-400'}`}>
-                            {locationMismatch && '⚠ '}{u.signup_country}
+                        <div className="space-y-1">
+                          <span className={`text-xs font-medium ${u.risk_flags.length > 0 ? 'text-red-400' : 'text-zinc-400'}`}>
+                            {u.signup_country ?? '—'}
                           </span>
-                        ) : (
-                          <span className="text-zinc-600 text-xs">—</span>
-                        )}
+                          {u.risk_flags.map((flag, fi) => (
+                            <div key={fi} className="flex items-center gap-1">
+                              <span className="text-[10px] bg-red-500/15 text-red-400 border border-red-500/20 rounded px-1.5 py-0.5 leading-tight">
+                                🚩 {flag}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-zinc-400 text-xs whitespace-nowrap">{formatDate(u.created_at)}</td>
                       <td className="px-4 py-3 text-zinc-400 text-xs">{u.post_count}</td>

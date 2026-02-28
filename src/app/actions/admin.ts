@@ -3,6 +3,29 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
+// Countries with disproportionately high rates of romance/sympathy scams
+export const HIGH_RISK_COUNTRIES = [
+  'Nigeria', 'Ghana', 'Cameroon', 'Senegal', 'Benin', 'Togo', 'Mali',
+  'Guinea', 'Niger', 'Liberia', 'Sierra Leone', 'Gambia', 'Ivory Coast',
+  "Côte d'Ivoire", 'Burkina Faso', 'Romania', 'Bulgaria',
+]
+
+export function computeRiskFlags(u: {
+  signup_country: string | null
+  city?: string | null
+  state?: string | null
+}): string[] {
+  const flags: string[] = []
+  if (!u.signup_country) return flags
+  if (HIGH_RISK_COUNTRIES.includes(u.signup_country)) {
+    flags.push(`High-risk country: ${u.signup_country}`)
+  }
+  if (u.signup_country !== 'United States' && (u.state || u.city)) {
+    flags.push(`IP in ${u.signup_country} but claims US location`)
+  }
+  return flags
+}
+
 function getServiceClient() {
   return createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,6 +59,7 @@ export interface DashboardStats {
   pendingReports: number
   bannedUsers: number
   suspendedUsers: number
+  flaggedUsers: number
   recentSignups: RecentSignup[]
   recentReports: RecentReport[]
 }
@@ -56,6 +80,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     { count: pendingReports },
     { count: bannedUsers },
     { count: suspendedUsers },
+    { count: flaggedUsers },
     { data: recentSignups },
     { data: recentReportsRaw },
   ] = await Promise.all([
@@ -66,6 +91,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     admin.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     admin.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'banned'),
     admin.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'suspended'),
+    admin.from('profiles').select('*', { count: 'exact', head: true }).in('signup_country', HIGH_RISK_COUNTRIES).eq('status', 'active'),
     admin.from('profiles')
       .select('id, username, first_name, last_name, created_at, status, profile_photo_url')
       .order('created_at', { ascending: false })
@@ -85,6 +111,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     pendingReports: pendingReports ?? 0,
     bannedUsers: bannedUsers ?? 0,
     suspendedUsers: suspendedUsers ?? 0,
+    flaggedUsers: flaggedUsers ?? 0,
     recentSignups: (recentSignups ?? []) as RecentSignup[],
     recentReports: (recentReportsRaw ?? []).map((r: any) => ({
       id: r.id,
@@ -121,6 +148,7 @@ export interface AdminUserRow {
   signup_country: string | null
   signup_region: string | null
   post_count: number
+  risk_flags: string[]
 }
 
 export interface AdminUserDetail {
@@ -183,7 +211,9 @@ export async function getUsers({
   if (search) {
     query = query.or(`username.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`) as typeof query
   }
-  if (status) {
+  if (status === 'flagged') {
+    query = query.in('signup_country', HIGH_RISK_COUNTRIES).eq('status', 'active') as typeof query
+  } else if (status) {
     query = query.eq('status', status) as typeof query
   }
 
@@ -203,7 +233,11 @@ export async function getUsers({
   }
 
   return {
-    users: (data ?? []).map((u) => ({ ...u, post_count: postCountMap[u.id] ?? 0 })) as AdminUserRow[],
+    users: (data ?? []).map((u) => ({
+      ...u,
+      post_count: postCountMap[u.id] ?? 0,
+      risk_flags: computeRiskFlags(u),
+    })) as AdminUserRow[],
     total: count ?? 0,
     pageSize,
   }

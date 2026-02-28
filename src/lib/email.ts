@@ -35,6 +35,8 @@ function layout(body: string) {
               <p style="margin:0;font-size:12px;color:#52525b;">
                 You're receiving this because you have an account at
                 <a href="${BASE_URL}" style="color:#f97316;text-decoration:none;">BikerOrNot</a>.
+                &nbsp;·&nbsp;
+                <a href="${BASE_URL}/settings" style="color:#52525b;text-decoration:underline;">Unsubscribe</a>
               </p>
             </td>
           </tr>

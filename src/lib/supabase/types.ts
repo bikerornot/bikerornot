@@ -32,6 +32,8 @@ export interface Profile {
   last_seen_at?: string | null
   deactivated_at?: string | null
   deletion_scheduled_at?: string | null
+  email_friend_requests: boolean
+  email_friend_accepted: boolean
 }
 
 export interface UserBike {

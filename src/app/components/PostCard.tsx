@@ -338,12 +338,12 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
       {showShareModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="absolute inset-0 bg-black/70" onClick={() => setShowShareModal(false)} />
-          <div className="relative w-full sm:max-w-md bg-zinc-900 border border-zinc-800 rounded-t-2xl sm:rounded-2xl shadow-2xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
+          <div className="relative w-full sm:max-w-md bg-zinc-900 border border-zinc-800 rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 flex-shrink-0">
               <h2 className="text-white font-semibold">Share to Feed</h2>
               <button onClick={() => setShowShareModal(false)} className="text-zinc-500 hover:text-white transition-colors text-lg leading-none">✕</button>
             </div>
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3 overflow-y-auto flex-1">
               <textarea
                 value={shareCaption}
                 onChange={(e) => setShareCaption(e.target.value)}
@@ -355,7 +355,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
                 <SharedPostEmbed post={post} />
               </div>
             </div>
-            <div className="px-4 pb-4">
+            <div className="px-4 pb-4 pt-2 flex-shrink-0 border-t border-zinc-800">
               <button
                 onClick={handleShare}
                 disabled={sharing}

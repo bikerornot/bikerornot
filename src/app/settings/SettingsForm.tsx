@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Profile, RELATIONSHIP_OPTIONS, GENDER_OPTIONS } from '@/lib/supabase/types'
-import { saveProfileSettings } from './actions'
+import { saveProfileSettings, saveEmailPreferences } from './actions'
 import { deactivateAccount, scheduleAccountDeletion } from '@/app/actions/account'
 
 interface Props {
@@ -23,6 +23,9 @@ export default function SettingsForm({ profile }: Props) {
   const [dangerPanel, setDangerPanel] = useState<'deactivate' | 'delete' | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [dangerPending, startDangerTransition] = useTransition()
+
+  const [emailFriendRequests, setEmailFriendRequests] = useState(profile.email_friend_requests ?? true)
+  const [emailFriendAccepted, setEmailFriendAccepted] = useState(profile.email_friend_accepted ?? true)
 
   const [bio, setBio] = useState(profile.bio ?? '')
   const [location, setLocation] = useState(profile.location ?? '')
@@ -188,6 +191,38 @@ export default function SettingsForm({ profile }: Props) {
         {saving ? 'Saving…' : saved ? '✓ Saved!' : 'Save changes'}
       </button>
     </form>
+
+    {/* ── Email Notifications ─────────────────────────────────────── */}
+    <div className="mt-10 pt-8 border-t border-zinc-800">
+      <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wide mb-1">Email Notifications</h2>
+      <p className="text-zinc-500 text-xs mb-5">Choose which emails you receive from BikerOrNot.</p>
+      <div className="space-y-3">
+        {([
+          { key: 'email_friend_requests' as const, label: 'Friend request received', value: emailFriendRequests, set: setEmailFriendRequests },
+          { key: 'email_friend_accepted' as const, label: 'Friend request accepted', value: emailFriendAccepted, set: setEmailFriendAccepted },
+        ]).map(({ key, label, value, set }) => (
+          <div key={key} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
+            <span className="text-sm text-zinc-300">{label}</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={value}
+              onClick={async () => {
+                const next = !value
+                set(next)
+                await saveEmailPreferences({
+                  email_friend_requests: key === 'email_friend_requests' ? next : emailFriendRequests,
+                  email_friend_accepted: key === 'email_friend_accepted' ? next : emailFriendAccepted,
+                })
+              }}
+              className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none ${value ? 'bg-orange-500' : 'bg-zinc-700'}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${value ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
 
     {/* ── Danger Zone ────────────────────────────────────────────── */}
     <div className="mt-10 pt-8 border-t border-zinc-800">

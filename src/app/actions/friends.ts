@@ -32,17 +32,13 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
   })
 
   // Send email notification (fire and forget)
-  const [{ data: requesterProfile }, { data: addresseeAuth }] = await Promise.all([
+  const [{ data: requesterProfile }, { data: addresseeAuth }, { data: addresseeProfile }] = await Promise.all([
     admin.from('profiles').select('username, first_name').eq('id', user.id).single(),
     admin.auth.admin.getUserById(addresseeId),
+    admin.from('profiles').select('first_name, email_friend_requests').eq('id', addresseeId).single(),
   ])
   const addresseeEmail = addresseeAuth.user?.email
-  if (addresseeEmail && requesterProfile?.username) {
-    const { data: addresseeProfile } = await admin
-      .from('profiles')
-      .select('first_name')
-      .eq('id', addresseeId)
-      .single()
+  if (addresseeEmail && requesterProfile?.username && addresseeProfile?.email_friend_requests !== false) {
     sendFriendRequestEmail({
       toEmail: addresseeEmail,
       toName: addresseeProfile?.first_name ?? 'there',
@@ -89,17 +85,13 @@ export async function acceptFriendRequest(requesterId: string): Promise<void> {
   })
 
   // Send email notification (fire and forget)
-  const [{ data: accepterProfile }, { data: requesterAuth }] = await Promise.all([
+  const [{ data: accepterProfile }, { data: requesterAuth }, { data: requesterProfile }] = await Promise.all([
     admin.from('profiles').select('username, first_name').eq('id', user.id).single(),
     admin.auth.admin.getUserById(requesterId),
+    admin.from('profiles').select('first_name, email_friend_accepted').eq('id', requesterId).single(),
   ])
   const requesterEmail = requesterAuth.user?.email
-  if (requesterEmail && accepterProfile?.username) {
-    const { data: requesterProfile } = await admin
-      .from('profiles')
-      .select('first_name')
-      .eq('id', requesterId)
-      .single()
+  if (requesterEmail && accepterProfile?.username && requesterProfile?.email_friend_accepted !== false) {
     sendFriendAcceptedEmail({
       toEmail: requesterEmail,
       toName: requesterProfile?.first_name ?? 'there',

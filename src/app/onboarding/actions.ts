@@ -11,6 +11,7 @@ async function getSignupLocation(): Promise<{
   countryCode: string | null
   region: string | null
   city: string | null
+  continent: string | null
 }> {
   const headersList = await headers()
   const forwarded = headersList.get('x-forwarded-for')
@@ -18,11 +19,11 @@ async function getSignupLocation(): Promise<{
 
   // Skip geo lookup for local/private IPs
   if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
-    return { ip, country: null, countryCode: null, region: null, city: null }
+    return { ip, country: null, countryCode: null, region: null, city: null, continent: null }
   }
 
   try {
-    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city`, {
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,continent`, {
       next: { revalidate: 0 },
     })
     const data = await res.json()
@@ -33,13 +34,14 @@ async function getSignupLocation(): Promise<{
         countryCode: data.countryCode ?? null,
         region: data.regionName ?? null,
         city: data.city ?? null,
+        continent: data.continent ?? null,
       }
     }
   } catch {
     // Geo lookup is best-effort — never block signup
   }
 
-  return { ip, country: null, countryCode: null, region: null, city: null }
+  return { ip, country: null, countryCode: null, region: null, city: null, continent: null }
 }
 
 function getServiceClient() {
@@ -122,6 +124,14 @@ export async function completeOnboarding(
   geoUpdate.signup_city = location.city
 
   await admin.from('profiles').update(geoUpdate).eq('id', user.id)
+
+  // Auto-ban accounts signing up from Africa
+  if (location.continent === 'Africa') {
+    await admin
+      .from('profiles')
+      .update({ status: 'banned', ban_reason: 'Auto-banned: signup IP in restricted region' })
+      .eq('id', user.id)
+  }
 
   if (bikes.length > 0) {
     const { error: bikesError } = await admin

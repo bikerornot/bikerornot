@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { sendFriendRequestEmail, sendFriendAcceptedEmail } from '@/lib/email'
 
 function getServiceClient() {
   return createServiceClient(
@@ -29,6 +30,25 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
     type: 'friend_request',
     actor_id: user.id,
   })
+
+  // Send email notification (fire and forget)
+  const [{ data: requesterProfile }, { data: addresseeAuth }] = await Promise.all([
+    admin.from('profiles').select('username, first_name').eq('id', user.id).single(),
+    admin.auth.admin.getUserById(addresseeId),
+  ])
+  const addresseeEmail = addresseeAuth.user?.email
+  if (addresseeEmail && requesterProfile?.username) {
+    const { data: addresseeProfile } = await admin
+      .from('profiles')
+      .select('first_name')
+      .eq('id', addresseeId)
+      .single()
+    sendFriendRequestEmail({
+      toEmail: addresseeEmail,
+      toName: addresseeProfile?.first_name ?? 'there',
+      fromUsername: requesterProfile.username,
+    }).catch(() => {})
+  }
 }
 
 export async function cancelFriendRequest(addresseeId: string): Promise<void> {
@@ -67,6 +87,25 @@ export async function acceptFriendRequest(requesterId: string): Promise<void> {
     type: 'friend_accepted',
     actor_id: user.id,
   })
+
+  // Send email notification (fire and forget)
+  const [{ data: accepterProfile }, { data: requesterAuth }] = await Promise.all([
+    admin.from('profiles').select('username, first_name').eq('id', user.id).single(),
+    admin.auth.admin.getUserById(requesterId),
+  ])
+  const requesterEmail = requesterAuth.user?.email
+  if (requesterEmail && accepterProfile?.username) {
+    const { data: requesterProfile } = await admin
+      .from('profiles')
+      .select('first_name')
+      .eq('id', requesterId)
+      .single()
+    sendFriendAcceptedEmail({
+      toEmail: requesterEmail,
+      toName: requesterProfile?.first_name ?? 'there',
+      fromUsername: accepterProfile.username,
+    }).catch(() => {})
+  }
 }
 
 export async function declineFriendRequest(requesterId: string): Promise<void> {

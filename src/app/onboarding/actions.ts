@@ -10,6 +10,7 @@ async function getSignupLocation(): Promise<{
   country: string | null
   countryCode: string | null
   region: string | null
+  city: string | null
 }> {
   const headersList = await headers()
   const forwarded = headersList.get('x-forwarded-for')
@@ -17,11 +18,11 @@ async function getSignupLocation(): Promise<{
 
   // Skip geo lookup for local/private IPs
   if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
-    return { ip, country: null, countryCode: null, region: null }
+    return { ip, country: null, countryCode: null, region: null, city: null }
   }
 
   try {
-    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName`, {
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city`, {
       next: { revalidate: 0 },
     })
     const data = await res.json()
@@ -31,13 +32,14 @@ async function getSignupLocation(): Promise<{
         country: data.country ?? null,
         countryCode: data.countryCode ?? null,
         region: data.regionName ?? null,
+        city: data.city ?? null,
       }
     }
   } catch {
     // Geo lookup is best-effort — never block signup
   }
 
-  return { ip, country: null, countryCode: null, region: null }
+  return { ip, country: null, countryCode: null, region: null, city: null }
 }
 
 function getServiceClient() {
@@ -117,6 +119,7 @@ export async function completeOnboarding(
   geoUpdate.signup_ip = location.ip
   geoUpdate.signup_country = location.country
   geoUpdate.signup_region = location.region
+  geoUpdate.signup_city = location.city
 
   await admin.from('profiles').update(geoUpdate).eq('id', user.id)
 

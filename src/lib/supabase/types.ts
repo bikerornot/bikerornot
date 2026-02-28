@@ -24,6 +24,7 @@ export interface Profile {
   signup_ip: string | null
   signup_country: string | null
   signup_region: string | null
+  signup_city: string | null
   suspension_reason: string | null
   suspended_until: string | null
   ban_reason: string | null

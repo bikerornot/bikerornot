@@ -156,6 +156,10 @@ export default async function UserDetailPage({
                 <dt className="text-zinc-600 text-xs mb-0.5">Region</dt>
                 <dd className="text-zinc-300 text-sm">{user.signup_region ?? '—'}</dd>
               </div>
+              <div>
+                <dt className="text-zinc-600 text-xs mb-0.5">City (IP)</dt>
+                <dd className="text-zinc-300 text-sm">{user.signup_city ?? '—'}</dd>
+              </div>
             </dl>
             {riskFlags.length > 0 && (
               <div className="mt-3 space-y-1.5">

@@ -168,6 +168,9 @@ export default function UsersClient({
                           {u.signup_region && (
                             <p className="text-xs text-zinc-500">{u.signup_region}</p>
                           )}
+                          {u.signup_city && (
+                            <p className="text-xs text-zinc-500">{u.signup_city}</p>
+                          )}
                           {u.risk_flags.map((flag, fi) => (
                             <div key={fi} className="flex items-center gap-1">
                               <span className="text-[10px] bg-red-500/15 text-red-400 border border-red-500/20 rounded px-1.5 py-0.5 leading-tight">

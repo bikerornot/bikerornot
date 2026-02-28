@@ -125,6 +125,7 @@ export interface AdminUserRow {
   profile_photo_url: string | null
   signup_country: string | null
   signup_region: string | null
+  signup_city: string | null
   post_count: number
   risk_flags: string[]
 }
@@ -147,6 +148,7 @@ export interface AdminUserDetail {
   signup_ip: string | null
   signup_country: string | null
   signup_region: string | null
+  signup_city: string | null
   suspension_reason: string | null
   suspended_until: string | null
   ban_reason: string | null
@@ -189,7 +191,7 @@ export async function getUsers({
 
   let query = admin
     .from('profiles')
-    .select('id, username, first_name, last_name, created_at, status, role, city, state, profile_photo_url, signup_country, signup_region', { count: 'exact' })
+    .select('id, username, first_name, last_name, created_at, status, role, city, state, profile_photo_url, signup_country, signup_region, signup_city', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1)
 
@@ -318,6 +320,7 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     signup_ip: profile.signup_ip ?? null,
     signup_country: profile.signup_country ?? null,
     signup_region: profile.signup_region ?? null,
+    signup_city: profile.signup_city ?? null,
     suspension_reason: profile.suspension_reason ?? null,
     suspended_until: profile.suspended_until ?? null,
     ban_reason: profile.ban_reason ?? null,

@@ -125,10 +125,12 @@ export default function FriendsTab({ profileId, isOwnProfile }: Props) {
       })
       setFriends(friendProfiles)
 
-      const pendingRequests = ((pendingRes.data ?? []) as any[]).map((f) => ({
-        requesterId: f.requester_id,
-        profile: f.requester as Profile,
-      }))
+      const pendingRequests = ((pendingRes.data ?? []) as any[])
+        .filter((f) => (f.requester as Profile)?.status === 'active' && !(f.requester as Profile)?.deactivated_at)
+        .map((f) => ({
+          requesterId: f.requester_id,
+          profile: f.requester as Profile,
+        }))
       setPending(pendingRequests)
       setLoading(false)
     })

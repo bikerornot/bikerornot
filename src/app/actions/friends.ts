@@ -47,7 +47,7 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
       toEmail: addresseeEmail,
       toName: addresseeProfile?.first_name ?? 'there',
       fromUsername: requesterProfile.username,
-    }).catch((err) => console.error('[friend request email]', err))
+    }).catch(() => {})
   }
 }
 

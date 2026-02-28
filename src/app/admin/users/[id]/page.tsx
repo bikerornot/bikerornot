@@ -23,6 +23,15 @@ function formatDate(dateStr: string): string {
   })
 }
 
+function calculateAge(dob: string): number {
+  const birth = new Date(dob)
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const m = today.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+  return age
+}
+
 function formatTimeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
   if (diff < 60) return `${diff}s ago`
@@ -102,6 +111,12 @@ export default async function UserDetailPage({
                 <dt className="text-zinc-600 text-xs uppercase tracking-wider mb-0.5">Joined</dt>
                 <dd className="text-zinc-300">{formatDate(user.created_at)}</dd>
               </div>
+              {user.date_of_birth && (
+                <div>
+                  <dt className="text-zinc-600 text-xs uppercase tracking-wider mb-0.5">Age</dt>
+                  <dd className="text-zinc-300">{calculateAge(user.date_of_birth)} years old</dd>
+                </div>
+              )}
               {(user.city || user.state) && (
                 <div>
                   <dt className="text-zinc-600 text-xs uppercase tracking-wider mb-0.5">Location</dt>
@@ -312,6 +327,34 @@ export default async function UserDetailPage({
               </ul>
             </div>
           )}
+
+          {/* Messages sent by this user */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
+              <h2 className="text-white font-semibold text-sm">Sent Messages</h2>
+              <span className="text-zinc-600 text-xs">{user.recent_messages.length} shown (last 50)</span>
+            </div>
+            {user.recent_messages.length === 0 ? (
+              <p className="text-center text-zinc-600 text-sm py-8">No messages sent</p>
+            ) : (
+              <ul>
+                {user.recent_messages.map((m, i) => (
+                  <li
+                    key={m.id}
+                    className={`px-5 py-3 space-y-1 ${i < user.recent_messages.length - 1 ? 'border-b border-zinc-800/50' : ''}`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      {m.recipient_username && (
+                        <span className="text-xs text-orange-400 flex-shrink-0">→ @{m.recipient_username}</span>
+                      )}
+                      <p className="text-zinc-600 text-xs flex-shrink-0 ml-auto">{formatTimeAgo(m.created_at)}</p>
+                    </div>
+                    <p className="text-zinc-300 text-sm leading-relaxed">{m.content}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
     </div>

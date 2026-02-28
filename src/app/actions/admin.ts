@@ -139,6 +139,7 @@ export interface AdminUserDetail {
   zip_code: string
   city: string | null
   state: string | null
+  date_of_birth: string | null
   created_at: string
   status: string
   role: string
@@ -164,6 +165,12 @@ export interface AdminUserDetail {
     status: string
     created_at: string
     reporter_username: string | null
+  }>
+  recent_messages: Array<{
+    id: string
+    content: string
+    created_at: string
+    recipient_username: string | null
   }>
 }
 
@@ -255,6 +262,27 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     }
   }
 
+  // Last 50 sent messages with recipient info
+  const { data: rawMessages } = await admin
+    .from('messages')
+    .select('id, content, created_at, conversation_id')
+    .eq('sender_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  const convIds = [...new Set((rawMessages ?? []).map((m) => m.conversation_id))]
+  let recipientMap: Record<string, string | null> = {}
+  if (convIds.length > 0) {
+    const { data: convs } = await admin
+      .from('conversations')
+      .select('id, participant1_id, participant2_id, p1:profiles!participant1_id(username), p2:profiles!participant2_id(username)')
+      .in('id', convIds)
+    for (const c of convs ?? []) {
+      const cc = c as any
+      recipientMap[c.id] = c.participant1_id === userId ? cc.p2?.username : cc.p1?.username
+    }
+  }
+
   // Report counts
   const [{ count: profileReports }, { count: postReports }] = await Promise.all([
     admin.from('reports').select('*', { count: 'exact', head: true }).eq('reported_type', 'profile').eq('reported_id', userId),
@@ -282,6 +310,7 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     zip_code: profile.zip_code,
     city: profile.city,
     state: profile.state,
+    date_of_birth: profile.date_of_birth ?? null,
     created_at: profile.created_at,
     status: profile.status,
     role: profile.role,
@@ -307,6 +336,12 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
       status: r.status,
       created_at: r.created_at,
       reporter_username: r.reporter?.username ?? null,
+    })),
+    recent_messages: (rawMessages ?? []).map((m) => ({
+      id: m.id,
+      content: m.content,
+      created_at: m.created_at,
+      recipient_username: recipientMap[m.conversation_id] ?? null,
     })),
   }
 }

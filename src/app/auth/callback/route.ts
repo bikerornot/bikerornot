@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 
     if (!error) {
       // Password reset flow — send straight to reset page
-      if (type === 'recovery') {
+      if (type === 'recovery' || next === '/reset-password') {
         return NextResponse.redirect(`${origin}/reset-password`)
       }
 

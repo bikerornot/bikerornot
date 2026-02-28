@@ -26,7 +26,7 @@ export async function getNotifications(): Promise<Notification[]> {
     .order('created_at', { ascending: false })
     .limit(30)
 
-  return (data ?? []) as Notification[]
+  return (data ?? []).filter((n: any) => n.actor?.status === 'active') as Notification[]
 }
 
 export async function markRead(notificationId: string): Promise<void> {

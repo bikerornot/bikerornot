@@ -125,8 +125,8 @@ export async function completeOnboarding(
 
   await admin.from('profiles').update(geoUpdate).eq('id', user.id)
 
-  // Auto-ban accounts signing up from Africa
-  if (location.continent === 'Africa') {
+  // Auto-ban accounts signing up from Africa or Asia
+  if (location.continent === 'Africa' || location.continent === 'Asia') {
     await admin
       .from('profiles')
       .update({ status: 'banned', ban_reason: 'Auto-banned: signup IP in restricted region' })

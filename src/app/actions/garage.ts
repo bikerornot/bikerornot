@@ -11,10 +11,20 @@ function getServiceClient() {
   )
 }
 
+const CURRENT_YEAR = new Date().getFullYear()
+
+function validateBikeFields(year: number, make: string, model: string) {
+  if (!Number.isInteger(year) || year < 1885 || year > CURRENT_YEAR + 2) throw new Error('Invalid year')
+  if (!make.trim() || make.length > 100) throw new Error('Invalid make')
+  if (!model.trim() || model.length > 100) throw new Error('Invalid model')
+}
+
 export async function addBike(year: number, make: string, model: string): Promise<string> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
+
+  validateBikeFields(year, make, model)
 
   const admin = getServiceClient()
   const { data, error } = await admin
@@ -30,6 +40,8 @@ export async function updateBike(id: string, year: number, make: string, model: 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
+
+  validateBikeFields(year, make, model)
 
   const admin = getServiceClient()
   const { error } = await admin

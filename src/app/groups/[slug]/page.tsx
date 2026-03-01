@@ -39,7 +39,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
 
   const [initialPosts, initialMembers, initialRequests] = await Promise.all([
     canSeePosts && user ? getGroupPosts(group.id) : Promise.resolve([]),
-    getGroupMembers(group.id),
+    canSeePosts ? getGroupMembers(group.id) : Promise.resolve([]),
     isAdmin && group.privacy === 'private' ? getPendingRequests(group.id) : Promise.resolve([]),
   ])
 

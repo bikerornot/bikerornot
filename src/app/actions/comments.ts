@@ -21,6 +21,30 @@ export async function createComment(postId: string, content: string, parentComme
   checkRateLimit(`createComment:${user.id}`, 20, 60_000)
 
   const admin = getServiceClient()
+
+  // Verify the post exists and user has access to it
+  const { data: post } = await admin
+    .from('posts')
+    .select('group_id, deleted_at')
+    .eq('id', postId)
+    .single()
+
+  if (!post || post.deleted_at) throw new Error('Post not found')
+  if (content.trim().length > 1000) throw new Error('Comment too long (max 1000 characters)')
+
+  // If post is in a private group, require active membership
+  if (post.group_id) {
+    const { data: membership } = await admin
+      .from('group_members')
+      .select('id')
+      .eq('group_id', post.group_id)
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .single()
+
+    if (!membership) throw new Error('Not authorized')
+  }
+
   const { data: comment, error } = await admin
     .from('comments')
     .insert({

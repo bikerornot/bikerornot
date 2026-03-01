@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { sendFriendRequestEmail, sendFriendAcceptedEmail } from '@/lib/email'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 function getServiceClient() {
   return createServiceClient(
@@ -16,6 +17,8 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
   if (user.id === addresseeId) throw new Error('Cannot friend yourself')
+
+  checkRateLimit(`sendFriendRequest:${user.id}`, 20, 60_000)
 
   const admin = getServiceClient()
   const { error } = await admin

@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { geocodeZip } from '@/lib/geocode'
+import { validateImageFile } from '@/lib/rate-limit'
 
 async function getSignupLocation(): Promise<{
   ip: string | null
@@ -17,8 +18,10 @@ async function getSignupLocation(): Promise<{
   const forwarded = headersList.get('x-forwarded-for')
   const ip = forwarded?.split(',')[0]?.trim() ?? headersList.get('x-real-ip') ?? null
 
-  // Skip geo lookup for local/private IPs
-  if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) {
+  // Skip geo lookup for local/private IPs or invalid formats
+  const isPrivate = !ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')
+  const isValidFormat = /^[\d.]+$/.test(ip ?? '') || /^[0-9a-f:]+$/i.test(ip ?? '')
+  if (isPrivate || !isValidFormat) {
     return { ip, country: null, countryCode: null, region: null, city: null, continent: null }
   }
 
@@ -57,6 +60,9 @@ export async function uploadAvatar(formData: FormData): Promise<string> {
   if (!user) throw new Error('Not authenticated')
 
   const file = formData.get('file') as File
+  if (!file) throw new Error('No file provided')
+  validateImageFile(file)
+
   const ext = file.name.split('.').pop() ?? 'jpg'
   const path = `${user.id}/avatar.${ext}`
 
@@ -78,6 +84,8 @@ export async function completeOnboarding(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
+
+  if (!/^[a-z0-9_]{3,20}$/.test(username)) throw new Error('Invalid username')
 
   const admin = getServiceClient()
 

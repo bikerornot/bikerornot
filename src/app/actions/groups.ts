@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { Group, GroupMember, Post, Profile } from '@/lib/supabase/types'
+import { validateImageFile } from '@/lib/rate-limit'
 
 function getServiceClient() {
   return createServiceClient(
@@ -35,6 +36,10 @@ export async function createGroup(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
+  if (!name.trim()) throw new Error('Group name is required')
+  if (name.trim().length > 100) throw new Error('Group name too long (max 100 characters)')
+  if (description && description.length > 1000) throw new Error('Description too long (max 1000 characters)')
+
   const admin = getServiceClient()
 
   // Generate unique slug
@@ -48,6 +53,7 @@ export async function createGroup(
   // Upload cover photo if provided
   let cover_photo_url: string | null = null
   if (coverFile && coverFile.size > 0) {
+    validateImageFile(coverFile)
     const ext = coverFile.name.split('.').pop() ?? 'jpg'
     const path = `groups/${user.id}/${slug}.${ext}`
     const bytes = await coverFile.arrayBuffer()

@@ -34,6 +34,8 @@ export async function saveProfileSettings(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
+  if (profileUpdates.bio && profileUpdates.bio.length > 500) throw new Error('Bio too long (max 500 characters)')
+
   const admin = getServiceClient()
 
   const { error: profileError } = await admin

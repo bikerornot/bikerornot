@@ -169,6 +169,7 @@ export async function sendMessage(conversationId: string, content: string): Prom
 
   const trimmed = content.trim()
   if (!trimmed) throw new Error('Message cannot be empty')
+  if (trimmed.length > 2000) throw new Error('Message too long (max 2000 characters)')
 
   const { data: message, error } = await admin
     .from('messages')

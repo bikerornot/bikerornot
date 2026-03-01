@@ -24,6 +24,7 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
   const admin = getServiceClient()
 
   const content = formData.get('content') as string | null
+  if (content && content.trim().length > 5000) throw new Error('Post too long (max 5000 characters)')
   const wallOwnerId = formData.get('wallOwnerId') as string | null
   const groupId = formData.get('groupId') as string | null
   const files = formData.getAll('images') as File[]

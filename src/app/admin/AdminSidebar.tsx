@@ -1,6 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
   pendingReports: number
   pendingDmca: number
   pendingFlags: number
+  initialActiveUsers: number
 }
 
 const navItems = [
@@ -81,8 +83,20 @@ const navItems = [
   },
 ]
 
-export default function AdminSidebar({ username, role, pendingReports, pendingDmca, pendingFlags }: Props) {
+export default function AdminSidebar({ username, role, pendingReports, pendingDmca, pendingFlags, initialActiveUsers }: Props) {
   const pathname = usePathname()
+  const [activeUsers, setActiveUsers] = useState(initialActiveUsers)
+
+  useEffect(() => {
+    function refresh() {
+      fetch('/api/admin/active-count')
+        .then((r) => r.json())
+        .then((d) => { if (typeof d.count === 'number') setActiveUsers(d.count) })
+        .catch(() => {})
+    }
+    const interval = setInterval(refresh, 30_000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <>
@@ -95,6 +109,12 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
           <p className="text-orange-400 text-xs font-semibold mt-0.5 uppercase tracking-wider">
             Admin Panel
           </p>
+          <div className="flex items-center gap-1.5 mt-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+            <span className="text-xs text-zinc-400">
+              <span className="text-emerald-400 font-semibold">{activeUsers}</span> online now
+            </span>
+          </div>
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5">

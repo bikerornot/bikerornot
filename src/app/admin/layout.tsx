@@ -24,10 +24,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  const [{ count: pendingReports }, { count: pendingDmca }, pendingFlags] = await Promise.all([
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+
+  const [{ count: pendingReports }, { count: pendingDmca }, pendingFlags, { count: activeUsers }] = await Promise.all([
     admin.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     admin.from('dmca_notices').select('*', { count: 'exact', head: true }).eq('status', 'received'),
     getPendingFlagsCount(),
+    admin.from('profiles').select('*', { count: 'exact', head: true }).gte('last_seen_at', fiveMinutesAgo),
   ])
 
   return (
@@ -38,6 +41,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         pendingReports={pendingReports ?? 0}
         pendingDmca={pendingDmca ?? 0}
         pendingFlags={pendingFlags}
+        initialActiveUsers={activeUsers ?? 0}
       />
       <main className="flex-1 min-w-0 min-h-screen">
         {children}

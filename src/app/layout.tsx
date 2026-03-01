@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import Script from 'next/script'
+import Heartbeat from '@/app/components/Heartbeat'
 import './globals.css'
 
 const geist = Geist({ subsets: ['latin'] })
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </noscript>
       </head>
       <body className={`${geist.className} antialiased bg-zinc-950 text-white`}>
+        <Heartbeat />
         {children}
       </body>
     </html>

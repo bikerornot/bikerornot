@@ -93,13 +93,16 @@ export async function removeContentForDmca(url: string): Promise<RemoveResult> {
       .eq('id', postId)
       .single()
 
-    if (!post) throw new Error(`Post not found: ${postId}`)
+    if (!post) throw new Error('Content not found')
 
     const { error } = await admin
       .from('posts')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', postId)
-    if (error) throw new Error(`Failed to remove post: ${error.message}`)
+    if (error) {
+      console.error('DMCA post removal failed:', error.message)
+      throw new Error('Failed to process request')
+    }
 
     // Notify the post author (non-fatal)
     if (post.author_id && actorId && post.author_id !== actorId) {
@@ -136,7 +139,10 @@ export async function removeContentForDmca(url: string): Promise<RemoveResult> {
         suspended_until: null,
       })
       .eq('id', profile.id)
-    if (error) throw new Error(`Failed to suspend profile: ${error.message}`)
+    if (error) {
+      console.error('DMCA profile suspension failed:', error.message)
+      throw new Error('Failed to process request')
+    }
 
     // Notify the profile owner (non-fatal)
     if (actorId && profile.id !== actorId) {

@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { moderateImage } from '@/lib/sightengine'
+import { validateImageFile } from '@/lib/rate-limit'
 
 function getServiceClient() {
   return createServiceClient(
@@ -18,6 +19,7 @@ export async function uploadProfilePhoto(formData: FormData): Promise<{ error: s
 
   const file = formData.get('file') as File
   if (!file) throw new Error('No file provided')
+  validateImageFile(file)
 
   const ext = file.name.split('.').pop() ?? 'jpg'
   const path = `${user.id}/avatar.${ext}`
@@ -57,6 +59,7 @@ export async function uploadCoverPhoto(formData: FormData): Promise<void> {
 
   const file = formData.get('file') as File
   if (!file) throw new Error('No file provided')
+  validateImageFile(file)
 
   const ext = file.name.split('.').pop() ?? 'jpg'
   const path = `${user.id}/cover.${ext}`

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { geocodeZip, geocodeCity } from '@/lib/geocode'
 import type { Profile } from '@/lib/supabase/types'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 function getServiceClient() {
   return createServiceClient(
@@ -112,6 +113,9 @@ export async function findUsersByUsername(
 
   const clean = query.trim().replace(/^@/, '').replace(/\s+/g, '')
   if (!clean) return { users: [], error: 'Please enter a username to search' }
+  if (clean.length > 50) return { users: [], error: 'Search query too long' }
+
+  checkRateLimit(`findUsersByUsername:${user.id}`, 30, 60_000)
 
   const admin = getServiceClient()
 
@@ -170,6 +174,8 @@ export async function findNearbyUsers(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { users: [], error: 'Not authenticated' }
 
+  checkRateLimit(`findNearby:${user.id}`, 10, 60_000)
+
   const coords = await geocodeZip(zipCode)
   if (!coords) return { users: [], error: 'Could not find that zip code. Please check and try again.' }
 
@@ -185,6 +191,8 @@ export async function findNearbyUsersByCity(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { users: [], error: 'Not authenticated' }
+
+  checkRateLimit(`findNearby:${user.id}`, 10, 60_000)
 
   const coords = await geocodeCity(city, stateAbbr)
   if (!coords) return { users: [], error: `Could not find "${city}, ${stateAbbr}". Please check the city and state and try again.` }

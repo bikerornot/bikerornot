@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 function getServiceClient() {
   return createServiceClient(
@@ -16,6 +17,8 @@ export async function createComment(postId: string, content: string, parentComme
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
+
+  checkRateLimit(`createComment:${user.id}`, 20, 60_000)
 
   const admin = getServiceClient()
   const { data: comment, error } = await admin

@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { moderateImage, type ModerationResult } from '@/lib/sightengine'
+import { checkRateLimit, validateImageFile } from '@/lib/rate-limit'
 
 function getServiceClient() {
   return createServiceClient(
@@ -17,6 +18,8 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
+
+  checkRateLimit(`createPost:${user.id}`, 5, 60_000)
 
   const admin = getServiceClient()
 
@@ -52,8 +55,9 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
     if (!membership) throw new Error('You must be an active group member to post here')
   }
 
-  // Moderate images BEFORE creating the post so a rejection never leaves an orphaned post
+  // Validate and moderate images BEFORE creating the post so a rejection never leaves an orphaned post
   const validFiles = files.filter((f) => f && f.size > 0)
+  for (const file of validFiles) validateImageFile(file)
   type CheckedFile = { file: File; bytes: ArrayBuffer; moderation: ModerationResult }
   const checkedFiles: CheckedFile[] = []
 

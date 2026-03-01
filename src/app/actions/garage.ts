@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { validateImageFile } from '@/lib/rate-limit'
 
 function getServiceClient() {
   return createServiceClient(
@@ -60,6 +61,7 @@ export async function uploadBikePhoto(bikeId: string, formData: FormData): Promi
 
   const file = formData.get('file') as File
   if (!file) throw new Error('No file provided')
+  validateImageFile(file)
 
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
   const path = `${user.id}/${bikeId}.${ext}`

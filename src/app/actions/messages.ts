@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { ConversationSummary, Message } from '@/lib/supabase/types'
 import { scanMessageForScam } from '@/app/actions/scam-scan'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 function getServiceClient() {
   return createServiceClient(
@@ -139,6 +140,8 @@ export async function sendMessage(conversationId: string, content: string): Prom
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
+
+  checkRateLimit(`sendMessage:${user.id}`, 30, 60_000)
 
   const admin = getServiceClient()
 

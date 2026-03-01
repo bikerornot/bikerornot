@@ -24,6 +24,10 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function formatTime(dateStr: string): string {
+  return new Date(dateStr).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+}
+
 function calculateAge(dob: string): number {
   const birth = new Date(dob)
   const today = new Date()
@@ -192,7 +196,10 @@ export default function UsersClient({
                       <td className="px-4 py-3 text-zinc-400 text-xs">
                         {u.date_of_birth ? calculateAge(u.date_of_birth) : '—'}
                       </td>
-                      <td className="px-4 py-3 text-zinc-400 text-xs whitespace-nowrap">{formatDate(u.created_at)}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <p className="text-zinc-400 text-xs">{formatDate(u.created_at)}</p>
+                        <p className="text-zinc-600 text-xs">{formatTime(u.created_at)}</p>
+                      </td>
                       <td className="px-4 py-3 text-zinc-400 text-xs">{u.post_count}</td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${

@@ -79,7 +79,8 @@ export async function uploadAvatar(formData: FormData): Promise<string> {
 export async function completeOnboarding(
   username: string,
   photoPath: string | null,
-  bikes: Array<{ year: number; make: string; model: string }>
+  bikes: Array<{ year: number; make: string; model: string }>,
+  refUrl?: string | null
 ) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -130,6 +131,7 @@ export async function completeOnboarding(
   geoUpdate.signup_country = location.country
   geoUpdate.signup_region = location.region
   geoUpdate.signup_city = location.city
+  geoUpdate.signup_ref_url = refUrl ?? null
 
   await admin.from('profiles').update(geoUpdate).eq('id', user.id)
 

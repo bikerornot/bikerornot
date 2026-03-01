@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -38,6 +38,15 @@ function validateZipCode(zip: string): boolean {
 export default function SignupPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    // Capture referral source once when the signup page loads
+    if (!sessionStorage.getItem('signup_ref_url')) {
+      const refParam = new URLSearchParams(window.location.search).get('ref')
+      const refUrl = refParam ? `ref:${refParam}` : (document.referrer || null)
+      if (refUrl) sessionStorage.setItem('signup_ref_url', refUrl)
+    }
+  }, [])
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 

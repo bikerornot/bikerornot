@@ -339,6 +339,7 @@ export default function OnboardingPage() {
       }
 
       // Complete onboarding via server action (bypasses client-side auth issues)
+      const refUrl = sessionStorage.getItem('signup_ref_url') ?? null
       await completeOnboarding(
         username,
         photoPath,
@@ -350,8 +351,10 @@ export default function OnboardingPage() {
                 year: parseInt(b.year),
                 make: b.make.trim(),
                 model: b.model.trim(),
-              }))
+              })),
+        refUrl
       )
+      sessionStorage.removeItem('signup_ref_url')
 
       if (typeof window !== 'undefined' && (window as any).fbq) {
         ;(window as any).fbq('track', 'CompleteRegistration')

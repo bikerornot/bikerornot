@@ -24,6 +24,14 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function calculateAge(dob: string): number {
+  const birth = new Date(dob)
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--
+  return age
+}
+
 interface Props {
   initialUsers: AdminUserRow[]
   total: number
@@ -121,6 +129,7 @@ export default function UsersClient({
                   <th className="text-left px-4 py-3 font-medium">User</th>
                   <th className="text-left px-4 py-3 font-medium">Location</th>
                   <th className="text-left px-4 py-3 font-medium">Signup country</th>
+                  <th className="text-left px-4 py-3 font-medium">Age</th>
                   <th className="text-left px-4 py-3 font-medium">Joined</th>
                   <th className="text-left px-4 py-3 font-medium">Posts</th>
                   <th className="text-left px-4 py-3 font-medium">Status</th>
@@ -179,6 +188,9 @@ export default function UsersClient({
                             </div>
                           ))}
                         </div>
+                      </td>
+                      <td className="px-4 py-3 text-zinc-400 text-xs">
+                        {u.date_of_birth ? calculateAge(u.date_of_birth) : '—'}
                       </td>
                       <td className="px-4 py-3 text-zinc-400 text-xs whitespace-nowrap">{formatDate(u.created_at)}</td>
                       <td className="px-4 py-3 text-zinc-400 text-xs">{u.post_count}</td>

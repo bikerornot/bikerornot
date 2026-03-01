@@ -33,6 +33,17 @@ export async function getOrCreateConversation(otherUserId: string): Promise<stri
 
   if (!friendship) throw new Error('You can only message friends')
 
+  // Block messaging banned/suspended/deactivated accounts
+  const { data: otherUser } = await admin
+    .from('profiles')
+    .select('status, deactivated_at')
+    .eq('id', otherUserId)
+    .single()
+
+  if (!otherUser || otherUser.status !== 'active' || otherUser.deactivated_at) {
+    throw new Error('Cannot message this user')
+  }
+
   const [p1, p2] = [user.id, otherUserId].sort() // enforce ordering
 
   const { data: existing } = await admin
@@ -83,13 +94,18 @@ export async function getConversations(): Promise<ConversationSummary[]> {
     unreadByConvo[row.conversation_id] = (unreadByConvo[row.conversation_id] ?? 0) + 1
   }
 
-  return convos.map((c) => ({
-    id: c.id,
-    other_user: c.participant1_id === user.id ? c.participant2 : c.participant1,
-    last_message_preview: c.last_message_preview,
-    last_message_at: c.last_message_at,
-    unread_count: unreadByConvo[c.id] ?? 0,
-  })) as ConversationSummary[]
+  return convos
+    .map((c) => ({
+      id: c.id,
+      other_user: c.participant1_id === user.id ? c.participant2 : c.participant1,
+      last_message_preview: c.last_message_preview,
+      last_message_at: c.last_message_at,
+      unread_count: unreadByConvo[c.id] ?? 0,
+    }))
+    .filter((c) => {
+      const other = c.other_user as any
+      return other?.status === 'active' && !other?.deactivated_at
+    }) as ConversationSummary[]
 }
 
 export async function getMessages(conversationId: string): Promise<Message[]> {
@@ -134,6 +150,18 @@ export async function sendMessage(conversationId: string, content: string): Prom
 
   if (!convo || (convo.participant1_id !== user.id && convo.participant2_id !== user.id)) {
     throw new Error('Not authorized')
+  }
+
+  // Block sending to banned/suspended/deactivated accounts
+  const recipientId = convo.participant1_id === user.id ? convo.participant2_id : convo.participant1_id
+  const { data: recipient } = await admin
+    .from('profiles')
+    .select('status, deactivated_at')
+    .eq('id', recipientId)
+    .single()
+
+  if (!recipient || recipient.status !== 'active' || recipient.deactivated_at) {
+    throw new Error('Cannot send message to this user')
   }
 
   const trimmed = content.trim()

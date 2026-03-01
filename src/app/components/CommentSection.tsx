@@ -31,7 +31,12 @@ export default function CommentSection({ postId, currentUserId, currentUserProfi
       .is('deleted_at', null)
       .order('created_at', { ascending: true })
       .then(({ data }) => {
-        if (data) setComments(data as Comment[])
+        if (data) {
+          const visible = (data as Comment[]).filter(
+            (c: any) => !['banned', 'suspended'].includes(c.author?.status)
+          )
+          setComments(visible)
+        }
         setLoading(false)
       })
 
@@ -52,6 +57,8 @@ export default function CommentSection({ postId, currentUserId, currentUserProfi
             .eq('id', payload.new.id)
             .single()
           if (data) {
+            const author = (data as any).author
+            if (['banned', 'suspended'].includes(author?.status)) return
             setComments((prev) =>
               prev.some((c) => c.id === data.id) ? prev : [...prev, data as Comment]
             )

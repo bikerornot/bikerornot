@@ -1,3 +1,5 @@
+import 'server-only'
+
 /**
  * Sightengine AI image moderation
  *

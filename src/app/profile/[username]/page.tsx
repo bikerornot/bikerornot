@@ -227,9 +227,9 @@ export default async function ProfilePage({
         </div>
       </header>
 
-      {/* Cover photo */}
-      <div className="relative w-full h-48 md:h-64 bg-zinc-800 overflow-hidden">
-        {coverUrl && (
+      {/* Cover photo — full bar only when a cover image exists */}
+      {coverUrl ? (
+        <div className="relative w-full h-48 md:h-64 bg-zinc-800 overflow-hidden">
           <Image
             src={coverUrl}
             alt="Cover photo"
@@ -237,14 +237,19 @@ export default async function ProfilePage({
             className="object-cover"
             priority
           />
-        )}
-        {isOwnProfile && <CoverPhotoUpload userId={profile.id} />}
-      </div>
+          {isOwnProfile && <CoverPhotoUpload userId={profile.id} />}
+        </div>
+      ) : isOwnProfile ? (
+        /* Own profile, no cover yet — thin strip with upload prompt only */
+        <div className="relative w-full h-14 bg-zinc-900 border-b border-dashed border-zinc-700">
+          <CoverPhotoUpload userId={profile.id} />
+        </div>
+      ) : null}
 
       {/* Profile body */}
       <div className="max-w-4xl mx-auto px-4">
         {/* Avatar + action buttons row */}
-        <div className="flex items-end justify-between -mt-16 mb-3">
+        <div className={`flex items-end justify-between mb-3 ${coverUrl ? '-mt-16' : 'pt-5'}`}>
           {/* Avatar */}
           <div className="relative w-32 h-32 rounded-full border-4 border-zinc-950 bg-zinc-800 overflow-hidden flex-shrink-0">
             {avatarUrl ? (

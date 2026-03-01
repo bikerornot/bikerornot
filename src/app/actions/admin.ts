@@ -385,6 +385,30 @@ export async function reinstateUser(userId: string): Promise<void> {
   }).eq('id', userId)
 }
 
+export interface OnlineUser {
+  id: string
+  username: string | null
+  first_name: string
+  last_name: string
+  profile_photo_url: string | null
+  status: string
+  role: string
+  city: string | null
+  state: string | null
+  last_seen_at: string
+}
+
+export async function getOnlineUsers(): Promise<OnlineUser[]> {
+  const admin = getServiceClient()
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+  const { data } = await admin
+    .from('profiles')
+    .select('id, username, first_name, last_name, profile_photo_url, status, role, city, state, last_seen_at')
+    .gte('last_seen_at', fiveMinutesAgo)
+    .order('last_seen_at', { ascending: false })
+  return (data ?? []) as OnlineUser[]
+}
+
 export async function setUserRole(userId: string, role: 'user' | 'moderator' | 'admin' | 'super_admin'): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

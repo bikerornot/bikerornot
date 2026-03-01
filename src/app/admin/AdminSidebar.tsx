@@ -109,12 +109,15 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
           <p className="text-orange-400 text-xs font-semibold mt-0.5 uppercase tracking-wider">
             Admin Panel
           </p>
-          <div className="flex items-center gap-1.5 mt-2">
+          <Link
+            href="/admin/online"
+            className="flex items-center gap-1.5 mt-2 group w-fit"
+          >
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
-            <span className="text-xs text-zinc-400">
+            <span className="text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors">
               <span className="text-emerald-400 font-semibold">{activeUsers}</span> online now
             </span>
-          </div>
+          </Link>
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5">

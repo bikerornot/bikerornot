@@ -72,14 +72,19 @@ export async function acceptFriendRequest(requesterId: string): Promise<void> {
   if (!user) throw new Error('Not authenticated')
 
   const admin = getServiceClient()
-  const { error } = await admin
+  const { data: updated, error } = await admin
     .from('friendships')
     .update({ status: 'accepted', updated_at: new Date().toISOString() })
     .eq('requester_id', requesterId)
     .eq('addressee_id', user.id)
     .eq('status', 'pending')
+    .select('id')
 
   if (error) throw new Error(error.message)
+
+  // Only notify if we actually transitioned a pending request — prevents
+  // duplicate notifications if the request was already accepted.
+  if (!updated || updated.length === 0) return
 
   await admin.from('notifications').insert({
     user_id: requesterId,

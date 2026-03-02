@@ -31,7 +31,7 @@ export interface RecentReport {
 
 export interface DashboardStats {
   totalUsers: number
-  newToday: number
+  newLast24h: number
   newThisWeek: number
   newThisMonth: number
   pendingReports: number
@@ -46,8 +46,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const admin = getServiceClient()
 
   const now = new Date()
-  // Use explicit UTC midnight so the boundary matches Supabase's UTC timestamps
-  const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString()
+  const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
@@ -64,7 +63,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     { data: recentReportsRaw },
   ] = await Promise.all([
     admin.from('profiles').select('*', { count: 'exact', head: true }),
-    admin.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', todayStart),
+    admin.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', last24h),
     admin.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', weekAgo),
     admin.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', monthAgo),
     admin.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
@@ -84,7 +83,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   return {
     totalUsers: totalUsers ?? 0,
-    newToday: newToday ?? 0,
+    newLast24h: newToday ?? 0,
     newThisWeek: newThisWeek ?? 0,
     newThisMonth: newThisMonth ?? 0,
     pendingReports: pendingReports ?? 0,

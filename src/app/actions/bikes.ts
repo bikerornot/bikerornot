@@ -45,16 +45,22 @@ export async function findBikeOwners(
 
   const admin = getServiceClient()
 
+  // Normalize make/model for fuzzy matching: case-insensitive, hyphens and
+  // spaces treated as equivalent so "Harley-Davidson", "Harley Davidson", and
+  // "HARLEY-DAVIDSON" all match the same search.
+  const makePat = '%' + make.trim().replace(/[\s-]+/g, '%') + '%'
+  const modelPat = model ? '%' + model.trim().replace(/[\s-]+/g, '%') + '%' : null
+
   // Build query — make is required, year and model are optional
   let query = admin
     .from('user_bikes')
     .select('user_id, year, make, model')
-    .eq('make', make)
+    .ilike('make', makePat)
     .neq('user_id', user.id)
     .limit(RESULT_LIMIT + 1) // fetch one extra to detect if results were capped
 
   if (year) query = query.eq('year', year)
-  if (model) query = query.eq('model', model)
+  if (modelPat) query = query.ilike('model', modelPat)
 
   const { data: bikeRows, error: bikeError } = await query
 

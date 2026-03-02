@@ -31,7 +31,7 @@ export interface RecentReport {
 
 export interface DashboardStats {
   totalUsers: number
-  newLast24h: number
+  newToday: number
   newThisWeek: number
   newThisMonth: number
   pendingReports: number
@@ -42,11 +42,30 @@ export interface DashboardStats {
   recentReports: RecentReport[]
 }
 
+// Returns the UTC timestamp for the start of today in US Eastern time,
+// automatically accounting for EST (UTC-5) vs EDT (UTC-4) DST transitions.
+function getEasternMidnightUTC(): string {
+  const now = new Date()
+  // 'sv-SE' locale reliably gives YYYY-MM-DD format
+  const easternDate = now.toLocaleDateString('sv-SE', { timeZone: 'America/New_York' })
+  const [y, m, d] = easternDate.split('-').map(Number)
+  // Eastern is either UTC-5 (EST) or UTC-4 (EDT) — try both
+  for (const offsetHours of [5, 4]) {
+    const candidate = new Date(Date.UTC(y, m - 1, d, offsetHours))
+    const easternHour = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York', hour: 'numeric', hour12: false,
+    }).format(candidate)
+    if (easternHour === '0' || easternHour === '00') return candidate.toISOString()
+  }
+  // Fallback to EST
+  return new Date(Date.UTC(y, m - 1, d, 5)).toISOString()
+}
+
 export async function getDashboardStats(): Promise<DashboardStats> {
   const admin = getServiceClient()
 
   const now = new Date()
-  const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
+  const todayStart = getEasternMidnightUTC()
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
@@ -63,7 +82,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     { data: recentReportsRaw },
   ] = await Promise.all([
     admin.from('profiles').select('*', { count: 'exact', head: true }),
-    admin.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', last24h),
+    admin.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', todayStart),
     admin.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', weekAgo),
     admin.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', monthAgo),
     admin.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
@@ -83,7 +102,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   return {
     totalUsers: totalUsers ?? 0,
-    newLast24h: newToday ?? 0,
+    newToday: newToday ?? 0,
     newThisWeek: newThisWeek ?? 0,
     newThisMonth: newThisMonth ?? 0,
     pendingReports: pendingReports ?? 0,

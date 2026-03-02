@@ -86,7 +86,7 @@ export default async function AdminDashboardPage() {
       {/* Top stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         <StatCard label="Total Users" value={stats.totalUsers} accent="green" />
-        <StatCard label="Last 24 Hours" value={stats.newLast24h} />
+        <StatCard label="New Today" value={stats.newToday} />
         <StatCard label="New This Week" value={stats.newThisWeek} />
         <StatCard label="New This Month" value={stats.newThisMonth} />
       </div>

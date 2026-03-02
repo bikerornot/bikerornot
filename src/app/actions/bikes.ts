@@ -34,6 +34,24 @@ export interface BikeOwner {
 
 const RESULT_LIMIT = 100
 
+// Known alternate names for makes that users may have typed manually or that
+// existed in earlier versions of the UI. Values are matched case-insensitively.
+const MAKE_ALIASES: Record<string, string[]> = {
+  'Harley-Davidson': ['HD', 'H-D', 'H.D.', 'Harley'],
+  'Indian': ['Indian Motorcycle', 'Indian Motocycle'],
+  'BMW': ['BMW Motorrad'],
+}
+
+// Returns a PostgREST OR filter string that covers the fuzzy canonical pattern
+// plus any known alternate spellings, e.g.:
+//   "Harley-Davidson" → "make.ilike.%Harley%Davidson%,make.ilike.HD,make.ilike.H-D"
+function buildMakeOrFilter(make: string): string {
+  const canonical = make.trim()
+  const fuzzyPat = '%' + canonical.replace(/[\s-]+/g, '%') + '%'
+  const aliases = MAKE_ALIASES[canonical] ?? []
+  return [`make.ilike.${fuzzyPat}`, ...aliases.map((a) => `make.ilike.${a}`)].join(',')
+}
+
 export async function findBikeOwners(
   make: string,
   year?: number | null,
@@ -45,17 +63,13 @@ export async function findBikeOwners(
 
   const admin = getServiceClient()
 
-  // Normalize make/model for fuzzy matching: case-insensitive, hyphens and
-  // spaces treated as equivalent so "Harley-Davidson", "Harley Davidson", and
-  // "HARLEY-DAVIDSON" all match the same search.
-  const makePat = '%' + make.trim().replace(/[\s-]+/g, '%') + '%'
   const modelPat = model ? '%' + model.trim().replace(/[\s-]+/g, '%') + '%' : null
 
   // Build query — make is required, year and model are optional
   let query = admin
     .from('user_bikes')
     .select('user_id, year, make, model')
-    .ilike('make', makePat)
+    .or(buildMakeOrFilter(make))
     .neq('user_id', user.id)
     .limit(RESULT_LIMIT + 1) // fetch one extra to detect if results were capped
 

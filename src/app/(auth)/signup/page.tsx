@@ -40,11 +40,14 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // Capture referral source once when the signup page loads
-    if (!sessionStorage.getItem('signup_ref_url')) {
+    // Capture referral source once when the signup page loads.
+    // localStorage survives across tabs (unlike sessionStorage), so the value
+    // is still available after the user clicks the email confirmation link
+    // which opens in a new tab.
+    if (!localStorage.getItem('signup_ref_url')) {
       const refParam = new URLSearchParams(window.location.search).get('ref')
       const refUrl = refParam ? `ref:${refParam}` : (document.referrer || null)
-      if (refUrl) sessionStorage.setItem('signup_ref_url', refUrl)
+      if (refUrl) localStorage.setItem('signup_ref_url', refUrl)
     }
   }, [])
   const [error, setError] = useState<string | null>(null)

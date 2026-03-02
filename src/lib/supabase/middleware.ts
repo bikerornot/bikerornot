@@ -49,6 +49,19 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Redirect authenticated users who haven't finished onboarding
+  if (user && isProtected && !pathname.startsWith('/onboarding')) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarding_complete')
+      .eq('id', user.id)
+      .single()
+    if (profile && !profile.onboarding_complete) {
+      url.pathname = '/onboarding'
+      return NextResponse.redirect(url)
+    }
+  }
+
   // For admin routes: verify the user has an elevated role
   if (isAdmin && user) {
     const { data: profile } = await supabase

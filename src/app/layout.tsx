@@ -42,6 +42,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             alt=""
           />
         </noscript>
+        {/* Google AdSense */}
+        <Script
+          id="google-adsense"
+          strategy="afterInteractive"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3393838345892792"
+          crossOrigin="anonymous"
+        />
         {/* Google Analytics */}
         <Script
           id="google-analytics"

@@ -241,19 +241,11 @@ export async function getUsers({
   let messageCountMap: Record<string, number> = {}
   let commentCountMap: Record<string, number> = {}
   if (userIds.length > 0) {
-    const [{ data: postCounts }, { data: messageCounts }, { data: commentCounts }] = await Promise.all([
-      admin.from('posts').select('author_id').in('author_id', userIds).is('deleted_at', null),
-      admin.from('messages').select('sender_id').in('sender_id', userIds),
-      admin.from('comments').select('author_id').in('author_id', userIds).is('deleted_at', null),
-    ])
-    for (const p of postCounts ?? []) {
-      postCountMap[p.author_id] = (postCountMap[p.author_id] ?? 0) + 1
-    }
-    for (const m of messageCounts ?? []) {
-      messageCountMap[m.sender_id] = (messageCountMap[m.sender_id] ?? 0) + 1
-    }
-    for (const c of commentCounts ?? []) {
-      commentCountMap[c.author_id] = (commentCountMap[c.author_id] ?? 0) + 1
+    const { data: counts } = await admin.rpc('get_user_activity_counts', { user_ids: userIds })
+    for (const row of counts ?? []) {
+      postCountMap[row.user_id] = Number(row.post_count)
+      messageCountMap[row.user_id] = Number(row.message_count)
+      commentCountMap[row.user_id] = Number(row.comment_count)
     }
   }
 

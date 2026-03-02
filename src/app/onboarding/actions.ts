@@ -86,7 +86,7 @@ export async function completeOnboarding(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  if (!/^[a-z0-9_]{3,20}$/.test(username)) throw new Error('Invalid username')
+  if (!/^[a-z0-9_]{4,20}$/.test(username)) throw new Error('Invalid username')
 
   const admin = getServiceClient()
 

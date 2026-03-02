@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { RIDING_STYLES } from '@/lib/supabase/types'
 import { uploadAvatar, completeOnboarding } from './actions'
 
-const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/
+const USERNAME_REGEX = /^[a-z0-9_]{4,20}$/
 const CURRENT_YEAR = new Date().getFullYear()
 
 type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
@@ -77,7 +77,7 @@ function StepUsername({
     setStatus('idle')
 
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (value.length >= 3) {
+    if (value.length >= 4) {
       debounceRef.current = setTimeout(() => checkUsername(value), 600)
     }
   }
@@ -88,7 +88,7 @@ function StepUsername({
     available: <span className="text-green-400">✓ @{username} is available</span>,
     taken: <span className="text-red-400">✗ That username is taken</span>,
     invalid: username.length > 0
-      ? <span className="text-red-400">✗ 3–20 chars, lowercase letters, numbers, underscores only</span>
+      ? <span className="text-red-400">✗ Must be 4–20 characters, lowercase letters, numbers, and underscores only</span>
       : null,
   }[status]
 
@@ -111,7 +111,7 @@ function StepUsername({
             placeholder="yourhandle"
           />
         </div>
-        <p className="text-zinc-500 text-xs mt-2">3–20 characters · lowercase letters, numbers, underscores</p>
+        <p className="text-zinc-500 text-xs mt-2">4–20 characters · lowercase letters, numbers, underscores</p>
         {statusMessage && <p className="text-xs mt-1">{statusMessage}</p>}
       </div>
     </div>

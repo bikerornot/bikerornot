@@ -220,6 +220,14 @@ export default async function UserDetailPage({
                 <p className="text-zinc-500 text-xs mt-0.5">Posts</p>
               </div>
               <div className="text-center">
+                <p className="text-2xl font-bold text-white">{user.message_count}</p>
+                <p className="text-zinc-500 text-xs mt-0.5">Messages</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-white">{user.comment_count}</p>
+                <p className="text-zinc-500 text-xs mt-0.5">Comments</p>
+              </div>
+              <div className="text-center">
                 <p className={`text-2xl font-bold ${user.report_count > 0 ? 'text-orange-400' : 'text-white'}`}>
                   {user.report_count}
                 </p>

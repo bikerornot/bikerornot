@@ -152,6 +152,8 @@ export interface AdminUserRow {
   signup_city: string | null
   date_of_birth: string | null
   post_count: number
+  message_count: number
+  comment_count: number
   risk_flags: string[]
 }
 
@@ -179,6 +181,8 @@ export interface AdminUserDetail {
   suspended_until: string | null
   ban_reason: string | null
   post_count: number
+  message_count: number
+  comment_count: number
   report_count: number
   recent_posts: Array<{
     id: string
@@ -234,14 +238,22 @@ export async function getUsers({
 
   const userIds = (data ?? []).map((u) => u.id)
   let postCountMap: Record<string, number> = {}
+  let messageCountMap: Record<string, number> = {}
+  let commentCountMap: Record<string, number> = {}
   if (userIds.length > 0) {
-    const { data: postCounts } = await admin
-      .from('posts')
-      .select('author_id')
-      .in('author_id', userIds)
-      .is('deleted_at', null)
+    const [{ data: postCounts }, { data: messageCounts }, { data: commentCounts }] = await Promise.all([
+      admin.from('posts').select('author_id').in('author_id', userIds).is('deleted_at', null),
+      admin.from('messages').select('sender_id').in('sender_id', userIds),
+      admin.from('comments').select('author_id').in('author_id', userIds).is('deleted_at', null),
+    ])
     for (const p of postCounts ?? []) {
       postCountMap[p.author_id] = (postCountMap[p.author_id] ?? 0) + 1
+    }
+    for (const m of messageCounts ?? []) {
+      messageCountMap[m.sender_id] = (messageCountMap[m.sender_id] ?? 0) + 1
+    }
+    for (const c of commentCounts ?? []) {
+      commentCountMap[c.author_id] = (commentCountMap[c.author_id] ?? 0) + 1
     }
   }
 
@@ -249,6 +261,8 @@ export async function getUsers({
     users: (data ?? []).map((u) => ({
       ...u,
       post_count: postCountMap[u.id] ?? 0,
+      message_count: messageCountMap[u.id] ?? 0,
+      comment_count: commentCountMap[u.id] ?? 0,
       risk_flags: computeRiskFlags(u),
     })) as AdminUserRow[],
     total: count ?? 0,
@@ -311,12 +325,14 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     }
   }
 
-  // Report counts
-  const [{ count: profileReports }, { count: postReports }] = await Promise.all([
+  // Report / message / comment counts
+  const [{ count: profileReports }, { count: postReports }, { count: totalMessages }, { count: totalComments }] = await Promise.all([
     admin.from('reports').select('*', { count: 'exact', head: true }).eq('reported_type', 'profile').eq('reported_id', userId),
     postIds.length > 0
       ? admin.from('reports').select('*', { count: 'exact', head: true }).eq('reported_type', 'post').in('reported_id', postIds)
       : Promise.resolve({ count: 0 }),
+    admin.from('messages').select('*', { count: 'exact', head: true }).eq('sender_id', userId),
+    admin.from('comments').select('*', { count: 'exact', head: true }).eq('author_id', userId).is('deleted_at', null),
   ])
 
   // Recent reports against this user's profile
@@ -352,6 +368,8 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     suspended_until: profile.suspended_until ?? null,
     ban_reason: profile.ban_reason ?? null,
     post_count: (posts ?? []).length,
+    message_count: totalMessages ?? 0,
+    comment_count: totalComments ?? 0,
     report_count: (profileReports ?? 0) + (postReports ?? 0),
     recent_posts: (posts ?? []).slice(0, 10).map((p) => ({
       id: p.id,

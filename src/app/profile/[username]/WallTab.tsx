@@ -48,8 +48,11 @@ export default function WallTab({
       if (error) throw error
       if (!data || data.length === 0) return []
 
-      const postIds = data.map((p) => p.id)
-      const sharedPostIds = data.map((p) => p.shared_post_id).filter(Boolean) as string[]
+      // Filter out posts from banned or suspended authors
+      const filtered = data.filter((p) => !p.author || p.author.status === 'active')
+
+      const postIds = filtered.map((p) => p.id)
+      const sharedPostIds = filtered.map((p) => p.shared_post_id).filter(Boolean) as string[]
 
       const [{ data: likeCounts }, { data: commentCounts }, { data: myLikes }, { data: sharedPostsData }] =
         await Promise.all([
@@ -88,7 +91,7 @@ export default function WallTab({
         sharedPostMap[p.id] = p as Post
       }
 
-      return data.map((post) => ({
+      return filtered.map((post) => ({
         ...post,
         like_count: likeMap[post.id] ?? 0,
         comment_count: commentMap[post.id] ?? 0,

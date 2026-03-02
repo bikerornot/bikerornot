@@ -388,8 +388,11 @@ export async function getGroupPosts(groupId: string, cursor?: string): Promise<P
   if (error) throw new Error(error.message)
   if (!data || data.length === 0) return []
 
-  const postIds = data.map((p) => p.id)
-  const sharedPostIds = data.map((p) => p.shared_post_id).filter(Boolean) as string[]
+  // Filter out posts from banned or suspended authors
+  const filtered = data.filter((p: any) => !p.author || p.author.status === 'active')
+
+  const postIds = filtered.map((p: any) => p.id)
+  const sharedPostIds = filtered.map((p: any) => p.shared_post_id).filter(Boolean) as string[]
 
   const [{ data: likeCounts }, { data: commentCounts }, { data: myLikes }, { data: sharedPostsData }] = await Promise.all([
     admin.from('post_likes').select('post_id').in('post_id', postIds),
@@ -414,7 +417,7 @@ export async function getGroupPosts(groupId: string, cursor?: string): Promise<P
     sharedPostMap[p.id] = p as Post
   }
 
-  return data.map((post) => ({
+  return filtered.map((post: any) => ({
     ...post,
     like_count: likeMap[post.id] ?? 0,
     comment_count: commentMap[post.id] ?? 0,

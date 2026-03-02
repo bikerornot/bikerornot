@@ -443,6 +443,22 @@ export async function getOnlineUsers(): Promise<OnlineUser[]> {
   return (data ?? []) as OnlineUser[]
 }
 
+export async function adminSendFriendRequest(targetUserId: string): Promise<void> {
+  const adminId = await requireAdmin()
+  if (adminId === targetUserId) throw new Error('Cannot friend yourself')
+  const admin = getServiceClient()
+  const { error } = await admin
+    .from('friendships')
+    .insert({ requester_id: adminId, addressee_id: targetUserId })
+  if (error && error.code !== '23505') throw new Error(error.message)
+  if (error) return // already exists
+  await admin.from('notifications').insert({
+    user_id: targetUserId,
+    type: 'friend_request',
+    actor_id: adminId,
+  })
+}
+
 export async function setUserRole(userId: string, role: 'user' | 'moderator' | 'admin' | 'super_admin'): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

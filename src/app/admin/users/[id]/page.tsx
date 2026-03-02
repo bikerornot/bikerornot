@@ -62,6 +62,20 @@ export default async function UserDetailPage({
   const isSuperAdmin = adminProfile?.role === 'super_admin'
   const riskFlags = computeRiskFlags(user)
 
+  // Friendship status between the logged-in admin and this user
+  const { data: friendship } = await supabase
+    .from('friendships')
+    .select('status, requester_id')
+    .or(`and(requester_id.eq.${adminUser!.id},addressee_id.eq.${id}),and(requester_id.eq.${id},addressee_id.eq.${adminUser!.id})`)
+    .maybeSingle()
+
+  let friendshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'accepted' = 'none'
+  if (friendship) {
+    if (friendship.status === 'accepted') friendshipStatus = 'accepted'
+    else if (friendship.requester_id === adminUser!.id) friendshipStatus = 'pending_sent'
+    else friendshipStatus = 'pending_received'
+  }
+
   return (
     <div className="p-6 max-w-4xl">
       {/* Back */}
@@ -245,6 +259,7 @@ export default async function UserDetailPage({
             currentStatus={user.status as 'active' | 'suspended' | 'banned'}
             currentRole={user.role}
             isSuperAdmin={isSuperAdmin}
+            friendshipStatus={friendshipStatus}
           />
 
           {/* Recent posts */}

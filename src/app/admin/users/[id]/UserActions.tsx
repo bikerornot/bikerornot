@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { suspendUser, banUser, reinstateUser, setUserRole } from '@/app/actions/admin'
+import { suspendUser, banUser, reinstateUser, setUserRole, adminSendFriendRequest } from '@/app/actions/admin'
 
 const SUSPEND_DURATIONS = [
   { label: '1 day', days: 1 },
@@ -19,9 +19,10 @@ interface Props {
   currentStatus: 'active' | 'suspended' | 'banned'
   currentRole: string
   isSuperAdmin: boolean
+  friendshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'accepted'
 }
 
-export default function UserActions({ userId, currentStatus, currentRole, isSuperAdmin }: Props) {
+export default function UserActions({ userId, currentStatus, currentRole, isSuperAdmin, friendshipStatus }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
 
@@ -100,6 +101,30 @@ export default function UserActions({ userId, currentStatus, currentRole, isSupe
             >
               Change Role
             </button>
+          )}
+          {friendshipStatus === 'none' && (
+            <button
+              onClick={() => run(() => adminSendFriendRequest(userId))}
+              disabled={busy}
+              className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-zinc-300 text-xs font-semibold px-4 py-2 rounded-lg transition-colors border border-zinc-700"
+            >
+              Friend Request
+            </button>
+          )}
+          {friendshipStatus === 'pending_sent' && (
+            <span className="bg-zinc-800/50 text-zinc-500 text-xs font-semibold px-4 py-2 rounded-lg border border-zinc-800 cursor-default">
+              Request Sent
+            </span>
+          )}
+          {friendshipStatus === 'pending_received' && (
+            <span className="bg-zinc-800/50 text-zinc-500 text-xs font-semibold px-4 py-2 rounded-lg border border-zinc-800 cursor-default">
+              Request Received
+            </span>
+          )}
+          {friendshipStatus === 'accepted' && (
+            <span className="bg-emerald-500/10 text-emerald-600 text-xs font-semibold px-4 py-2 rounded-lg border border-emerald-500/20 cursor-default">
+              Friends
+            </span>
           )}
         </div>
       </div>

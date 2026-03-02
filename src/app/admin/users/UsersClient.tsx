@@ -132,6 +132,7 @@ export default function UsersClient({
                 <tr className="border-b border-zinc-800 text-zinc-500 text-xs uppercase tracking-wider">
                   <th className="text-left px-4 py-3 font-medium">User</th>
                   <th className="text-left px-4 py-3 font-medium w-28">Country</th>
+                  <th className="text-left px-4 py-3 font-medium">Source</th>
                   <th className="text-left px-4 py-3 font-medium">Age</th>
                   <th className="text-left px-4 py-3 font-medium">Joined</th>
                   <th className="text-left px-4 py-3 font-medium">Activity</th>
@@ -185,6 +186,15 @@ export default function UsersClient({
                             </div>
                           ))}
                         </div>
+                      </td>
+                      <td className="px-4 py-3 max-w-[180px]">
+                        {u.signup_ref_url ? (
+                          <span className="text-zinc-400 text-xs truncate block" title={u.signup_ref_url}>
+                            {u.signup_ref_url.length > 40 ? u.signup_ref_url.slice(0, 40) + '…' : u.signup_ref_url}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-600 text-xs">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-zinc-400 text-xs">
                         {u.date_of_birth ? calculateAge(u.date_of_birth) : '—'}

@@ -150,6 +150,7 @@ export interface AdminUserRow {
   signup_country: string | null
   signup_region: string | null
   signup_city: string | null
+  signup_ref_url: string | null
   date_of_birth: string | null
   post_count: number
   message_count: number
@@ -221,7 +222,7 @@ export async function getUsers({
 
   let query = admin
     .from('profiles')
-    .select('id, username, first_name, last_name, created_at, status, role, city, state, profile_photo_url, signup_country, signup_region, signup_city, date_of_birth', { count: 'exact' })
+    .select('id, username, first_name, last_name, created_at, status, role, city, state, profile_photo_url, signup_country, signup_region, signup_city, signup_ref_url, date_of_birth', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1)
 

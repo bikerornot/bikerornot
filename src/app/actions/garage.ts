@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { validateImageFile } from '@/lib/rate-limit'
+import { normalizeMake } from '@/lib/normalize-make'
 
 function getServiceClient() {
   return createServiceClient(
@@ -12,25 +13,6 @@ function getServiceClient() {
 }
 
 const CURRENT_YEAR = new Date().getFullYear()
-
-// Normalize common make aliases to their canonical names so the DB stays clean
-// regardless of how users type them in the "Other" free-text field.
-const MAKE_CANONICAL: Record<string, string> = {
-  'harley-davidson': 'Harley-Davidson',
-  'harley davidson': 'Harley-Davidson',
-  'harley':          'Harley-Davidson',
-  'hd':              'Harley-Davidson',
-  'h-d':             'Harley-Davidson',
-  'h.d.':            'Harley-Davidson',
-  'indian motorcycle': 'Indian',
-  'indian motocycle':  'Indian',
-  'bmw motorrad':      'BMW',
-  'moto-guzzi':        'Moto Guzzi',
-}
-
-function normalizeMake(make: string): string {
-  return MAKE_CANONICAL[make.trim().toLowerCase()] ?? make.trim()
-}
 
 function validateBikeFields(year: number, make: string, model: string) {
   if (!Number.isInteger(year) || year < 1885 || year > CURRENT_YEAR + 2) throw new Error('Invalid year')

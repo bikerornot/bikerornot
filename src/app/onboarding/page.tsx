@@ -6,17 +6,12 @@ import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { RIDING_STYLES } from '@/lib/supabase/types'
 import { uploadAvatar, completeOnboarding } from './actions'
+import BikeSelector, { BikeData } from '@/app/settings/BikeSelector'
 
 const USERNAME_REGEX = /^[a-z0-9_]{4,20}$/
 const CURRENT_YEAR = new Date().getFullYear()
 
 type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
-
-interface BikeRow {
-  year: string
-  make: string
-  model: string
-}
 
 // ─── Progress Indicator ───────────────────────────────────────────────────────
 function StepIndicator({ current }: { current: number }) {
@@ -209,11 +204,11 @@ function StepBikes({
   bikes,
   setBikes,
 }: {
-  bikes: BikeRow[]
-  setBikes: React.Dispatch<React.SetStateAction<BikeRow[]>>
+  bikes: BikeData[]
+  setBikes: React.Dispatch<React.SetStateAction<BikeData[]>>
 }) {
-  function updateBike(index: number, field: keyof BikeRow, value: string) {
-    setBikes((prev) => prev.map((b, i) => (i === index ? { ...b, [field]: value } : b)))
+  function updateBike(index: number, val: BikeData) {
+    setBikes((prev) => prev.map((b, i) => (i === index ? val : b)))
   }
 
   function addBike() {
@@ -246,31 +241,7 @@ function StepBikes({
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              <input
-                type="number"
-                value={bike.year}
-                onChange={(e) => updateBike(index, 'year', e.target.value)}
-                min={1900}
-                max={CURRENT_YEAR + 1}
-                placeholder="Year"
-                className="bg-zinc-900 border border-zinc-600 rounded-md px-2 py-1.5 text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm"
-              />
-              <input
-                type="text"
-                value={bike.make}
-                onChange={(e) => updateBike(index, 'make', e.target.value)}
-                placeholder="Make"
-                className="bg-zinc-900 border border-zinc-600 rounded-md px-2 py-1.5 text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm"
-              />
-              <input
-                type="text"
-                value={bike.model}
-                onChange={(e) => updateBike(index, 'model', e.target.value)}
-                placeholder="Model"
-                className="bg-zinc-900 border border-zinc-600 rounded-md px-2 py-1.5 text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 text-sm"
-              />
-            </div>
+            <BikeSelector value={bike} onChange={(val) => updateBike(index, val)} />
           </div>
         ))}
 
@@ -302,7 +273,7 @@ export default function OnboardingPage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
 
   // Step 3
-  const [bikes, setBikes] = useState<BikeRow[]>([{ year: '', make: '', model: '' }])
+  const [bikes, setBikes] = useState<BikeData[]>([{ year: '', make: '', model: '' }])
 
   function canAdvanceStep1() {
     return usernameStatus === 'available'

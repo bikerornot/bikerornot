@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { geocodeZip } from '@/lib/geocode'
 import { validateImageFile } from '@/lib/rate-limit'
+import { normalizeMake } from '@/lib/normalize-make'
 
 async function getSignupLocation(): Promise<{
   ip: string | null
@@ -146,7 +147,7 @@ export async function completeOnboarding(
   if (bikes.length > 0) {
     const { error: bikesError } = await admin
       .from('user_bikes')
-      .insert(bikes.map((b) => ({ ...b, user_id: user.id })))
+      .insert(bikes.map((b) => ({ ...b, make: normalizeMake(b.make), user_id: user.id })))
     if (bikesError) throw new Error(bikesError.message)
   }
 

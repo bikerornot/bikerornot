@@ -408,17 +408,12 @@ export async function suspendUser(userId: string, reason: string, days: number |
 export async function banUser(userId: string, reason: string): Promise<void> {
   await requireAdmin()
   const admin = getServiceClient()
-  const now = new Date().toISOString()
-  await Promise.all([
-    admin.from('profiles').update({
-      status: 'banned',
-      ban_reason: reason,
-      suspension_reason: null,
-      suspended_until: null,
-    }).eq('id', userId),
-    // Soft-delete all posts by the banned user so they disappear from all feeds and walls
-    admin.from('posts').update({ deleted_at: now }).eq('author_id', userId).is('deleted_at', null),
-  ])
+  await admin.from('profiles').update({
+    status: 'banned',
+    ban_reason: reason,
+    suspension_reason: null,
+    suspended_until: null,
+  }).eq('id', userId)
 }
 
 export async function reinstateUser(userId: string): Promise<void> {

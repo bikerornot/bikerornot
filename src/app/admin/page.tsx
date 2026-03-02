@@ -3,6 +3,7 @@ import { getDashboardStats } from '@/app/actions/admin'
 import type { RecentSignup, RecentReport } from '@/app/actions/admin'
 
 export const metadata = { title: 'Dashboard — BikerOrNot Admin' }
+export const dynamic = 'force-dynamic'
 
 const REASON_LABELS: Record<string, string> = {
   spam: 'Spam',

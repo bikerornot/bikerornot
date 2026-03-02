@@ -46,7 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Script
           id="google-analytics"
           strategy="afterInteractive"
-          src="https://www.googletagmanager.com/gtag/js?id=G-EP6CJVKSEZ"
+          src="https://www.googletagmanager.com/gtag/js?id=G-YJLPP8ZQ6W"
         />
         <Script
           id="google-analytics-config"
@@ -56,7 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
-              gtag('config', 'G-EP6CJVKSEZ');
+              gtag('config', 'G-YJLPP8ZQ6W');
             `,
           }}
         />

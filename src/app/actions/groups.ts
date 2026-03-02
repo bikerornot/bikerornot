@@ -388,8 +388,8 @@ export async function getGroupPosts(groupId: string, cursor?: string): Promise<P
   if (error) throw new Error(error.message)
   if (!data || data.length === 0) return []
 
-  // Filter out posts from banned or suspended authors
-  const filtered = data.filter((p: any) => !p.author || p.author.status === 'active')
+  // Only keep posts where the author is confirmed active (not banned/suspended/missing)
+  const filtered = data.filter((p: any) => p.author?.status === 'active')
 
   const postIds = filtered.map((p: any) => p.id)
   const sharedPostIds = filtered.map((p: any) => p.shared_post_id).filter(Boolean) as string[]

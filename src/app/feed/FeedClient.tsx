@@ -47,8 +47,8 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       if (error) throw error
       if (!data || data.length === 0) return []
 
-      // Filter out posts from banned or suspended users
-      const filtered = data.filter((p) => !p.author || p.author.status === 'active')
+      // Only keep posts where the author is confirmed active (not banned/suspended/missing)
+      const filtered = data.filter((p) => p.author?.status === 'active')
 
       const postIds = filtered.map((p) => p.id)
       const sharedPostIds = filtered.map((p) => p.shared_post_id).filter(Boolean) as string[]

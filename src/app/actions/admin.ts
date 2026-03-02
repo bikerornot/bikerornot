@@ -460,6 +460,45 @@ export async function adminSendFriendRequest(targetUserId: string): Promise<void
   })
 }
 
+export interface RefSourceRow {
+  label: string
+  count: number
+}
+
+export async function getRefSources(): Promise<RefSourceRow[]> {
+  const admin = getServiceClient()
+  const { data } = await admin
+    .from('profiles')
+    .select('signup_ref_url')
+    .not('signup_ref_url', 'is', null)
+
+  // Normalize raw URLs/strings into human-readable labels
+  function toLabel(raw: string): string {
+    if (/facebook\.com/i.test(raw) || raw.startsWith('facebook /')) return 'Facebook'
+    if (/instagram\.com/i.test(raw)) return 'Instagram'
+    if (/google\.com/i.test(raw) || raw.startsWith('google /')) return 'Google'
+    if (/bing\.com/i.test(raw) || raw.startsWith('bing /')) return 'Bing'
+    if (/tiktok\.com/i.test(raw) || raw.startsWith('tiktok /')) return 'TikTok'
+    if (/youtube\.com/i.test(raw) || raw.startsWith('youtube /')) return 'YouTube'
+    if (/twitter\.com|x\.com/i.test(raw) || raw.startsWith('twitter /') || raw.startsWith('x /')) return 'X / Twitter'
+    if (raw.startsWith('ref:')) return raw  // keep explicit ref: tags as-is
+    // UTM format "source / medium / campaign" — use as-is
+    if (raw.includes(' / ')) return raw
+    // Full URL — extract hostname
+    try { return new URL(raw).hostname.replace(/^www\./, '') } catch { return raw }
+  }
+
+  const counts: Record<string, number> = {}
+  for (const row of data ?? []) {
+    const label = toLabel(row.signup_ref_url as string)
+    counts[label] = (counts[label] ?? 0) + 1
+  }
+
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, count]) => ({ label, count }))
+}
+
 export async function setUserRole(userId: string, role: 'user' | 'moderator' | 'admin' | 'super_admin'): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

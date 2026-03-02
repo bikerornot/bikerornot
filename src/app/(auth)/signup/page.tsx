@@ -39,35 +39,8 @@ export default function SignupPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    // Capture referral source once when the signup page loads.
-    // localStorage survives across tabs (unlike sessionStorage), so the value
-    // is still available after the user clicks the email confirmation link
-    // which opens in a new tab.
-    //
-    // Priority: UTM params (paid ads) > ?ref= > document.referrer
-    if (!localStorage.getItem('signup_ref_url')) {
-      const params = new URLSearchParams(window.location.search)
-      const utmSource = params.get('utm_source')
-      const utmMedium = params.get('utm_medium')
-      const utmCampaign = params.get('utm_campaign')
-      const refParam = params.get('ref')
-
-      let refUrl: string | null = null
-      if (utmSource) {
-        const parts = [utmSource]
-        if (utmMedium) parts.push(utmMedium)
-        if (utmCampaign) parts.push(utmCampaign)
-        refUrl = parts.join(' / ')
-      } else if (refParam) {
-        refUrl = `ref:${refParam}`
-      } else if (document.referrer) {
-        refUrl = document.referrer
-      }
-
-      if (refUrl) localStorage.setItem('signup_ref_url', refUrl)
-    }
-  }, [])
+  // Referral source capture is handled by the root layout script,
+  // which fires on any landing page before the user reaches /signup.
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 

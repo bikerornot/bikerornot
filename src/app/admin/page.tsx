@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { getDashboardStats } from '@/app/actions/admin'
+import { getDashboardStats, getRefSources } from '@/app/actions/admin'
 import type { RecentSignup, RecentReport } from '@/app/actions/admin'
 
 export const metadata = { title: 'Dashboard — BikerOrNot Admin' }
@@ -48,7 +48,7 @@ function StatCard({ label, value, sub, accent = 'default' }: StatCardProps) {
 }
 
 export default async function AdminDashboardPage() {
-  const stats = await getDashboardStats()
+  const [stats, refSources] = await Promise.all([getDashboardStats(), getRefSources()])
 
   return (
     <div className="p-6 max-w-6xl">
@@ -127,6 +127,30 @@ export default async function AdminDashboardPage() {
           value={stats.suspendedUsers}
           accent={stats.suspendedUsers > 0 ? 'orange' : 'default'}
         />
+      </div>
+
+      {/* Referral Sources */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-6">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
+          <h2 className="text-white font-semibold text-sm">Referral Sources</h2>
+          <span className="text-zinc-600 text-xs">
+            {refSources.reduce((s, r) => s + r.count, 0)} tracked · rest are direct / unknown
+          </span>
+        </div>
+        {refSources.length === 0 ? (
+          <p className="text-zinc-600 text-sm text-center py-6">
+            No referral data yet — add UTM params to your ad URLs to start tracking
+          </p>
+        ) : (
+          <div className="px-5 py-4 flex flex-wrap gap-3">
+            {refSources.map((r) => (
+              <div key={r.label} className="bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2.5 flex items-center gap-3">
+                <span className="text-white text-sm font-medium">{r.label}</span>
+                <span className="text-orange-400 text-sm font-bold">{r.count}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Recent activity */}

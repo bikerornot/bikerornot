@@ -42,6 +42,35 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             alt=""
           />
         </noscript>
+        {/* Referral source capture — runs on every page so UTM params are
+            caught on any landing page, not just /signup */}
+        <Script
+          id="referral-capture"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  if (localStorage.getItem('signup_ref_url')) return;
+                  var p = new URLSearchParams(window.location.search);
+                  var src = p.get('utm_source');
+                  var med = p.get('utm_medium');
+                  var cmp = p.get('utm_campaign');
+                  var ref = p.get('ref');
+                  var val = null;
+                  if (src) {
+                    val = src + (med ? ' / ' + med : '') + (cmp ? ' / ' + cmp : '');
+                  } else if (ref) {
+                    val = 'ref:' + ref;
+                  } else if (document.referrer) {
+                    val = document.referrer;
+                  }
+                  if (val) localStorage.setItem('signup_ref_url', val);
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
         {/* Google AdSense */}
         <Script
           id="google-adsense"

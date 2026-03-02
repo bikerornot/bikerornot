@@ -85,8 +85,20 @@ export default async function AdminDashboardPage() {
 
       {/* Top stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <StatCard label="Total Users" value={stats.totalUsers} accent="green" />
-        <StatCard label="New Today" value={stats.newToday} />
+        {/* Combined Total / Today card */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+          <div className="flex divide-x divide-zinc-700">
+            <div className="flex-1 pr-4">
+              <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-2">Total Users</p>
+              <p className="text-3xl font-bold text-emerald-400">{stats.totalUsers.toLocaleString()}</p>
+            </div>
+            <div className="flex-1 pl-4">
+              <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-2">Today</p>
+              <p className="text-3xl font-bold text-white">{stats.newToday.toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
+        <StatCard label="Last 24 Hours" value={stats.newLast24h} />
         <StatCard label="New This Week" value={stats.newThisWeek} />
         <StatCard label="New This Month" value={stats.newThisMonth} />
       </div>

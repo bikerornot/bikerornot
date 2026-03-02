@@ -131,13 +131,10 @@ export default function UsersClient({
               <thead>
                 <tr className="border-b border-zinc-800 text-zinc-500 text-xs uppercase tracking-wider">
                   <th className="text-left px-4 py-3 font-medium">User</th>
-                  <th className="text-left px-4 py-3 font-medium">Location</th>
                   <th className="text-left px-4 py-3 font-medium">Country</th>
                   <th className="text-left px-4 py-3 font-medium">Age</th>
                   <th className="text-left px-4 py-3 font-medium">Joined</th>
-                  <th className="text-left px-2 py-3 font-medium">Posts</th>
-                  <th className="text-left px-2 py-3 font-medium">Msgs</th>
-                  <th className="text-left px-2 py-3 font-medium">Cmts</th>
+                  <th className="text-left px-4 py-3 font-medium">Activity</th>
                   <th className="text-left px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3" />
                 </tr>
@@ -172,9 +169,6 @@ export default function UsersClient({
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-zinc-400 text-xs">
-                        {u.city && u.state ? `${u.city}, ${u.state}` : u.state ?? u.city ?? '—'}
-                      </td>
                       <td className="px-4 py-3">
                         <div className="space-y-1">
                           <span className={`text-xs font-medium ${u.risk_flags.length > 0 ? 'text-red-400' : 'text-zinc-400'}`}>
@@ -182,9 +176,6 @@ export default function UsersClient({
                           </span>
                           {u.signup_region && (
                             <p className="text-xs text-zinc-500">{u.signup_region}</p>
-                          )}
-                          {u.signup_city && (
-                            <p className="text-xs text-zinc-500">{u.signup_city}</p>
                           )}
                           {u.risk_flags.map((flag, fi) => (
                             <div key={fi} className="flex items-center gap-1">
@@ -202,9 +193,13 @@ export default function UsersClient({
                         <p className="text-zinc-400 text-xs">{formatDate(u.created_at)}</p>
                         <p className="text-zinc-600 text-xs">{formatTime(u.created_at)}</p>
                       </td>
-                      <td className="px-2 py-3 text-zinc-400 text-xs">{u.post_count}</td>
-                      <td className="px-2 py-3 text-zinc-400 text-xs">{u.message_count}</td>
-                      <td className="px-2 py-3 text-zinc-400 text-xs">{u.comment_count}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-3 text-xs">
+                          <span className="text-zinc-400"><span className="text-zinc-500">P </span>{u.post_count}</span>
+                          <span className="text-zinc-400"><span className="text-zinc-500">M </span>{u.message_count}</span>
+                          <span className="text-zinc-400"><span className="text-zinc-500">C </span>{u.comment_count}</span>
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                           u.status === 'banned' ? 'bg-red-500/20 text-red-400' :

@@ -2,6 +2,7 @@ import { getUsers } from '@/app/actions/admin'
 import UsersClient from './UsersClient'
 
 export const metadata = { title: 'Users — BikerOrNot Admin' }
+export const dynamic = 'force-dynamic'
 
 export default async function AdminUsersPage({
   searchParams,

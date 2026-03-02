@@ -132,12 +132,12 @@ export default function UsersClient({
                 <tr className="border-b border-zinc-800 text-zinc-500 text-xs uppercase tracking-wider">
                   <th className="text-left px-4 py-3 font-medium">User</th>
                   <th className="text-left px-4 py-3 font-medium">Location</th>
-                  <th className="text-left px-4 py-3 font-medium">Signup country</th>
+                  <th className="text-left px-4 py-3 font-medium">Country</th>
                   <th className="text-left px-4 py-3 font-medium">Age</th>
                   <th className="text-left px-4 py-3 font-medium">Joined</th>
-                  <th className="text-left px-4 py-3 font-medium">Posts</th>
-                  <th className="text-left px-4 py-3 font-medium">Msgs</th>
-                  <th className="text-left px-4 py-3 font-medium">Comments</th>
+                  <th className="text-left px-2 py-3 font-medium">Posts</th>
+                  <th className="text-left px-2 py-3 font-medium">Msgs</th>
+                  <th className="text-left px-2 py-3 font-medium">Cmts</th>
                   <th className="text-left px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3" />
                 </tr>
@@ -202,9 +202,9 @@ export default function UsersClient({
                         <p className="text-zinc-400 text-xs">{formatDate(u.created_at)}</p>
                         <p className="text-zinc-600 text-xs">{formatTime(u.created_at)}</p>
                       </td>
-                      <td className="px-4 py-3 text-zinc-400 text-xs">{u.post_count}</td>
-                      <td className="px-4 py-3 text-zinc-400 text-xs">{u.message_count}</td>
-                      <td className="px-4 py-3 text-zinc-400 text-xs">{u.comment_count}</td>
+                      <td className="px-2 py-3 text-zinc-400 text-xs">{u.post_count}</td>
+                      <td className="px-2 py-3 text-zinc-400 text-xs">{u.message_count}</td>
+                      <td className="px-2 py-3 text-zinc-400 text-xs">{u.comment_count}</td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                           u.status === 'banned' ? 'bg-red-500/20 text-red-400' :

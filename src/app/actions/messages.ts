@@ -216,15 +216,27 @@ export async function getUnreadMessageCount(): Promise<number> {
 
   const { data: convos } = await admin
     .from('conversations')
-    .select('id')
+    .select('id, participant1_id, participant2_id, participant1:profiles!participant1_id(status, deactivated_at), participant2:profiles!participant2_id(status, deactivated_at)')
     .or(`participant1_id.eq.${user.id},participant2_id.eq.${user.id}`)
 
   if (!convos || convos.length === 0) return 0
 
+  // Only count unread messages from conversations that are actually visible —
+  // same filter as getConversations so banned/suspended users can't cause a
+  // phantom badge the recipient can never clear.
+  const visibleConvoIds = convos
+    .filter((c: any) => {
+      const other = c.participant1_id === user.id ? c.participant2 : c.participant1
+      return other?.status === 'active' && !other?.deactivated_at
+    })
+    .map((c) => c.id)
+
+  if (visibleConvoIds.length === 0) return 0
+
   const { count } = await admin
     .from('messages')
     .select('*', { count: 'exact', head: true })
-    .in('conversation_id', convos.map((c) => c.id))
+    .in('conversation_id', visibleConvoIds)
     .neq('sender_id', user.id)
     .is('read_at', null)
 

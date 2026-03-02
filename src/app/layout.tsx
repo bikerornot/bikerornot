@@ -42,6 +42,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             alt=""
           />
         </noscript>
+        {/* Google Analytics */}
+        <Script
+          id="google-analytics"
+          strategy="afterInteractive"
+          src="https://www.googletagmanager.com/gtag/js?id=G-EP6CJVKSEZ"
+        />
+        <Script
+          id="google-analytics-config"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-EP6CJVKSEZ');
+            `,
+          }}
+        />
       </head>
       <body className={`${geist.className} antialiased bg-zinc-950 text-white`}>
         <Heartbeat />

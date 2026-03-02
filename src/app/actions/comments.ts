@@ -140,7 +140,7 @@ export async function likeComment(commentId: string): Promise<void> {
 
   const { data: comment } = await admin
     .from('comments')
-    .select('author_id')
+    .select('author_id, post_id')
     .eq('id', commentId)
     .single()
 
@@ -150,6 +150,7 @@ export async function likeComment(commentId: string): Promise<void> {
       type: 'comment_like',
       actor_id: user.id,
       comment_id: commentId,
+      post_id: comment.post_id,
     })
   }
 }

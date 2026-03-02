@@ -45,11 +45,11 @@ function notificationHref(n: Notification, currentUsername: string): string {
     case 'post_comment':
     case 'comment_reply':
     case 'comment_like':
-      return `/profile/${currentUsername}`
+      return n.post_id ? `/posts/${n.post_id}` : '/feed'
     case 'group_invite':
       return n.group?.slug ? `/groups/${n.group.slug}` : '/groups'
     case 'wall_post':
-      return `/profile/${currentUsername}`
+      return n.post_id ? `/posts/${n.post_id}` : `/profile/${currentUsername}`
     case 'dmca_takedown':
       return '/dmca/counter-notice'
     default:

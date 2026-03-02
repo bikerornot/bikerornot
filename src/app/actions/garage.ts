@@ -13,6 +13,25 @@ function getServiceClient() {
 
 const CURRENT_YEAR = new Date().getFullYear()
 
+// Normalize common make aliases to their canonical names so the DB stays clean
+// regardless of how users type them in the "Other" free-text field.
+const MAKE_CANONICAL: Record<string, string> = {
+  'harley-davidson': 'Harley-Davidson',
+  'harley davidson': 'Harley-Davidson',
+  'harley':          'Harley-Davidson',
+  'hd':              'Harley-Davidson',
+  'h-d':             'Harley-Davidson',
+  'h.d.':            'Harley-Davidson',
+  'indian motorcycle': 'Indian',
+  'indian motocycle':  'Indian',
+  'bmw motorrad':      'BMW',
+  'moto-guzzi':        'Moto Guzzi',
+}
+
+function normalizeMake(make: string): string {
+  return MAKE_CANONICAL[make.trim().toLowerCase()] ?? make.trim()
+}
+
 function validateBikeFields(year: number, make: string, model: string) {
   if (!Number.isInteger(year) || year < 1885 || year > CURRENT_YEAR + 2) throw new Error('Invalid year')
   if (!make.trim() || make.length > 100) throw new Error('Invalid make')
@@ -24,12 +43,13 @@ export async function addBike(year: number, make: string, model: string): Promis
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  validateBikeFields(year, make, model)
+  const canonicalMake = normalizeMake(make)
+  validateBikeFields(year, canonicalMake, model)
 
   const admin = getServiceClient()
   const { data, error } = await admin
     .from('user_bikes')
-    .insert({ user_id: user.id, year, make, model })
+    .insert({ user_id: user.id, year, make: canonicalMake, model })
     .select('id')
     .single()
   if (error) throw new Error(error.message)
@@ -41,12 +61,13 @@ export async function updateBike(id: string, year: number, make: string, model: 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  validateBikeFields(year, make, model)
+  const canonicalMake = normalizeMake(make)
+  validateBikeFields(year, canonicalMake, model)
 
   const admin = getServiceClient()
   const { error } = await admin
     .from('user_bikes')
-    .update({ year, make, model })
+    .update({ year, make: canonicalMake, model })
     .eq('id', id)
     .eq('user_id', user.id)
   if (error) throw new Error(error.message)

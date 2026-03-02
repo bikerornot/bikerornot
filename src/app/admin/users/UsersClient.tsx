@@ -131,7 +131,7 @@ export default function UsersClient({
               <thead>
                 <tr className="border-b border-zinc-800 text-zinc-500 text-xs uppercase tracking-wider">
                   <th className="text-left px-4 py-3 font-medium">User</th>
-                  <th className="text-left px-4 py-3 font-medium">Country</th>
+                  <th className="text-left px-4 py-3 font-medium w-28">Country</th>
                   <th className="text-left px-4 py-3 font-medium">Age</th>
                   <th className="text-left px-4 py-3 font-medium">Joined</th>
                   <th className="text-left px-4 py-3 font-medium">Activity</th>
@@ -169,13 +169,13 @@ export default function UsersClient({
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 w-28">
                         <div className="space-y-1">
                           <span className={`text-xs font-medium ${u.risk_flags.length > 0 ? 'text-red-400' : 'text-zinc-400'}`}>
                             {u.signup_country ?? '—'}
                           </span>
                           {u.signup_region && (
-                            <p className="text-xs text-zinc-500">{u.signup_region}</p>
+                            <p className="text-xs text-zinc-500 truncate">{u.signup_region}</p>
                           )}
                           {u.risk_flags.map((flag, fi) => (
                             <div key={fi} className="flex items-center gap-1">

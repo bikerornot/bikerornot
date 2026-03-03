@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { RIDING_STYLES } from '@/lib/supabase/types'
 import { uploadAvatar, completeOnboarding } from './actions'
 import BikeSelector, { BikeData } from '@/app/settings/BikeSelector'
+import { compressImage } from '@/lib/compress'
 
 const USERNAME_REGEX = /^[a-z0-9_]{4,20}$/
 const CURRENT_YEAR = new Date().getFullYear()
@@ -134,19 +135,24 @@ function StepPhoto({
     }
   }, [photoPreview])
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     setError(null)
     const file = e.target.files?.[0]
     if (!file) return
+    e.target.value = ''
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be under 5 MB')
-      return
+    try {
+      const compressed = await compressImage(file, 0.5, 800)
+      if (compressed.size > 3 * 1024 * 1024) {
+        setError('Image is too large. Please choose a smaller file.')
+        return
+      }
+      if (photoPreview) URL.revokeObjectURL(photoPreview)
+      setPhotoFile(compressed)
+      setPhotoPreview(URL.createObjectURL(compressed))
+    } catch {
+      setError('Failed to process image')
     }
-
-    if (photoPreview) URL.revokeObjectURL(photoPreview)
-    setPhotoFile(file)
-    setPhotoPreview(URL.createObjectURL(file))
   }
 
   return (

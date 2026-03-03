@@ -15,26 +15,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <noscript>
-          <img
-            height="1"
-            width="1"
-            style={{ display: 'none' }}
-            src="https://www.facebook.com/tr?id=2703070426753057&ev=PageView&noscript=1"
-            alt=""
-          />
-        </noscript>
-      </head>
-      <body className={`${geist.className} antialiased bg-zinc-950 text-white`}>
-        <Heartbeat />
-        {children}
+        {/* Google Analytics — raw script tags so they fire before hydration */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-YJLPP8ZQ6W" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-YJLPP8ZQ6W');
+            `,
+          }}
+        />
 
-        {/* === Tracking scripts — must be in <body>, not <head>, for App Router === */}
-
-        {/* Facebook Pixel */}
-        <Script
-          id="facebook-pixel"
-          strategy="afterInteractive"
+        {/* Facebook Pixel — raw script tag so it fires before hydration */}
+        <script
           dangerouslySetInnerHTML={{
             __html: `
               !function(f,b,e,v,n,t,s)
@@ -50,6 +45,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             `,
           }}
         />
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{ display: 'none' }}
+            src="https://www.facebook.com/tr?id=2703070426753057&ev=PageView&noscript=1"
+            alt=""
+          />
+        </noscript>
+      </head>
+      <body className={`${geist.className} antialiased bg-zinc-950 text-white`}>
+        <Heartbeat />
+        {children}
 
         {/* Referral source capture — runs on every page so UTM params are
             caught on any landing page, not just /signup */}
@@ -87,25 +95,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           strategy="afterInteractive"
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3393838345892792"
           crossOrigin="anonymous"
-        />
-
-        {/* Google Analytics */}
-        <Script
-          id="google-analytics"
-          strategy="afterInteractive"
-          src="https://www.googletagmanager.com/gtag/js?id=G-YJLPP8ZQ6W"
-        />
-        <Script
-          id="google-analytics-config"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'G-YJLPP8ZQ6W');
-            `,
-          }}
         />
       </body>
     </html>

@@ -89,6 +89,7 @@ export async function getGroups(currentUserId?: string): Promise<Group[]> {
   const { data: groups, error } = await admin
     .from('groups')
     .select('*')
+    .eq('status', 'active')
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(error.message)

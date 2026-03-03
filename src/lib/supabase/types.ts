@@ -93,6 +93,8 @@ export interface Group {
   cover_photo_url: string | null
   privacy: 'public' | 'private'
   creator_id: string
+  status: 'active' | 'suspended'
+  suspended_reason: string | null
   created_at: string
   updated_at: string
   member_count?: number

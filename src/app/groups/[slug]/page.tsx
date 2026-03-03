@@ -31,6 +31,31 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
   const group = await getGroup(slug, user?.id)
   if (!group) notFound()
 
+  // Show suspended state — group is off but not deleted
+  if (group.status === 'suspended') {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-5">
+            <svg className="w-7 h-7 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+          </div>
+          <h1 className="text-white text-xl font-bold mb-2">{group.name}</h1>
+          <p className="text-zinc-400 text-sm leading-relaxed">
+            This group has been suspended by the platform administrators and is no longer available.
+          </p>
+          <Link
+            href="/groups"
+            className="inline-block mt-6 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium px-5 py-2.5 rounded-xl transition-colors"
+          >
+            Browse Groups
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   const isMember = group.member_status === 'active'
   const isAdmin = group.member_role === 'admin'
 

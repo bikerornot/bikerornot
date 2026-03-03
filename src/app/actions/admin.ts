@@ -407,6 +407,119 @@ export async function banUser(userId: string, reason: string): Promise<void> {
     suspension_reason: null,
     suspended_until: null,
   }).eq('id', userId)
+
+  // Auto-suspend all active groups created by this user
+  await admin
+    .from('groups')
+    .update({ status: 'suspended', suspended_reason: `Creator account banned: ${reason}` })
+    .eq('creator_id', userId)
+    .eq('status', 'active')
+}
+
+// ─── Admin Group Management ──────────────────────────────────────────────────
+
+export interface AdminGroupRow {
+  id: string
+  name: string
+  slug: string
+  privacy: 'public' | 'private'
+  status: 'active' | 'suspended'
+  suspended_reason: string | null
+  member_count: number
+  created_at: string
+}
+
+export interface GroupMemberOption {
+  user_id: string
+  username: string | null
+  first_name: string
+  last_name: string
+}
+
+export async function getGroupsByCreator(userId: string): Promise<AdminGroupRow[]> {
+  const admin = getServiceClient()
+
+  const { data: groups } = await admin
+    .from('groups')
+    .select('id, name, slug, privacy, status, suspended_reason, created_at')
+    .eq('creator_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (!groups || groups.length === 0) return []
+
+  const groupIds = groups.map((g) => g.id)
+  const { data: memberCounts } = await admin
+    .from('group_members')
+    .select('group_id')
+    .in('group_id', groupIds)
+    .eq('status', 'active')
+
+  const countMap: Record<string, number> = {}
+  for (const row of memberCounts ?? []) {
+    countMap[row.group_id] = (countMap[row.group_id] ?? 0) + 1
+  }
+
+  return groups.map((g) => ({ ...g, member_count: countMap[g.id] ?? 0 })) as AdminGroupRow[]
+}
+
+export async function suspendGroup(groupId: string, reason: string): Promise<void> {
+  await requireAdmin()
+  const admin = getServiceClient()
+  await admin
+    .from('groups')
+    .update({ status: 'suspended', suspended_reason: reason })
+    .eq('id', groupId)
+}
+
+export async function reinstateGroup(groupId: string): Promise<void> {
+  await requireAdmin()
+  const admin = getServiceClient()
+  await admin
+    .from('groups')
+    .update({ status: 'active', suspended_reason: null })
+    .eq('id', groupId)
+}
+
+export async function getGroupMembersForTransfer(
+  groupId: string,
+  excludeUserId: string
+): Promise<GroupMemberOption[]> {
+  const admin = getServiceClient()
+  const { data } = await admin
+    .from('group_members')
+    .select('user_id, profile:profiles!user_id(username, first_name, last_name)')
+    .eq('group_id', groupId)
+    .eq('status', 'active')
+    .neq('user_id', excludeUserId)
+
+  return (data ?? []).map((m: any) => ({
+    user_id: m.user_id,
+    username: m.profile?.username ?? null,
+    first_name: m.profile?.first_name ?? '',
+    last_name: m.profile?.last_name ?? '',
+  }))
+}
+
+export async function transferGroupOwnership(
+  groupId: string,
+  newOwnerId: string
+): Promise<void> {
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  // Ensure new owner is an active admin in group_members
+  await admin
+    .from('group_members')
+    .upsert(
+      { group_id: groupId, user_id: newOwnerId, role: 'admin', status: 'active' },
+      { onConflict: 'group_id,user_id' }
+    )
+
+  // Transfer creator_id and reinstate the group
+  await admin
+    .from('groups')
+    .update({ creator_id: newOwnerId, status: 'active', suspended_reason: null })
+    .eq('id', groupId)
 }
 
 export async function reinstateUser(userId: string): Promise<void> {

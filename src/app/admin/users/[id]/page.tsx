@@ -4,11 +4,12 @@ import Link from 'next/link'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 import { createClient } from '@/lib/supabase/server'
-import { getUserDetail } from '@/app/actions/admin'
+import { getUserDetail, getGroupsByCreator } from '@/app/actions/admin'
 import { computeRiskFlags } from '@/lib/risk'
 import { getImageUrl } from '@/lib/supabase/image'
 import UserActions from './UserActions'
 import AvatarPreview from './AvatarPreview'
+import GroupAdminPanel from './GroupAdminPanel'
 
 export const metadata = { title: 'User Detail — BikerOrNot Admin' }
 
@@ -52,7 +53,10 @@ export default async function UserDetailPage({
   const { data: adminProfile } = await supabase
     .from('profiles').select('role').eq('id', adminUser!.id).single()
 
-  const user = await getUserDetail(id)
+  const [user, createdGroups] = await Promise.all([
+    getUserDetail(id),
+    getGroupsByCreator(id),
+  ])
   if (!user) notFound()
 
   const avatarUrl = user.profile_photo_url
@@ -358,6 +362,9 @@ export default async function UserDetailPage({
               </ul>
             </div>
           )}
+
+          {/* Groups created by this user */}
+          <GroupAdminPanel groups={createdGroups} creatorId={id} />
 
           {/* Messages sent by this user */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">

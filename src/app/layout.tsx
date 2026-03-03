@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
-import { GoogleAnalytics } from '@next/third-parties/google'
 import Script from 'next/script'
 import Heartbeat from '@/app/components/Heartbeat'
 import './globals.css'
@@ -16,6 +15,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        {/* Google Analytics — raw script tags so Tag Assistant detects them */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-YJLPP8ZQ6W" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-YJLPP8ZQ6W');`,
+          }}
+        />
         <noscript>
           <img
             height="1"
@@ -84,8 +90,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           crossOrigin="anonymous"
         />
 
-        {/* Google Analytics — uses @next/third-parties for proper script injection */}
-        <GoogleAnalytics gaId="G-YJLPP8ZQ6W" />
       </body>
     </html>
   )

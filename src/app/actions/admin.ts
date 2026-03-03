@@ -507,6 +507,13 @@ export async function transferGroupOwnership(
   await requireAdmin()
   const admin = getServiceClient()
 
+  // Look up the current creator so we can remove them
+  const { data: group } = await admin
+    .from('groups')
+    .select('creator_id')
+    .eq('id', groupId)
+    .single()
+
   // Ensure new owner is an active admin in group_members
   await admin
     .from('group_members')
@@ -514,6 +521,15 @@ export async function transferGroupOwnership(
       { group_id: groupId, user_id: newOwnerId, role: 'admin', status: 'active' },
       { onConflict: 'group_id,user_id' }
     )
+
+  // Remove the original creator from the group entirely
+  if (group?.creator_id && group.creator_id !== newOwnerId) {
+    await admin
+      .from('group_members')
+      .delete()
+      .eq('group_id', groupId)
+      .eq('user_id', group.creator_id)
+  }
 
   // Transfer creator_id and reinstate the group
   await admin

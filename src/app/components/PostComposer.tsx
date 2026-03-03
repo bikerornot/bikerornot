@@ -123,7 +123,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
   }
 
   return (
-    <div className="bg-zinc-900 rounded-xl border border-zinc-700 border-t-[3px] border-t-orange-500 p-4 shadow-lg shadow-black/40">
+    <div className="bg-orange-500/5 rounded-xl border border-orange-500/30 p-4 shadow-lg shadow-black/40">
       <form onSubmit={handleSubmit}>
         {/* Avatar + textarea row */}
         <div className="flex gap-3">
@@ -147,7 +147,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Share your ride…"
+              placeholder="Share something with the crew…"
               rows={3}
               disabled={submitting}
               className="w-full bg-transparent text-white placeholder-zinc-400 focus:outline-none text-base resize-none"
@@ -212,7 +212,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
         {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
 
         {/* Action bar */}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-700">
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-orange-500/20">
           <div className="flex items-center gap-2">
             {images.length < 4 && (
               <button

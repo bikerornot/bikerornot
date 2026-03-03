@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
+import { GoogleAnalytics } from '@next/third-parties/google'
 import Script from 'next/script'
 import Heartbeat from '@/app/components/Heartbeat'
 import './globals.css'
@@ -26,20 +27,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </noscript>
       </head>
       <body className={`${geist.className} antialiased bg-zinc-950 text-white`}>
-        {/* Google Analytics — beforeInteractive loads before hydration */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-YJLPP8ZQ6W"
-          strategy="beforeInteractive"
-        />
-        <Script id="gtag-init" strategy="beforeInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-YJLPP8ZQ6W');
-          `}
-        </Script>
-
         {/* Facebook Pixel — beforeInteractive so it fires on initial load */}
         <Script id="facebook-pixel" strategy="beforeInteractive">
           {`
@@ -96,6 +83,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3393838345892792"
           crossOrigin="anonymous"
         />
+
+        {/* Google Analytics — uses @next/third-parties for proper script injection */}
+        <GoogleAnalytics gaId="G-YJLPP8ZQ6W" />
       </body>
     </html>
   )

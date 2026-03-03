@@ -20,6 +20,10 @@ export default function CoverPhotoUpload({ userId }: { userId: string }) {
 
     try {
       const compressed = await compressImage(file, 1, 1920)
+      if (compressed.size > 3 * 1024 * 1024) {
+        setError('Image is too large. Please choose a smaller file.')
+        return
+      }
       const formData = new FormData()
       formData.append('file', compressed)
       await uploadCoverPhoto(formData)

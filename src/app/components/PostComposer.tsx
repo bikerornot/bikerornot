@@ -61,6 +61,15 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
     setError(null)
     try {
       const compressed = await Promise.all(files.map((f) => compressImage(f)))
+
+      // Validate total payload stays under Vercel's 4.5 MB function limit
+      const existingBytes = images.reduce((s, f) => s + f.size, 0)
+      const newBytes = compressed.reduce((s, f) => s + f.size, 0)
+      if (existingBytes + newBytes > 3.5 * 1024 * 1024) {
+        setError('Images are too large. Please use fewer images or choose smaller files.')
+        return
+      }
+
       setImages((prev) => [...prev, ...compressed])
       compressed.forEach((file) => {
         setImagePreviews((prev) => [...prev, URL.createObjectURL(file)])

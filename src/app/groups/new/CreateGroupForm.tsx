@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createGroup } from '@/app/actions/groups'
+import { compressImage } from '@/lib/compress'
 
 export default function CreateGroupForm() {
   const router = useRouter()
@@ -16,17 +17,23 @@ export default function CreateGroupForm() {
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  function handleCoverSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleCoverSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 10 * 1024 * 1024) {
-      setError('Cover photo must be under 10 MB')
-      return
-    }
-    if (coverPreview) URL.revokeObjectURL(coverPreview)
-    setCoverFile(file)
-    setCoverPreview(URL.createObjectURL(file))
     e.target.value = ''
+    setError(null)
+    try {
+      const compressed = await compressImage(file, 1, 1920)
+      if (compressed.size > 3 * 1024 * 1024) {
+        setError('Image is too large. Please choose a smaller file.')
+        return
+      }
+      if (coverPreview) URL.revokeObjectURL(coverPreview)
+      setCoverFile(compressed)
+      setCoverPreview(URL.createObjectURL(compressed))
+    } catch {
+      setError('Failed to process image')
+    }
   }
 
   function removeCover() {

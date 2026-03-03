@@ -20,6 +20,10 @@ export default function ProfilePhotoUpload({ userId }: { userId: string }) {
 
     try {
       const compressed = await compressImage(file, 0.5, 800)
+      if (compressed.size > 3 * 1024 * 1024) {
+        setError('Image is too large. Please choose a smaller file.')
+        return
+      }
       const formData = new FormData()
       formData.append('file', compressed)
       const result = await uploadProfilePhoto(formData)

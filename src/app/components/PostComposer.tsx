@@ -123,7 +123,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
   }
 
   return (
-    <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4">
+    <div className="bg-zinc-900 rounded-xl border border-zinc-700 border-t-[3px] border-t-orange-500 p-4 shadow-lg shadow-black/40">
       <form onSubmit={handleSubmit}>
         {/* Avatar + textarea row */}
         <div className="flex gap-3">
@@ -147,10 +147,10 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="What's on your mind?"
+              placeholder="Share your ride…"
               rows={3}
               disabled={submitting}
-              className="w-full bg-transparent text-white placeholder-zinc-500 focus:outline-none text-base resize-none"
+              className="w-full bg-transparent text-white placeholder-zinc-400 focus:outline-none text-base resize-none"
             />
 
             {imagePreviews.length > 0 && (
@@ -212,20 +212,21 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
         {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
 
         {/* Action bar */}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-800">
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-700">
           <div className="flex items-center gap-2">
             {images.length < 4 && (
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="text-zinc-400 hover:text-orange-400 transition-colors p-1.5 rounded-lg hover:bg-zinc-800"
+                className="flex items-center gap-1.5 text-zinc-400 hover:text-orange-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-sm font-medium"
                 title="Add photos (max 4)"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                   <circle cx="8.5" cy="8.5" r="1.5" />
                   <polyline points="21 15 16 10 5 21" />
                 </svg>
+                Add Photo
               </button>
             )}
             <input
@@ -241,7 +242,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
           <button
             type="submit"
             disabled={(!content.trim() && images.length === 0) || submitting || compressing}
-            className="bg-orange-500 hover:bg-orange-600 disabled:bg-orange-500/20 disabled:text-orange-400/60 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors"
+            className="bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors"
           >
             {submitting ? 'Posting…' : 'Post'}
           </button>

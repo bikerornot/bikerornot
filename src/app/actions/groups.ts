@@ -376,6 +376,26 @@ export async function getGroupPosts(groupId: string, cursor?: string): Promise<P
 
   const admin = getServiceClient()
 
+  // Verify the group exists and check privacy + membership
+  const { data: group } = await admin
+    .from('groups')
+    .select('privacy')
+    .eq('id', groupId)
+    .single()
+
+  if (!group) throw new Error('Group not found')
+
+  if (group.privacy === 'private') {
+    const { data: membership } = await admin
+      .from('group_members')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .single()
+    if (!membership) throw new Error('Not a member of this group')
+  }
+
   const base = admin
     .from('posts')
     .select('*, author:profiles!author_id(*), images:post_images(*)')

@@ -35,11 +35,12 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
         .order('created_at', { ascending: false })
         .limit(PAGE_SIZE)
 
-      // Show non-group posts plus posts from groups the user is in.
-      // Only apply group_id filter if user has group memberships (column may not
-      // exist yet if migration hasn't run, so we skip the filter when the list is empty).
+      // Always filter: show non-group posts plus posts from groups the user belongs to.
+      // When the user is in no groups, only non-group posts are shown (group_id must be null).
       if (userGroupIds.length > 0) {
         base = base.or(`group_id.is.null,group_id.in.(${userGroupIds.join(',')})`) as typeof base
+      } else {
+        base = base.is('group_id', null) as typeof base
       }
 
       const { data, error } = cursor ? await base.lt('created_at', cursor) : await base

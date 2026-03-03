@@ -499,6 +499,80 @@ export async function getRefSources(): Promise<RefSourceRow[]> {
     .map(([label, count]) => ({ label, count }))
 }
 
+// ─── Admin Messages ─────────────────────────────────────────────────────────
+
+export interface AdminMessageRow {
+  id: string
+  conversation_id: string
+  sender_id: string
+  content: string
+  created_at: string
+  sender: {
+    id: string
+    username: string | null
+    first_name: string
+    last_name: string
+    profile_photo_url: string | null
+    status: string
+  } | null
+  recipient: {
+    id: string
+    username: string | null
+    first_name: string
+    last_name: string
+    profile_photo_url: string | null
+  } | null
+}
+
+export async function getAdminMessages(
+  page = 0,
+  pageSize = 50,
+): Promise<{ messages: AdminMessageRow[]; hasMore: boolean }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || !['moderator', 'admin', 'super_admin'].includes(profile.role)) throw new Error('Not authorized')
+
+  const admin = getServiceClient()
+
+  const { data } = await admin
+    .from('messages')
+    .select(`
+      id, conversation_id, sender_id, content, created_at,
+      sender:profiles!sender_id(id, username, first_name, last_name, profile_photo_url, status),
+      conversation:conversations!conversation_id(
+        participant1_id, participant2_id,
+        p1:profiles!participant1_id(id, username, first_name, last_name, profile_photo_url),
+        p2:profiles!participant2_id(id, username, first_name, last_name, profile_photo_url)
+      )
+    `)
+    .order('created_at', { ascending: false })
+    .range(page * pageSize, page * pageSize + pageSize) // fetch pageSize+1 to detect hasMore
+
+  const rows = data ?? []
+  const hasMore = rows.length > pageSize
+
+  const messages: AdminMessageRow[] = rows.slice(0, pageSize).map((row: any) => {
+    const convo = row.conversation
+    let recipient = null
+    if (convo) {
+      recipient = row.sender_id === convo.participant1_id ? convo.p2 : convo.p1
+    }
+    return {
+      id: row.id,
+      conversation_id: row.conversation_id,
+      sender_id: row.sender_id,
+      content: row.content,
+      created_at: row.created_at,
+      sender: row.sender ?? null,
+      recipient: recipient ?? null,
+    }
+  })
+
+  return { messages, hasMore }
+}
+
 export async function setUserRole(userId: string, role: 'user' | 'moderator' | 'admin' | 'super_admin'): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

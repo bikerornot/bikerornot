@@ -30,15 +30,50 @@ export interface RecentReport {
 }
 
 export interface DashboardStats {
+  // Users
   totalUsers: number
   newToday: number
   newLast24h: number
   newThisWeek: number
   newThisMonth: number
+  onboardingComplete: number
+  // Engagement
+  posts24h: number
+  posts7d: number
+  postsTotal: number
+  comments24h: number
+  comments7d: number
+  commentsTotal: number
+  messages24h: number
+  messages7d: number
+  messagesTotal: number
+  likes24h: number
+  likes7d: number
+  likesTotal: number
+  // Social
+  friendRequestsSent24h: number
+  friendRequestsSent7d: number
+  friendshipsFormed24h: number
+  friendshipsFormed7d: number
+  friendshipsTotal: number
+  // Content
+  photosUploaded24h: number
+  photosUploaded7d: number
+  bikesAdded24h: number
+  bikesAdded7d: number
+  bikesTotal: number
+  groupsCreated7d: number
+  groupsTotal: number
+  // Safety
   pendingReports: number
+  reports24h: number
+  reports7d: number
+  blocks24h: number
+  blocks7d: number
   bannedUsers: number
   suspendedUsers: number
   flaggedUsers: number
+  // Activity feeds
   recentSignups: RecentSignup[]
   recentReports: RecentReport[]
 }
@@ -71,28 +106,106 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
+  const c = (table: string, col = '*') => admin.from(table).select(col, { count: 'exact', head: true })
+
   const [
+    // Users
     { count: totalUsers },
     { count: newToday },
     { count: newLast24h },
     { count: newThisWeek },
     { count: newThisMonth },
+    { count: onboardingComplete },
+    // Posts
+    { count: postsTotal },
+    { count: posts24h },
+    { count: posts7d },
+    // Comments
+    { count: commentsTotal },
+    { count: comments24h },
+    { count: comments7d },
+    // Messages
+    { count: messagesTotal },
+    { count: messages24h },
+    { count: messages7d },
+    // Likes
+    { count: likesTotal },
+    { count: likes24h },
+    { count: likes7d },
+    // Friendships
+    { count: friendRequestsSent24h },
+    { count: friendRequestsSent7d },
+    { count: friendshipsFormed24h },
+    { count: friendshipsFormed7d },
+    { count: friendshipsTotal },
+    // Content
+    { count: photosUploaded24h },
+    { count: photosUploaded7d },
+    { count: bikesAdded24h },
+    { count: bikesAdded7d },
+    { count: bikesTotal },
+    { count: groupsCreated7d },
+    { count: groupsTotal },
+    // Safety
     { count: pendingReports },
+    { count: reports24h },
+    { count: reports7d },
+    { count: blocks24h },
+    { count: blocks7d },
     { count: bannedUsers },
     { count: suspendedUsers },
     { count: flaggedUsers },
+    // Activity feeds
     { data: recentSignups },
     { data: recentReportsRaw },
   ] = await Promise.all([
-    admin.from('profiles').select('*', { count: 'exact', head: true }),
-    admin.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', todayStart),
-    admin.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', last24h),
-    admin.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', weekAgo),
-    admin.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', monthAgo),
-    admin.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-    admin.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'banned'),
-    admin.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'suspended'),
-    admin.from('profiles').select('*', { count: 'exact', head: true }).in('signup_country', HIGH_RISK_COUNTRIES).eq('status', 'active'),
+    // Users
+    c('profiles'),
+    c('profiles').gte('created_at', todayStart),
+    c('profiles').gte('created_at', last24h),
+    c('profiles').gte('created_at', weekAgo),
+    c('profiles').gte('created_at', monthAgo),
+    c('profiles').eq('onboarding_complete', true),
+    // Posts
+    c('posts').is('deleted_at', null),
+    c('posts').is('deleted_at', null).gte('created_at', last24h),
+    c('posts').is('deleted_at', null).gte('created_at', weekAgo),
+    // Comments
+    c('comments').is('deleted_at', null),
+    c('comments').is('deleted_at', null).gte('created_at', last24h),
+    c('comments').is('deleted_at', null).gte('created_at', weekAgo),
+    // Messages
+    c('messages'),
+    c('messages').gte('created_at', last24h),
+    c('messages').gte('created_at', weekAgo),
+    // Likes
+    c('post_likes'),
+    c('post_likes').gte('created_at', last24h),
+    c('post_likes').gte('created_at', weekAgo),
+    // Friendships
+    c('friendships').gte('created_at', last24h),
+    c('friendships').gte('created_at', weekAgo),
+    c('friendships').eq('status', 'accepted').gte('updated_at', last24h),
+    c('friendships').eq('status', 'accepted').gte('updated_at', weekAgo),
+    c('friendships').eq('status', 'accepted'),
+    // Content
+    c('post_images').gte('created_at', last24h),
+    c('post_images').gte('created_at', weekAgo),
+    c('user_bikes').gte('created_at', last24h),
+    c('user_bikes').gte('created_at', weekAgo),
+    c('user_bikes'),
+    c('groups').gte('created_at', weekAgo),
+    c('groups'),
+    // Safety
+    c('reports').eq('status', 'pending'),
+    c('reports').gte('created_at', last24h),
+    c('reports').gte('created_at', weekAgo),
+    c('blocks').gte('created_at', last24h),
+    c('blocks').gte('created_at', weekAgo),
+    c('profiles').eq('status', 'banned'),
+    c('profiles').eq('status', 'suspended'),
+    c('profiles').in('signup_country', HIGH_RISK_COUNTRIES).eq('status', 'active'),
+    // Activity feeds
     admin.from('profiles')
       .select('id, username, first_name, last_name, created_at, status, profile_photo_url')
       .order('created_at', { ascending: false })
@@ -110,7 +223,36 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     newLast24h: newLast24h ?? 0,
     newThisWeek: newThisWeek ?? 0,
     newThisMonth: newThisMonth ?? 0,
+    onboardingComplete: onboardingComplete ?? 0,
+    postsTotal: postsTotal ?? 0,
+    posts24h: posts24h ?? 0,
+    posts7d: posts7d ?? 0,
+    commentsTotal: commentsTotal ?? 0,
+    comments24h: comments24h ?? 0,
+    comments7d: comments7d ?? 0,
+    messagesTotal: messagesTotal ?? 0,
+    messages24h: messages24h ?? 0,
+    messages7d: messages7d ?? 0,
+    likesTotal: likesTotal ?? 0,
+    likes24h: likes24h ?? 0,
+    likes7d: likes7d ?? 0,
+    friendRequestsSent24h: friendRequestsSent24h ?? 0,
+    friendRequestsSent7d: friendRequestsSent7d ?? 0,
+    friendshipsFormed24h: friendshipsFormed24h ?? 0,
+    friendshipsFormed7d: friendshipsFormed7d ?? 0,
+    friendshipsTotal: friendshipsTotal ?? 0,
+    photosUploaded24h: photosUploaded24h ?? 0,
+    photosUploaded7d: photosUploaded7d ?? 0,
+    bikesAdded24h: bikesAdded24h ?? 0,
+    bikesAdded7d: bikesAdded7d ?? 0,
+    bikesTotal: bikesTotal ?? 0,
+    groupsCreated7d: groupsCreated7d ?? 0,
+    groupsTotal: groupsTotal ?? 0,
     pendingReports: pendingReports ?? 0,
+    reports24h: reports24h ?? 0,
+    reports7d: reports7d ?? 0,
+    blocks24h: blocks24h ?? 0,
+    blocks7d: blocks7d ?? 0,
     bannedUsers: bannedUsers ?? 0,
     suspendedUsers: suspendedUsers ?? 0,
     flaggedUsers: flaggedUsers ?? 0,
@@ -205,6 +347,13 @@ export interface AdminUserDetail {
     content: string
     created_at: string
     recipient_username: string | null
+  }>
+  recent_comments: Array<{
+    id: string
+    content: string
+    created_at: string
+    post_id: string
+    post_author_username: string | null
   }>
 }
 
@@ -350,6 +499,28 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     admin.from('comments').select('*', { count: 'exact', head: true }).eq('author_id', userId).is('deleted_at', null),
   ])
 
+  // Recent comments by this user
+  const { data: recentComments } = await admin
+    .from('comments')
+    .select('id, content, created_at, post_id')
+    .eq('author_id', userId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  // Fetch post author usernames for comments
+  const commentPostIds = [...new Set((recentComments ?? []).map((c) => c.post_id))]
+  let commentPostAuthorMap: Record<string, string | null> = {}
+  if (commentPostIds.length > 0) {
+    const { data: commentPosts } = await admin
+      .from('posts')
+      .select('id, author:profiles!author_id(username)')
+      .in('id', commentPostIds)
+    for (const p of commentPosts ?? []) {
+      commentPostAuthorMap[p.id] = (p.author as any)?.username ?? null
+    }
+  }
+
   // Recent reports against this user's profile
   const { data: recentReports } = await admin
     .from('reports')
@@ -405,6 +576,13 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
       content: m.content,
       created_at: m.created_at,
       recipient_username: recipientMap[m.conversation_id] ?? null,
+    })),
+    recent_comments: (recentComments ?? []).map((c) => ({
+      id: c.id,
+      content: c.content,
+      created_at: c.created_at,
+      post_id: c.post_id,
+      post_author_username: commentPostAuthorMap[c.post_id] ?? null,
     })),
   }
 }

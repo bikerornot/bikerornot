@@ -97,16 +97,19 @@ export async function getGroups(currentUserId?: string): Promise<Group[]> {
 
   const groupIds = groups.map((g) => g.id)
 
-  // Get member counts
+  // Get member counts (exclude banned/deactivated profiles)
   const { data: memberCounts } = await admin
     .from('group_members')
-    .select('group_id')
+    .select('group_id, profile:profiles!user_id(status, deactivated_at)')
     .in('group_id', groupIds)
     .eq('status', 'active')
 
   const countMap: Record<string, number> = {}
   for (const row of memberCounts ?? []) {
-    countMap[row.group_id] = (countMap[row.group_id] ?? 0) + 1
+    const p = (row as any).profile
+    if (p?.status === 'active' && !p?.deactivated_at) {
+      countMap[row.group_id] = (countMap[row.group_id] ?? 0) + 1
+    }
   }
 
   // Get current user's memberships
@@ -145,11 +148,14 @@ export async function getGroup(slug: string, currentUserId?: string): Promise<Gr
 
   const { data: memberCountRows } = await admin
     .from('group_members')
-    .select('id')
+    .select('id, profile:profiles!user_id(status, deactivated_at)')
     .eq('group_id', group.id)
     .eq('status', 'active')
 
-  const member_count = memberCountRows?.length ?? 0
+  const member_count = (memberCountRows ?? []).filter((r) => {
+    const p = (r as any).profile
+    return p?.status === 'active' && !p?.deactivated_at
+  }).length
 
   let member_role: 'admin' | 'member' | null = null
   let member_status: 'active' | 'pending' | null = null
@@ -246,12 +252,17 @@ export async function getGroupMembers(groupId: string): Promise<GroupMember[]> {
 
   if (error) throw new Error(error.message)
 
-  // Sort admins first
-  return (data ?? []).sort((a, b) => {
-    if (a.role === 'admin' && b.role !== 'admin') return -1
-    if (a.role !== 'admin' && b.role === 'admin') return 1
-    return 0
-  }) as GroupMember[]
+  // Filter out banned/deactivated profiles, then sort admins first
+  return ((data ?? []) as GroupMember[])
+    .filter((m) => {
+      const p = m.profile as any
+      return p?.status === 'active' && !p?.deactivated_at
+    })
+    .sort((a, b) => {
+      if (a.role === 'admin' && b.role !== 'admin') return -1
+      if (a.role !== 'admin' && b.role === 'admin') return 1
+      return 0
+    })
 }
 
 export async function getPendingRequests(groupId: string): Promise<GroupMember[]> {

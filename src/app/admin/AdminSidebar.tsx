@@ -184,8 +184,16 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
       {/* Mobile top bar */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 bg-zinc-900 border-b border-zinc-800 sticky top-0 z-40">
         <div>
-          <Link href="/feed" className="text-base font-bold text-white">BikerOrNot</Link>
-          <span className="ml-2 text-orange-400 text-xs font-semibold">Admin</span>
+          <div>
+            <Link href="/feed" className="text-base font-bold text-white">BikerOrNot</Link>
+            <span className="ml-2 text-orange-400 text-xs font-semibold">Admin</span>
+          </div>
+          <Link href="/admin/online" className="flex items-center gap-1.5 mt-0.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+            <span className="text-xs text-zinc-400">
+              <span className="text-emerald-400 font-semibold">{activeUsers}</span> online
+            </span>
+          </Link>
         </div>
         <div className="flex items-center gap-1">
           {navItems.map((item) => {

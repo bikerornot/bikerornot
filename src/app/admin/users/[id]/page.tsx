@@ -393,6 +393,34 @@ export default async function UserDetailPage({
               </ul>
             )}
           </div>
+
+          {/* Comments posted by this user */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
+              <h2 className="text-white font-semibold text-sm">Comments</h2>
+              <span className="text-zinc-600 text-xs">{user.recent_comments.length} shown · {user.comment_count} total</span>
+            </div>
+            {user.recent_comments.length === 0 ? (
+              <p className="text-center text-zinc-600 text-sm py-8">No comments yet</p>
+            ) : (
+              <ul>
+                {user.recent_comments.map((c, i) => (
+                  <li
+                    key={c.id}
+                    className={`px-5 py-3 space-y-1 ${i < user.recent_comments.length - 1 ? 'border-b border-zinc-800/50' : ''}`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      {c.post_author_username && (
+                        <span className="text-xs text-orange-400 flex-shrink-0">on @{c.post_author_username}&apos;s post</span>
+                      )}
+                      <p className="text-zinc-600 text-xs flex-shrink-0 ml-auto">{formatTimeAgo(c.created_at)}</p>
+                    </div>
+                    <p className="text-zinc-300 text-sm leading-relaxed">{c.content}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
     </div>

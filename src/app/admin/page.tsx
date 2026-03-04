@@ -24,14 +24,19 @@ function formatTimeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-interface StatCardProps {
+function KpiCard({
+  label,
+  total,
+  last24h,
+  last7d,
+  accent,
+}: {
   label: string
-  value: number
-  sub?: string
-  accent?: 'orange' | 'red' | 'green' | 'default'
-}
-
-function StatCard({ label, value, sub, accent = 'default' }: StatCardProps) {
+  total: number
+  last24h?: number
+  last7d?: number
+  accent?: 'orange' | 'red' | 'green'
+}) {
   const valueColor =
     accent === 'orange' ? 'text-orange-400' :
     accent === 'red' ? 'text-red-400' :
@@ -39,16 +44,39 @@ function StatCard({ label, value, sub, accent = 'default' }: StatCardProps) {
     'text-white'
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-      <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-2">{label}</p>
-      <p className={`text-3xl font-bold ${valueColor}`}>{value.toLocaleString()}</p>
-      {sub && <p className="text-zinc-600 text-xs mt-1">{sub}</p>}
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+      <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-1.5">{label}</p>
+      <p className={`text-2xl font-bold ${valueColor}`}>{total.toLocaleString()}</p>
+      {(last24h !== undefined || last7d !== undefined) && (
+        <div className="flex gap-3 mt-1.5">
+          {last24h !== undefined && (
+            <span className="text-zinc-500 text-xs">
+              <span className="text-zinc-300 font-medium">{last24h.toLocaleString()}</span> 24h
+            </span>
+          )}
+          {last7d !== undefined && (
+            <span className="text-zinc-500 text-xs">
+              <span className="text-zinc-300 font-medium">{last7d.toLocaleString()}</span> 7d
+            </span>
+          )}
+        </div>
+      )}
     </div>
+  )
+}
+
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">{title}</h2>
   )
 }
 
 export default async function AdminDashboardPage() {
   const [stats, refSources] = await Promise.all([getDashboardStats(), getRefSources()])
+
+  const onboardingRate = stats.totalUsers > 0
+    ? Math.round((stats.onboardingComplete / stats.totalUsers) * 100)
+    : 0
 
   return (
     <div className="p-6 max-w-6xl">
@@ -83,60 +111,108 @@ export default async function AdminDashboardPage() {
         </Link>
       )}
 
-      {/* Top stats row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        {/* Combined Total / Today card */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-          <div className="flex divide-x divide-zinc-700">
-            <div className="flex-1 pr-4">
-              <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-2">Total Users</p>
-              <p className="text-3xl font-bold text-emerald-400">{stats.totalUsers.toLocaleString()}</p>
-            </div>
-            <div className="flex-1 pl-4">
-              <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-2">Today</p>
-              <p className="text-3xl font-bold text-white">{stats.newToday.toLocaleString()}</p>
-            </div>
-          </div>
+      {/* ── GROWTH ─────────────────────────────────────────────── */}
+      <SectionHeader title="Growth" />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-1.5">Total Users</p>
+          <p className="text-2xl font-bold text-emerald-400">{stats.totalUsers.toLocaleString()}</p>
+          <p className="text-zinc-500 text-xs mt-1.5">
+            <span className="text-zinc-300 font-medium">{onboardingRate}%</span> onboarded
+          </p>
         </div>
-        <StatCard label="Last 24 Hours" value={stats.newLast24h} />
-        <StatCard label="New This Week" value={stats.newThisWeek} />
-        <StatCard label="New This Month" value={stats.newThisMonth} />
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-1.5">Today</p>
+          <p className="text-2xl font-bold text-white">{stats.newToday.toLocaleString()}</p>
+          <p className="text-zinc-500 text-xs mt-1.5">
+            <span className="text-zinc-300 font-medium">{stats.newLast24h.toLocaleString()}</span> last 24h
+          </p>
+        </div>
+        <KpiCard label="This Week" total={stats.newThisWeek} />
+        <KpiCard label="This Month" total={stats.newThisMonth} />
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-1.5">Onboarded</p>
+          <p className="text-2xl font-bold text-white">{stats.onboardingComplete.toLocaleString()}</p>
+          <p className="text-zinc-500 text-xs mt-1.5">
+            <span className="text-zinc-300 font-medium">{(stats.totalUsers - stats.onboardingComplete).toLocaleString()}</span> incomplete
+          </p>
+        </div>
       </div>
 
-      {/* Status row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard
+      {/* ── ENGAGEMENT ─────────────────────────────────────────── */}
+      <SectionHeader title="Engagement" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <KpiCard label="Posts" total={stats.postsTotal} last24h={stats.posts24h} last7d={stats.posts7d} />
+        <KpiCard label="Comments" total={stats.commentsTotal} last24h={stats.comments24h} last7d={stats.comments7d} />
+        <KpiCard label="Messages" total={stats.messagesTotal} last24h={stats.messages24h} last7d={stats.messages7d} />
+        <KpiCard label="Likes" total={stats.likesTotal} last24h={stats.likes24h} last7d={stats.likes7d} />
+      </div>
+
+      {/* ── SOCIAL ─────────────────────────────────────────────── */}
+      <SectionHeader title="Social" />
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+        <KpiCard
+          label="Friendships"
+          total={stats.friendshipsTotal}
+          last24h={stats.friendshipsFormed24h}
+          last7d={stats.friendshipsFormed7d}
+          accent="green"
+        />
+        <KpiCard
+          label="Friend Requests"
+          total={stats.friendRequestsSent7d}
+          last24h={stats.friendRequestsSent24h}
+          last7d={stats.friendRequestsSent7d}
+        />
+        <KpiCard label="Groups" total={stats.groupsTotal} last7d={stats.groupsCreated7d} />
+      </div>
+
+      {/* ── CONTENT ────────────────────────────────────────────── */}
+      <SectionHeader title="Content" />
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
+        <KpiCard label="Photos Uploaded" total={stats.photosUploaded7d} last24h={stats.photosUploaded24h} last7d={stats.photosUploaded7d} />
+        <KpiCard label="Bikes in Garages" total={stats.bikesTotal} last24h={stats.bikesAdded24h} last7d={stats.bikesAdded7d} />
+        <KpiCard label="Groups Created" total={stats.groupsTotal} last7d={stats.groupsCreated7d} />
+      </div>
+
+      {/* ── SAFETY ─────────────────────────────────────────────── */}
+      <SectionHeader title="Safety" />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+        <KpiCard
           label="Pending Reports"
-          value={stats.pendingReports}
-          accent={stats.pendingReports > 0 ? 'orange' : 'default'}
-          sub={stats.pendingReports > 0 ? 'Needs attention' : 'All clear'}
+          total={stats.pendingReports}
+          accent={stats.pendingReports > 0 ? 'orange' : undefined}
         />
-        <StatCard
-          label="Flagged Users"
-          value={stats.flaggedUsers}
-          accent={stats.flaggedUsers > 0 ? 'red' : 'default'}
-          sub={stats.flaggedUsers > 0 ? 'High-risk IPs' : 'None detected'}
+        <KpiCard label="Reports Filed" total={stats.reports7d} last24h={stats.reports24h} last7d={stats.reports7d} />
+        <KpiCard
+          label="Blocks"
+          total={stats.blocks7d}
+          last24h={stats.blocks24h}
+          last7d={stats.blocks7d}
+          accent={stats.blocks24h > 5 ? 'red' : undefined}
         />
-        <StatCard
-          label="Banned Users"
-          value={stats.bannedUsers}
-          accent={stats.bannedUsers > 0 ? 'red' : 'default'}
+        <KpiCard
+          label="Banned"
+          total={stats.bannedUsers}
+          accent={stats.bannedUsers > 0 ? 'red' : undefined}
         />
-        <StatCard
-          label="Suspended Users"
-          value={stats.suspendedUsers}
-          accent={stats.suspendedUsers > 0 ? 'orange' : 'default'}
+        <KpiCard
+          label="Suspended"
+          total={stats.suspendedUsers}
+          accent={stats.suspendedUsers > 0 ? 'orange' : undefined}
         />
       </div>
 
-      {/* Referral Sources */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-6">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
-          <h2 className="text-white font-semibold text-sm">Referral Sources</h2>
-          <span className="text-zinc-600 text-xs">
-            {refSources.reduce((s, r) => s + r.count, 0)} tracked · rest are direct / unknown
-          </span>
+      {/* ── FLAGGED USERS ──────────────────────────────────────── */}
+      {stats.flaggedUsers > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
+          <KpiCard label="Flagged Users" total={stats.flaggedUsers} accent="red" />
         </div>
+      )}
+
+      {/* ── REFERRAL SOURCES ───────────────────────────────────── */}
+      <SectionHeader title="Referral Sources" />
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden mb-6">
         {refSources.length === 0 ? (
           <p className="text-zinc-600 text-sm text-center py-6">
             No referral data yet — add UTM params to your ad URLs to start tracking
@@ -149,11 +225,17 @@ export default async function AdminDashboardPage() {
                 <span className="text-orange-400 text-sm font-bold">{r.count}</span>
               </div>
             ))}
+            <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg px-4 py-2.5">
+              <span className="text-zinc-500 text-sm">
+                {refSources.reduce((s, r) => s + r.count, 0)} tracked total
+              </span>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Recent activity */}
+      {/* ── RECENT ACTIVITY ────────────────────────────────────── */}
+      <SectionHeader title="Recent Activity" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent signups */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">

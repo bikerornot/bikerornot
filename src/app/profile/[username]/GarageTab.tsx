@@ -8,6 +8,7 @@ import BikeSelector, { BikeData } from '@/app/settings/BikeSelector'
 import { addBike, updateBike, deleteBike, uploadBikePhoto } from '@/app/actions/garage'
 import { compressImage } from '@/lib/compress'
 import { getImageUrl } from '@/lib/supabase/image'
+import { bikeSluggify } from '@/lib/bike-slug'
 
 interface BikeCard {
   id: string
@@ -21,6 +22,7 @@ interface Props {
   isOwnProfile: boolean
   initialBikes: UserBike[]
   ownerCounts: Record<string, number>
+  username: string
 }
 
 const EMPTY: BikeData = { year: '', make: '', model: '' }
@@ -65,7 +67,7 @@ function PhotoThumbnail({
   )
 }
 
-export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts }: Props) {
+export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, username }: Props) {
   const [bikes, setBikes] = useState<BikeCard[]>(
     initialBikes.map((b) => ({
       id: b.id,
@@ -207,12 +209,15 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts }: P
               isOwn={false}
             />
             <div>
-              <p className="text-white font-medium">
+              <Link
+                href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}
+                className="text-white font-medium hover:text-orange-400 transition-colors"
+              >
                 {[bike.year, bike.make, bike.model].filter(Boolean).join(' ')}
-              </p>
+              </Link>
               {(ownerCounts[bike.id] ?? 0) > 0 && (
                 <Link
-                  href={`/bikes?year=${bike.year}&make=${encodeURIComponent(bike.make)}&model=${encodeURIComponent(bike.model)}`}
+                  href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}
                   className="text-orange-400 hover:text-orange-300 text-xs mt-0.5 block transition-colors"
                 >
                   {ownerCounts[bike.id]} other {ownerCounts[bike.id] === 1 ? 'owner' : 'owners'} →
@@ -281,12 +286,15 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts }: P
             />
 
             <div className="flex-1 min-w-0">
-              <p className="text-white font-medium">
+              <Link
+                href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}
+                className="text-white font-medium hover:text-orange-400 transition-colors"
+              >
                 {[bike.year, bike.make, bike.model].filter(Boolean).join(' ')}
-              </p>
+              </Link>
               {(ownerCounts[bike.id] ?? 0) > 0 ? (
                 <Link
-                  href={`/bikes?year=${bike.year}&make=${encodeURIComponent(bike.make)}&model=${encodeURIComponent(bike.model)}`}
+                  href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}
                   className="text-orange-400 hover:text-orange-300 text-xs mt-0.5 block transition-colors"
                 >
                   {ownerCounts[bike.id]} other {ownerCounts[bike.id] === 1 ? 'owner' : 'owners'} →

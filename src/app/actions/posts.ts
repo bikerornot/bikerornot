@@ -27,6 +27,7 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
   if (content && content.trim().length > 5000) throw new Error('Post too long (max 5000 characters)')
   const wallOwnerId = formData.get('wallOwnerId') as string | null
   const groupId = formData.get('groupId') as string | null
+  const bikeId = formData.get('bikeId') as string | null
   const files = formData.getAll('images') as File[]
 
   // If posting on someone else's wall, require an accepted friendship
@@ -56,6 +57,30 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
     if (!membership) throw new Error('You must be an active group member to post here')
   }
 
+  // If posting on a bike, verify ownership or friendship with bike owner
+  if (bikeId) {
+    const { data: bike } = await admin
+      .from('user_bikes')
+      .select('id, user_id')
+      .eq('id', bikeId)
+      .single()
+    if (!bike) throw new Error('Bike not found')
+
+    if (bike.user_id !== user.id) {
+      // Must be friends with the bike owner
+      const { data: friendship } = await admin
+        .from('friendships')
+        .select('id')
+        .or(
+          `and(requester_id.eq.${user.id},addressee_id.eq.${bike.user_id}),and(requester_id.eq.${bike.user_id},addressee_id.eq.${user.id})`
+        )
+        .eq('status', 'accepted')
+        .single()
+
+      if (!friendship) throw new Error('You must be friends to post on this bike wall')
+    }
+  }
+
   // Validate and moderate images BEFORE creating the post so a rejection never leaves an orphaned post
   const validFiles = files.filter((f) => f && f.size > 0)
   for (const file of validFiles) validateImageFile(file)
@@ -77,6 +102,7 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
       author_id: user.id,
       wall_owner_id: wallOwnerId || null,
       group_id: groupId || null,
+      bike_id: bikeId || null,
       content: content?.trim() || null,
     })
     .select()
@@ -165,11 +191,24 @@ export async function deletePost(postId: string): Promise<void> {
 
   const { data: post } = await admin
     .from('posts')
-    .select('author_id')
+    .select('author_id, bike_id')
     .eq('id', postId)
     .single()
 
-  if (!post || post.author_id !== user.id) throw new Error('Not authorized')
+  if (!post) throw new Error('Not authorized')
+
+  // Allow if post author OR bike wall owner
+  let authorized = post.author_id === user.id
+  if (!authorized && post.bike_id) {
+    const { data: bike } = await admin
+      .from('user_bikes')
+      .select('id')
+      .eq('id', post.bike_id)
+      .eq('user_id', user.id)
+      .single()
+    if (bike) authorized = true
+  }
+  if (!authorized) throw new Error('Not authorized')
 
   const { error } = await admin
     .from('posts')

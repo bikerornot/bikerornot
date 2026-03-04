@@ -16,6 +16,7 @@ interface Props {
   currentUserId?: string
   currentUserProfile?: Profile | null
   initialShowComments?: boolean
+  wallOwnerId?: string
 }
 
 const URL_REGEX = /(https?:\/\/[^\s]+)/g
@@ -160,7 +161,7 @@ function SharedPostEmbed({ post }: { post: Omit<Post, 'shared_post'> }) {
   )
 }
 
-export default function PostCard({ post, currentUserId, currentUserProfile, initialShowComments }: Props) {
+export default function PostCard({ post, currentUserId, currentUserProfile, initialShowComments, wallOwnerId }: Props) {
   const [liked, setLiked] = useState(post.is_liked_by_me ?? false)
   const [likeCount, setLikeCount] = useState(post.like_count ?? 0)
   const [commentCount, setCommentCount] = useState(post.comment_count ?? 0)
@@ -248,7 +249,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
           )}
         </div>
 
-        {currentUserId === post.author_id ? (
+        {currentUserId === post.author_id || (wallOwnerId && currentUserId === wallOwnerId) ? (
           <button
             onClick={handleDelete}
             className="text-zinc-600 hover:text-red-400 transition-colors text-xs flex-shrink-0 p-1"

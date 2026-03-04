@@ -19,6 +19,7 @@ interface Props {
   initialBikes: UserBike[]
   ownerCounts: Record<string, number>
   defaultTab?: string
+  username: string
 }
 
 export default function ProfileTabs({
@@ -30,6 +31,7 @@ export default function ProfileTabs({
   initialBikes,
   ownerCounts,
   defaultTab,
+  username,
 }: Props) {
   const resolvedDefault: Tab =
     TABS.includes(defaultTab as Tab) ? (defaultTab as Tab) : 'Wall'
@@ -76,7 +78,7 @@ export default function ProfileTabs({
       )}
 
       {active === 'Garage' && (
-        <GarageTab isOwnProfile={isOwnProfile} initialBikes={initialBikes} ownerCounts={ownerCounts} />
+        <GarageTab isOwnProfile={isOwnProfile} initialBikes={initialBikes} ownerCounts={ownerCounts} username={username} />
       )}
     </div>
   )

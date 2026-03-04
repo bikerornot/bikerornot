@@ -152,6 +152,7 @@ export interface AdminUserRow {
   signup_city: string | null
   signup_ref_url: string | null
   date_of_birth: string | null
+  gender: string | null
   post_count: number
   message_count: number
   comment_count: number
@@ -210,11 +211,13 @@ export interface AdminUserDetail {
 export async function getUsers({
   search = '',
   status = '',
+  gender = '',
   page = 1,
   pageSize = 25,
 }: {
   search?: string
   status?: string
+  gender?: string
   page?: number
   pageSize?: number
 } = {}): Promise<{ users: AdminUserRow[]; total: number; pageSize: number }> {
@@ -222,7 +225,7 @@ export async function getUsers({
 
   let query = admin
     .from('profiles')
-    .select('id, username, first_name, last_name, created_at, status, role, city, state, profile_photo_url, signup_country, signup_region, signup_city, signup_ref_url, date_of_birth', { count: 'exact' })
+    .select('id, username, first_name, last_name, created_at, status, role, city, state, profile_photo_url, signup_country, signup_region, signup_city, signup_ref_url, date_of_birth, gender', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1)
 
@@ -233,6 +236,11 @@ export async function getUsers({
     query = query.in('signup_country', HIGH_RISK_COUNTRIES).eq('status', 'active') as typeof query
   } else if (status) {
     query = query.eq('status', status) as typeof query
+  }
+  if (gender === 'male' || gender === 'female') {
+    query = query.eq('gender', gender) as typeof query
+  } else if (gender === 'unknown') {
+    query = query.is('gender', null) as typeof query
   }
 
   const { data, count } = await query

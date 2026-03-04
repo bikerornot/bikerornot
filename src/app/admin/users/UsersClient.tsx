@@ -15,6 +15,13 @@ const STATUS_FILTERS = [
   { value: 'banned', label: 'Banned' },
 ]
 
+const GENDER_FILTERS = [
+  { value: '', label: 'All' },
+  { value: 'male', label: '♂ Male' },
+  { value: 'female', label: '♀ Female' },
+  { value: 'unknown', label: '— Not set' },
+]
+
 const REASON_LABELS: Record<string, string> = {
   spam: 'Spam', harassment: 'Harassment', hate_speech: 'Hate speech',
   nudity: 'Nudity', violence: 'Violence', fake_account: 'Fake account', other: 'Other',
@@ -42,6 +49,7 @@ interface Props {
   pageSize: number
   initialSearch: string
   initialStatus: string
+  initialGender: string
   initialPage: number
 }
 
@@ -51,6 +59,7 @@ export default function UsersClient({
   pageSize,
   initialSearch,
   initialStatus,
+  initialGender,
   initialPage,
 }: Props) {
   const router = useRouter()
@@ -59,31 +68,36 @@ export default function UsersClient({
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
 
   const navigate = useCallback(
-    (params: { search?: string; status?: string; page?: number }) => {
+    (params: { search?: string; status?: string; gender?: string; page?: number }) => {
       const sp = new URLSearchParams()
       if (params.search ?? initialSearch) sp.set('search', params.search ?? initialSearch)
       if (params.status ?? initialStatus) sp.set('status', params.status ?? initialStatus)
+      if (params.gender ?? initialGender) sp.set('gender', params.gender ?? initialGender)
       if ((params.page ?? initialPage) > 1) sp.set('page', String(params.page ?? initialPage))
       startTransition(() => {
         router.push(`/admin/users${sp.toString() ? '?' + sp.toString() : ''}`)
       })
     },
-    [router, initialSearch, initialStatus, initialPage, startTransition]
+    [router, initialSearch, initialStatus, initialGender, initialPage, startTransition]
   )
 
   function handleSearch(value: string) {
     setSearch(value)
     if (debounceTimer) clearTimeout(debounceTimer)
-    const t = setTimeout(() => navigate({ search: value, status: initialStatus, page: 1 }), 400)
+    const t = setTimeout(() => navigate({ search: value, status: initialStatus, gender: initialGender, page: 1 }), 400)
     setDebounceTimer(t)
   }
 
   function handleStatus(value: string) {
-    navigate({ search, status: value, page: 1 })
+    navigate({ search, status: value, gender: initialGender, page: 1 })
+  }
+
+  function handleGender(value: string) {
+    navigate({ search, status: initialStatus, gender: value, page: 1 })
   }
 
   function handlePage(page: number) {
-    navigate({ search, status: initialStatus, page })
+    navigate({ search, status: initialStatus, gender: initialGender, page })
   }
 
   const totalPages = Math.ceil(total / pageSize)
@@ -111,6 +125,22 @@ export default function UsersClient({
               onClick={() => handleStatus(f.value)}
               className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
                 initialStatus === f.value
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1.5">
+          <span className="px-2 py-2 text-xs text-zinc-600">Gender:</span>
+          {GENDER_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => handleGender(f.value)}
+              className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                initialGender === f.value
                   ? 'bg-orange-500 text-white'
                   : 'bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700'
               }`}
@@ -196,8 +226,11 @@ export default function UsersClient({
                           <span className="text-zinc-600 text-xs">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-zinc-400 text-xs">
-                        {u.date_of_birth ? calculateAge(u.date_of_birth) : '—'}
+                      <td className="px-4 py-3">
+                        <p className="text-zinc-400 text-xs">{u.date_of_birth ? calculateAge(u.date_of_birth) : '—'}</p>
+                        <p className={`text-xs ${u.gender === 'male' ? 'text-blue-400' : u.gender === 'female' ? 'text-pink-400' : 'text-zinc-600'}`}>
+                          {u.gender === 'male' ? '♂' : u.gender === 'female' ? '♀' : '—'}
+                        </p>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <p className="text-zinc-400 text-xs">{formatDate(u.created_at)}</p>

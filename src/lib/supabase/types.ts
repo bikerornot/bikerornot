@@ -60,6 +60,15 @@ export const RIDING_STYLES = [
   'Electric',
 ] as const
 
+export interface BikePhoto {
+  id: string
+  bike_id: string
+  user_id: string
+  storage_path: string
+  is_primary: boolean
+  created_at: string
+}
+
 export interface PostImage {
   id: string
   post_id: string
@@ -71,6 +80,7 @@ export interface Post {
   id: string
   author_id: string
   wall_owner_id: string | null
+  bike_id?: string | null
   group_id?: string | null
   shared_post_id?: string | null
   content: string | null

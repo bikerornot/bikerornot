@@ -32,6 +32,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
         .select('*, author:profiles!author_id(*), images:post_images(*)')
         .is('deleted_at', null)
         .is('wall_owner_id', null)
+        .is('bike_id', null)
         .order('created_at', { ascending: false })
         .limit(PAGE_SIZE)
 

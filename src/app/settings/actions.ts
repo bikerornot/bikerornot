@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { geocodeZip } from '@/lib/geocode'
+import { normalizeMake } from '@/lib/normalize-make'
 
 function getServiceClient() {
   return createServiceClient(
@@ -67,7 +68,7 @@ export async function saveProfileSettings(
   if (newBikes.length > 0) {
     const { error } = await admin
       .from('user_bikes')
-      .insert(newBikes.map((b) => ({ user_id: user.id, year: b.year, make: b.make, model: b.model })))
+      .insert(newBikes.map((b) => ({ user_id: user.id, year: b.year, make: normalizeMake(b.make), model: b.model })))
     if (error) throw new Error(error.message)
   }
 }

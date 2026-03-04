@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getImageUrl } from '@/lib/supabase/image'
 import ProfilePhotoUpload from './ProfilePhotoUpload'
 import CoverPhotoUpload from './CoverPhotoUpload'
@@ -111,19 +112,40 @@ export default async function ProfilePage({
     .eq('user_id', profile.id)
     .order('year', { ascending: false })
 
-  // Count other users who own the same bikes
+  // Count other users who own the same bikes — must use service client
+  // because user_bikes RLS only allows reading own rows
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
   const ownerCounts: Record<string, number> = {}
   if (bikes && bikes.length > 0) {
     await Promise.all(
       bikes.map(async (bike) => {
         if (bike.year && bike.make && bike.model) {
-          const { count } = await supabase
+          // Get user_ids of other owners
+          const { data: bikeRows } = await admin
             .from('user_bikes')
-            .select('*', { count: 'exact', head: true })
+            .select('user_id')
             .eq('year', bike.year)
-            .eq('make', bike.make)
-            .eq('model', bike.model)
+            .ilike('make', bike.make)
+            .ilike('model', bike.model)
             .neq('user_id', profile.id)
+
+          if (!bikeRows || bikeRows.length === 0) {
+            ownerCounts[bike.id] = 0
+            return
+          }
+
+          // Only count owners with active, complete profiles
+          const userIds = [...new Set(bikeRows.map((r) => r.user_id))]
+          const { count } = await admin
+            .from('profiles')
+            .select('*', { count: 'exact', head: true })
+            .in('id', userIds)
+            .eq('onboarding_complete', true)
+            .eq('status', 'active')
+
           ownerCounts[bike.id] = count ?? 0
         }
       })
@@ -412,6 +434,7 @@ export default async function ProfilePage({
           initialBikes={bikes ?? []}
           ownerCounts={ownerCounts}
           defaultTab={defaultTab}
+          username={profile.username!}
         />
 
         <div className="h-12" />

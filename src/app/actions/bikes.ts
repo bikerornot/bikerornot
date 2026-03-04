@@ -166,3 +166,147 @@ export async function findBikeOwners(
 
   return { owners, error: null, limited }
 }
+
+// ── Bike Profile Page actions ──────────────────────────────────────────────────
+
+import { bikeSluggify } from '@/lib/bike-slug'
+
+export interface BikeProfileOwner {
+  id: string
+  username: string | null
+  first_name: string
+  last_name: string
+  profile_photo_url: string | null
+  city: string | null
+  state: string | null
+  updated_at: string
+}
+
+export interface BikeGalleryPhoto {
+  bikeId: string
+  photoUrl: string
+  owner: {
+    id: string
+    username: string | null
+    profile_photo_url: string | null
+    updated_at: string
+  }
+}
+
+export async function getBikeProfileData(username: string, bikeSlug: string) {
+  const admin = getServiceClient()
+
+  // Fetch profile by username
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('*')
+    .eq('username', username)
+    .single()
+
+  if (!profile) return null
+
+  // Fetch this user's bikes and match by slug
+  const { data: bikes } = await admin
+    .from('user_bikes')
+    .select('*')
+    .eq('user_id', profile.id)
+
+  if (!bikes || bikes.length === 0) return null
+
+  const matchedBike = bikes.find((b) => {
+    if (!b.year || !b.make || !b.model) return false
+    return bikeSluggify(b.year, b.make, b.model) === bikeSlug
+  })
+
+  if (!matchedBike) return null
+
+  return { profile, bike: matchedBike }
+}
+
+export async function getBikeOwnersCount(year: number, make: string, model: string): Promise<number> {
+  const admin = getServiceClient()
+  const { count } = await admin
+    .from('user_bikes')
+    .select('*', { count: 'exact', head: true })
+    .eq('year', year)
+    .ilike('make', make)
+    .ilike('model', model)
+  return count ?? 0
+}
+
+export async function getBikeOwnersPaginated(
+  year: number,
+  make: string,
+  model: string,
+  page: number = 0,
+  pageSize: number = 12
+): Promise<BikeProfileOwner[]> {
+  const admin = getServiceClient()
+  const from = page * pageSize
+  const to = from + pageSize - 1
+
+  // Get user_ids who own this bike
+  const { data: bikeRows } = await admin
+    .from('user_bikes')
+    .select('user_id')
+    .eq('year', year)
+    .ilike('make', make)
+    .ilike('model', model)
+    .range(from, to)
+
+  if (!bikeRows || bikeRows.length === 0) return []
+
+  const userIds = [...new Set(bikeRows.map((r) => r.user_id))]
+
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('id, username, first_name, last_name, profile_photo_url, city, state, updated_at')
+    .in('id', userIds)
+    .eq('onboarding_complete', true)
+    .eq('status', 'active')
+
+  return (profiles ?? []) as BikeProfileOwner[]
+}
+
+export async function getBikeGalleryPhotos(
+  year: number,
+  make: string,
+  model: string,
+  page: number = 0,
+  pageSize: number = 12
+): Promise<BikeGalleryPhoto[]> {
+  const admin = getServiceClient()
+  const from = page * pageSize
+  const to = from + pageSize - 1
+
+  // Get bikes with photos for this year/make/model
+  const { data: bikeRows } = await admin
+    .from('user_bikes')
+    .select('id, user_id, photo_url')
+    .eq('year', year)
+    .ilike('make', make)
+    .ilike('model', model)
+    .not('photo_url', 'is', null)
+    .range(from, to)
+
+  if (!bikeRows || bikeRows.length === 0) return []
+
+  const userIds = [...new Set(bikeRows.map((r) => r.user_id))]
+
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('id, username, profile_photo_url, updated_at')
+    .in('id', userIds)
+    .eq('onboarding_complete', true)
+    .eq('status', 'active')
+
+  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]))
+
+  return bikeRows
+    .filter((b) => profileMap.has(b.user_id))
+    .map((b) => ({
+      bikeId: b.id,
+      photoUrl: b.photo_url!,
+      owner: profileMap.get(b.user_id)!,
+    }))
+}

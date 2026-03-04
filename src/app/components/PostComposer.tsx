@@ -12,10 +12,11 @@ interface Props {
   currentUserProfile: Profile
   wallOwnerId?: string
   groupId?: string
+  bikeId?: string
   onPostCreated?: (postId: string) => void
 }
 
-export default function PostComposer({ currentUserProfile, wallOwnerId, groupId, onPostCreated }: Props) {
+export default function PostComposer({ currentUserProfile, wallOwnerId, groupId, bikeId, onPostCreated }: Props) {
   const [content, setContent] = useState('')
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
@@ -99,6 +100,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
       if (content.trim()) formData.set('content', content.trim())
       if (wallOwnerId) formData.set('wallOwnerId', wallOwnerId)
       if (groupId) formData.set('groupId', groupId)
+      if (bikeId) formData.set('bikeId', bikeId)
       images.forEach((file) => formData.append('images', file))
 
       const result = await createPost(formData)
@@ -147,7 +149,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Share something with the crew…"
+              placeholder={bikeId ? "Share something about this ride…" : "Share something with the crew…"}
               rows={3}
               disabled={submitting}
               className="w-full bg-transparent text-white placeholder-zinc-400 focus:outline-none text-base resize-none"

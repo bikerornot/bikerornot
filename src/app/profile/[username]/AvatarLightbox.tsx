@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { uploadProfilePhoto } from './actions'
@@ -18,6 +19,11 @@ export default function AvatarLightbox({ avatarUrl, firstInitial, isOwnProfile }
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -71,8 +77,8 @@ export default function AvatarLightbox({ avatarUrl, firstInitial, isOwnProfile }
         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
       </div>
 
-      {/* Lightbox modal */}
-      {open && (
+      {/* Lightbox modal — portaled to body so overflow/z-index issues are avoided */}
+      {open && mounted && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80"
           onClick={() => setOpen(false)}
@@ -97,7 +103,7 @@ export default function AvatarLightbox({ avatarUrl, firstInitial, isOwnProfile }
                   alt="Profile photo"
                   fill
                   className="object-cover"
-                  sizes="(max-width: 640px) 90vw, 384px"
+                  sizes="(max-width: 640px) 90vw, 512px"
                   priority
                 />
               ) : (
@@ -130,7 +136,8 @@ export default function AvatarLightbox({ avatarUrl, firstInitial, isOwnProfile }
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

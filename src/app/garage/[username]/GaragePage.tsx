@@ -56,7 +56,7 @@ export default function GaragePage({
   return (
     <div className="space-y-6">
       {/* Bike tabs */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {bikes.map((bike) => (
           <button
             key={bike.id}

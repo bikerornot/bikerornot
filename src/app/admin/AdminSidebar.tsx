@@ -96,6 +96,11 @@ const navItems = [
 export default function AdminSidebar({ username, role, pendingReports, pendingDmca, pendingFlags, initialActiveUsers }: Props) {
   const pathname = usePathname()
   const [activeUsers, setActiveUsers] = useState(initialActiveUsers)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [pathname])
 
   useEffect(() => {
     function refresh() {
@@ -182,52 +187,94 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
       </aside>
 
       {/* Mobile top bar */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-zinc-900 border-b border-zinc-800 sticky top-0 z-40">
-        <div>
+      <div className="md:hidden sticky top-0 z-40">
+        <div className="flex items-center justify-between px-4 py-3 bg-zinc-900 border-b border-zinc-800">
           <div>
-            <Link href="/feed" className="text-base font-bold text-white">BikerOrNot</Link>
-            <span className="ml-2 text-orange-400 text-xs font-semibold">Admin</span>
+            <div>
+              <Link href="/feed" className="text-base font-bold text-white">BikerOrNot</Link>
+              <span className="ml-2 text-orange-400 text-xs font-semibold">Admin</span>
+            </div>
+            <Link href="/admin/online" className="flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+              <span className="text-xs text-zinc-400">
+                <span className="text-emerald-400 font-semibold">{activeUsers}</span> online
+              </span>
+            </Link>
           </div>
-          <Link href="/admin/online" className="flex items-center gap-1.5 mt-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
-            <span className="text-xs text-zinc-400">
-              <span className="text-emerald-400 font-semibold">{activeUsers}</span> online
-            </span>
-          </Link>
-        </div>
-        <div className="flex items-center gap-1">
-          {navItems.map((item) => {
-            const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
-            const badge = item.href === '/admin/reports' && pendingReports > 0 ? pendingReports
-              : item.href === '/admin/dmca' && pendingDmca > 0 ? pendingDmca
-              : item.href === '/admin/flags' && pendingFlags > 0 ? pendingFlags
-              : null
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`relative p-2 rounded-lg transition-colors ${
-                  isActive ? 'text-orange-400 bg-orange-500/10' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-                }`}
-              >
-                {item.icon}
-                {badge != null && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-orange-500 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
-                    {badge > 9 ? '9+' : badge}
-                  </span>
-                )}
-              </Link>
-            )
-          })}
-          <Link
-            href="/feed"
-            className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors ml-1"
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="relative p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </Link>
+            {menuOpen ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+            {!menuOpen && (pendingReports + pendingDmca + pendingFlags) > 0 && (
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-orange-500" />
+            )}
+          </button>
         </div>
+
+        {/* Dropdown menu */}
+        {menuOpen && (
+          <>
+            <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+            <div className="relative z-40 bg-zinc-900 border-b border-zinc-800 shadow-xl">
+              <nav className="py-2">
+                {navItems.map((item) => {
+                  const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
+                  const badge = item.href === '/admin/reports' && pendingReports > 0 ? pendingReports
+                    : item.href === '/admin/dmca' && pendingDmca > 0 ? pendingDmca
+                    : item.href === '/admin/flags' && pendingFlags > 0 ? pendingFlags
+                    : null
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center justify-between px-5 py-3 text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-orange-500/10 text-orange-400'
+                          : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                      }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        {item.icon}
+                        {item.label}
+                      </span>
+                      {badge != null && (
+                        <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
+                          {badge > 99 ? '99+' : badge}
+                        </span>
+                      )}
+                    </Link>
+                  )
+                })}
+              </nav>
+              <div className="border-t border-zinc-800 px-5 py-3">
+                <p className="text-zinc-600 text-xs mb-2">
+                  @{username}
+                  <span className="ml-1.5 bg-zinc-800 text-zinc-500 text-xs px-1.5 py-0.5 rounded font-medium">
+                    {role}
+                  </span>
+                </p>
+                <Link
+                  href="/feed"
+                  className="flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Back to feed
+                </Link>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </>
   )

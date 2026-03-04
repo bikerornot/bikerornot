@@ -271,6 +271,20 @@ export async function getUsers({
   }
 }
 
+export async function getGenderCounts(): Promise<{ male: number; female: number; unknown: number }> {
+  const admin = getServiceClient()
+  const [{ count: male }, { count: female }, { count: total }] = await Promise.all([
+    admin.from('profiles').select('*', { count: 'exact', head: true }).eq('gender', 'male'),
+    admin.from('profiles').select('*', { count: 'exact', head: true }).eq('gender', 'female'),
+    admin.from('profiles').select('*', { count: 'exact', head: true }),
+  ])
+  return {
+    male: male ?? 0,
+    female: female ?? 0,
+    unknown: (total ?? 0) - (male ?? 0) - (female ?? 0),
+  }
+}
+
 export async function getUserDetail(userId: string): Promise<AdminUserDetail | null> {
   const admin = getServiceClient()
 

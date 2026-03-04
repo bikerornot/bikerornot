@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getImageUrl } from '@/lib/supabase/image'
-import ProfilePhotoUpload from './ProfilePhotoUpload'
+import AvatarLightbox from './AvatarLightbox'
 import CoverPhotoUpload from './CoverPhotoUpload'
 import ProfileTabs from './ProfileTabs'
 import FriendButton, { type FriendshipStatus } from './FriendButton'
@@ -273,22 +273,11 @@ export default async function ProfilePage({
         {/* Avatar + action buttons row */}
         <div className={`flex items-end justify-between mb-3 ${coverUrl ? '-mt-16' : 'pt-5'}`}>
           {/* Avatar */}
-          <div className="relative w-32 h-32 rounded-full border-4 border-zinc-950 bg-zinc-800 overflow-hidden flex-shrink-0">
-            {avatarUrl ? (
-              <Image
-                src={avatarUrl}
-                alt={displayName}
-                fill
-                className="object-cover"
-                priority
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-zinc-600">
-                {profile.first_name[0]?.toUpperCase() ?? '?'}
-              </div>
-            )}
-            {isOwnProfile && <ProfilePhotoUpload userId={profile.id} />}
-          </div>
+          <AvatarLightbox
+            avatarUrl={avatarUrl}
+            firstInitial={(profile.first_name?.[0] ?? '?').toUpperCase()}
+            isOwnProfile={isOwnProfile}
+          />
 
           {/* Action buttons */}
           <div className="pb-2 flex gap-2">

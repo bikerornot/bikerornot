@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getImageUrl } from '@/lib/supabase/image'
-import { addBike } from '@/app/actions/garage'
 import { getBikeOwnersPaginated } from '@/app/actions/bikes'
 import type { BikeOwnerSummary } from './GaragePage'
 
@@ -32,8 +31,6 @@ export default function OwnersSection({
   const [owners, setOwners] = useState(initialOwners)
   const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(false)
-  const [adding, setAdding] = useState(false)
-  const [added, setAdded] = useState(false)
   const hasMore = owners.length < totalCount
 
   async function loadMore() {
@@ -50,26 +47,7 @@ export default function OwnersSection({
     }
   }
 
-  async function handleAddToGarage() {
-    if (!currentUserId || adding || added) return
-    setAdding(true)
-    try {
-      await addBike(year, make, model)
-      setAdded(true)
-    } catch {
-      // Ignore — likely already owns it
-    } finally {
-      setAdding(false)
-    }
-  }
-
-  // Check if current user is in the owners list (or is the page owner)
-  const currentUserOwns = currentUserId
-    ? currentUserId === profileId || owners.some((o) => o.id === currentUserId) || added
-    : true // hide button for logged out
-
-  // Don't render the section at all if there are no other owners and no "Add" action
-  if (totalCount === 0 && currentUserOwns) return null
+  if (totalCount === 0) return null
 
   return (
     <div>
@@ -124,9 +102,8 @@ export default function OwnersSection({
         </div>
       )}
 
-      {/* Actions row */}
-      <div className="mt-4 flex flex-col sm:flex-row gap-3">
-        {hasMore && (
+      {hasMore && (
+        <div className="mt-4">
           <button
             onClick={loadMore}
             disabled={loading}
@@ -134,18 +111,8 @@ export default function OwnersSection({
           >
             {loading ? 'Loading...' : 'Show More'}
           </button>
-        )}
-
-        {currentUserId && !currentUserOwns && (
-          <button
-            onClick={handleAddToGarage}
-            disabled={adding}
-            className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
-          >
-            {adding ? 'Adding...' : added ? 'Added!' : 'Add to My Garage'}
-          </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

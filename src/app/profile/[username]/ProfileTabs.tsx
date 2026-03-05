@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Profile, UserBike } from '@/lib/supabase/types'
 import WallTab from './WallTab'
 import FriendsTab from './FriendsTab'
@@ -36,6 +36,11 @@ export default function ProfileTabs({
   const resolvedDefault: Tab =
     TABS.includes(defaultTab as Tab) ? (defaultTab as Tab) : 'Wall'
   const [active, setActive] = useState<Tab>(resolvedDefault)
+
+  // Sync tab when URL ?tab= param changes (e.g. clicking "X Friends" link)
+  useEffect(() => {
+    setActive(resolvedDefault)
+  }, [resolvedDefault])
 
   return (
     <div>

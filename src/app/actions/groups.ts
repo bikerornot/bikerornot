@@ -428,7 +428,7 @@ export async function getGroupPosts(groupId: string, cursor?: string): Promise<P
 
   const [{ data: likeCounts }, { data: commentCounts }, { data: myLikes }, { data: sharedPostsData }] = await Promise.all([
     admin.from('post_likes').select('post_id').in('post_id', postIds),
-    admin.from('comments').select('post_id').in('post_id', postIds).is('deleted_at', null),
+    admin.from('comments').select('post_id, author:profiles!author_id(status)').in('post_id', postIds).is('deleted_at', null),
     admin.from('post_likes').select('post_id').in('post_id', postIds).eq('user_id', user.id),
     sharedPostIds.length > 0
       ? admin.from('posts').select('*, author:profiles!author_id(*), images:post_images(*)').in('id', sharedPostIds)
@@ -439,7 +439,8 @@ export async function getGroupPosts(groupId: string, cursor?: string): Promise<P
     acc[r.post_id] = (acc[r.post_id] ?? 0) + 1
     return acc
   }, {})
-  const commentMap = (commentCounts ?? []).reduce<Record<string, number>>((acc, r) => {
+  const commentMap = (commentCounts ?? []).reduce<Record<string, number>>((acc, r: any) => {
+    if (['banned', 'suspended'].includes(r.author?.status)) return acc
     acc[r.post_id] = (acc[r.post_id] ?? 0) + 1
     return acc
   }, {})

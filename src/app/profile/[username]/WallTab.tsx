@@ -59,7 +59,7 @@ export default function WallTab({
           supabase.from('post_likes').select('post_id').in('post_id', postIds),
           supabase
             .from('comments')
-            .select('post_id')
+            .select('post_id, author:profiles!author_id(status)')
             .in('post_id', postIds)
             .is('deleted_at', null),
           currentUserId
@@ -81,7 +81,8 @@ export default function WallTab({
         acc[r.post_id] = (acc[r.post_id] ?? 0) + 1
         return acc
       }, {})
-      const commentMap = (commentCounts ?? []).reduce<Record<string, number>>((acc, r) => {
+      const commentMap = (commentCounts ?? []).reduce<Record<string, number>>((acc, r: any) => {
+        if (['banned', 'suspended'].includes(r.author?.status)) return acc
         acc[r.post_id] = (acc[r.post_id] ?? 0) + 1
         return acc
       }, {})

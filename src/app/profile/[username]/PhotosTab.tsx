@@ -65,7 +65,7 @@ export default function PhotosTab({ profileId, currentUserId, currentUserProfile
           ? supabase.from('post_likes').select('post_id').in('post_id', postIds).eq('user_id', currentUserId)
           : Promise.resolve({ data: [] as { post_id: string }[] }),
         postIds.length > 0
-          ? supabase.from('comments').select('post_id').in('post_id', postIds).is('deleted_at', null)
+          ? supabase.from('comments').select('post_id, author:profiles!author_id(status)').in('post_id', postIds).is('deleted_at', null)
           : Promise.resolve({ data: [] as { post_id: string }[] }),
       ])
 
@@ -74,7 +74,8 @@ export default function PhotosTab({ profileId, currentUserId, currentUserProfile
         return acc
       }, {})
       const myLikeSet = new Set((myLikes ?? []).map((l) => l.post_id))
-      const commentCountByPost = (allComments ?? []).reduce<Record<string, number>>((acc, r) => {
+      const commentCountByPost = (allComments ?? []).reduce<Record<string, number>>((acc, r: any) => {
+        if (['banned', 'suspended'].includes(r.author?.status)) return acc
         acc[r.post_id] = (acc[r.post_id] ?? 0) + 1
         return acc
       }, {})

@@ -152,12 +152,16 @@ export default async function ProfilePage({
     )
   }
 
-  // Friend count
-  const { count: friendCount } = await supabase
+  // Friend count — only count friends with active, non-deactivated profiles
+  const { data: friendRows } = await admin
     .from('friendships')
-    .select('*', { count: 'exact', head: true })
+    .select('requester_id, addressee_id, requester:profiles!requester_id(status, deactivated_at), addressee:profiles!addressee_id(status, deactivated_at)')
     .or(`requester_id.eq.${profile.id},addressee_id.eq.${profile.id}`)
     .eq('status', 'accepted')
+  const friendCount = (friendRows ?? []).filter((f: any) => {
+    const other = f.requester_id === profile.id ? f.addressee : f.requester
+    return other?.status === 'active' && !other?.deactivated_at
+  }).length
 
   // Friendship status with current user
   let friendshipStatus: FriendshipStatus = 'none'
@@ -329,9 +333,12 @@ export default async function ProfilePage({
 
         {/* Stats */}
         <div className="flex flex-wrap gap-5 text-sm text-zinc-400 mb-4">
-          <span>
+          <Link
+            href={`/profile/${profile.username}?tab=Friends`}
+            className="hover:text-white transition-colors"
+          >
             <span className="text-white font-semibold">{friendCount ?? 0}</span> Friends
-          </span>
+          </Link>
           <span>
             Member since <span className="text-white">{memberSince}</span>
           </span>

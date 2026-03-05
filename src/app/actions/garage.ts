@@ -47,7 +47,7 @@ export async function addBike(year: number, make: string, model: string): Promis
   return data.id
 }
 
-export async function updateBike(id: string, year: number, make: string, model: string) {
+export async function updateBike(id: string, year: number, make: string, model: string, description?: string | null) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
@@ -55,10 +55,13 @@ export async function updateBike(id: string, year: number, make: string, model: 
   const canonicalMake = normalizeMake(make)
   validateBikeFields(year, canonicalMake, model)
 
+  const trimmed = description?.trim() || null
+  if (trimmed && trimmed.length > 2000) throw new Error('Description must be under 2000 characters')
+
   const admin = getServiceClient()
   const { error } = await admin
     .from('user_bikes')
-    .update({ year, make: canonicalMake, model })
+    .update({ year, make: canonicalMake, model, description: trimmed })
     .eq('id', id)
     .eq('user_id', user.id)
   if (error) throw new Error(error.message)

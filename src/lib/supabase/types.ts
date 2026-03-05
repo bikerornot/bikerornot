@@ -43,6 +43,7 @@ export interface UserBike {
   year: number | null
   make: string | null
   model: string | null
+  description: string | null
   photo_url: string | null
   created_at: string
 }

@@ -82,6 +82,14 @@ export default function GaragePage({
           isOwnGarage={isOwnGarage}
         />
 
+        {/* Bike description */}
+        {activeBike.description && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+            <h3 className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-2">About this bike</h3>
+            <p className="text-zinc-300 text-sm whitespace-pre-wrap leading-relaxed">{activeBike.description}</p>
+          </div>
+        )}
+
         {/* Bike Wall */}
         <BikeWall
           bikeId={activeBikeId}

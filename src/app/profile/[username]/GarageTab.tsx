@@ -15,6 +15,7 @@ interface BikeCard {
   year: string
   make: string
   model: string
+  description: string | null
   photo_url: string | null
 }
 
@@ -74,6 +75,7 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
       year: String(b.year ?? ''),
       make: b.make ?? '',
       model: b.model ?? '',
+      description: b.description ?? null,
       photo_url: b.photo_url ?? null,
     }))
   )
@@ -81,6 +83,7 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
   const [newForm, setNewForm] = useState<BikeData>(EMPTY)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<BikeData>(EMPTY)
+  const [editDescription, setEditDescription] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
   const [uploadingId, setUploadingId] = useState<string | null>(null)
   const [photoTargetId, setPhotoTargetId] = useState<string | null>(null)
@@ -90,6 +93,7 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
   function startEdit(bike: BikeCard) {
     setEditingId(bike.id)
     setEditForm({ year: bike.year, make: bike.make, model: bike.model })
+    setEditDescription(bike.description ?? '')
     setAddingNew(false)
     setError(null)
   }
@@ -97,6 +101,7 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
   function cancelEdit() {
     setEditingId(null)
     setEditForm(EMPTY)
+    setEditDescription('')
   }
 
   function openAddForm() {
@@ -119,7 +124,7 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
       const id = await addBike(parseInt(newForm.year), newForm.make.trim(), newForm.model.trim())
       setBikes((prev) => [
         ...prev,
-        { id, year: newForm.year, make: newForm.make, model: newForm.model, photo_url: null },
+        { id, year: newForm.year, make: newForm.make, model: newForm.model, description: null, photo_url: null },
       ])
       cancelAdd()
     } catch (err: unknown) {
@@ -134,10 +139,10 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
     setSavingId(id)
     setError(null)
     try {
-      await updateBike(id, parseInt(editForm.year), editForm.make.trim(), editForm.model.trim())
+      await updateBike(id, parseInt(editForm.year), editForm.make.trim(), editForm.model.trim(), editDescription || null)
       setBikes((prev) =>
         prev.map((b) =>
-          b.id === id ? { ...b, year: editForm.year, make: editForm.make, model: editForm.model } : b
+          b.id === id ? { ...b, year: editForm.year, make: editForm.make, model: editForm.model, description: editDescription.trim() || null } : b
         )
       )
       cancelEdit()
@@ -208,17 +213,20 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
               isUploading={false}
               isOwn={false}
             />
-            <div>
+            <div className="flex-1 min-w-0">
               <Link
                 href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}
                 className="text-white font-medium hover:text-orange-400 transition-colors"
               >
                 {[bike.year, bike.make, bike.model].filter(Boolean).join(' ')}
               </Link>
+              {bike.description && (
+                <p className="text-zinc-400 text-sm mt-1 whitespace-pre-wrap leading-relaxed">{bike.description}</p>
+              )}
               {(ownerCounts[bike.id] ?? 0) > 0 && (
                 <Link
                   href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}
-                  className="text-orange-400 hover:text-orange-300 text-xs mt-0.5 block transition-colors"
+                  className="text-orange-400 hover:text-orange-300 text-xs mt-1 block transition-colors"
                 >
                   {ownerCounts[bike.id]} other {ownerCounts[bike.id] === 1 ? 'owner' : 'owners'} →
                 </Link>
@@ -264,10 +272,22 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
                 </button>
               </div>
               <BikeSelector value={editForm} onChange={setEditForm} />
+              <div className="mt-3">
+                <label className="text-zinc-400 text-xs block mb-1">About this bike <span className="text-zinc-600">(optional)</span></label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Mods, history, stories..."
+                  maxLength={2000}
+                  rows={3}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500 resize-none"
+                />
+                <p className="text-zinc-600 text-xs text-right mt-0.5">{editDescription.length}/2000</p>
+              </div>
               <button
                 onClick={() => handleUpdate(bike.id)}
                 disabled={isSaving || !editForm.year || !editForm.make || !editForm.model}
-                className="mt-3 w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2 rounded-lg transition-colors text-sm"
+                className="mt-2 w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2 rounded-lg transition-colors text-sm"
               >
                 {isSaving ? 'Saving…' : 'Save Changes'}
               </button>
@@ -292,14 +312,17 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
               >
                 {[bike.year, bike.make, bike.model].filter(Boolean).join(' ')}
               </Link>
+              {bike.description && (
+                <p className="text-zinc-400 text-sm mt-1 whitespace-pre-wrap leading-relaxed">{bike.description}</p>
+              )}
               {(ownerCounts[bike.id] ?? 0) > 0 ? (
                 <Link
                   href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}
-                  className="text-orange-400 hover:text-orange-300 text-xs mt-0.5 block transition-colors"
+                  className="text-orange-400 hover:text-orange-300 text-xs mt-1 block transition-colors"
                 >
                   {ownerCounts[bike.id]} other {ownerCounts[bike.id] === 1 ? 'owner' : 'owners'} →
                 </Link>
-              ) : !bike.photo_url ? (
+              ) : !bike.photo_url && !bike.description ? (
                 <p className="text-zinc-600 text-xs mt-0.5">Tap photo to add image</p>
               ) : null}
             </div>

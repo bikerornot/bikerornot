@@ -82,16 +82,27 @@ export default async function UserDetailPage({
 
   return (
     <div className="p-6 max-w-4xl">
-      {/* Back */}
-      <Link
-        href="/admin/users"
-        className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors text-sm mb-6"
-      >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-        All users
-      </Link>
+      {/* Back + Scammer Analysis link */}
+      <div className="flex items-center justify-between mb-6">
+        <Link
+          href="/admin/users"
+          className="flex items-center gap-1.5 text-zinc-500 hover:text-white transition-colors text-sm"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          All users
+        </Link>
+        <Link
+          href={`/admin/scammer/${id}`}
+          className="flex items-center gap-1.5 text-orange-400 hover:text-orange-300 transition-colors text-sm font-medium"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Scammer Analysis
+        </Link>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left column: profile + moderation */}

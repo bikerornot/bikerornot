@@ -21,6 +21,24 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
   checkRateLimit(`sendFriendRequest:${user.id}`, 20, 60_000)
 
   const admin = getServiceClient()
+
+  // Gate 2: New accounts (<7 days) — max 5 friend requests per day
+  const { data: senderProfile } = await admin
+    .from('profiles').select('created_at').eq('id', user.id).single()
+  const accountAgeDays = (Date.now() - new Date(senderProfile!.created_at).getTime()) / 86_400_000
+  if (accountAgeDays < 7) {
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    const { count: requestsToday } = await admin
+      .from('friendships')
+      .select('*', { count: 'exact', head: true })
+      .eq('requester_id', user.id)
+      .gte('created_at', todayStart.toISOString())
+    if ((requestsToday ?? 0) >= 5) {
+      throw new Error('New accounts can send up to 5 friend requests per day.')
+    }
+  }
+
   const { error } = await admin
     .from('friendships')
     .insert({ requester_id: user.id, addressee_id: addresseeId })

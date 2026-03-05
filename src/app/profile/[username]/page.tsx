@@ -181,6 +181,16 @@ export default async function ProfilePage({
     }
   }
 
+  // Check if current user has public activity (required to unlock messaging)
+  let viewerHasPublicActivity = true
+  if (user && !isOwnProfile && friendshipStatus === 'accepted') {
+    const [{ count: vPosts }, { count: vComments }] = await Promise.all([
+      admin.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
+      admin.from('comments').select('*', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
+    ])
+    viewerHasPublicActivity = ((vPosts ?? 0) + (vComments ?? 0)) > 0
+  }
+
   // Mutual friends (only when viewing someone else's profile)
   const mutualFriends = user && !isOwnProfile
     ? await getMutualFriends(profile.id)
@@ -297,7 +307,7 @@ export default async function ProfilePage({
                   />
                 )}
                 {friendshipStatus === 'accepted' && (
-                  <MessageButton profileId={profile.id} />
+                  <MessageButton profileId={profile.id} locked={!viewerHasPublicActivity} />
                 )}
                 {user && (
                   <ContentMenu

@@ -34,6 +34,15 @@ export async function getOrCreateConversation(otherUserId: string): Promise<stri
 
   if (!friendship) throw new Error('You can only message friends')
 
+  // Gate 1: Must have at least 1 post or comment before messaging
+  const [{ count: postCount }, { count: commentCount }] = await Promise.all([
+    admin.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
+    admin.from('comments').select('*', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
+  ])
+  if ((postCount ?? 0) === 0 && (commentCount ?? 0) === 0) {
+    throw new Error('Please make a post or comment before sending messages.')
+  }
+
   // Block messaging banned/suspended/deactivated accounts
   const { data: otherUser } = await admin
     .from('profiles')
@@ -54,7 +63,25 @@ export async function getOrCreateConversation(otherUserId: string): Promise<stri
     .eq('participant2_id', p2)
     .single()
 
+  // Returning to an existing conversation is always allowed
   if (existing) return existing.id
+
+  // Gate 3: New accounts (<7 days) — max 3 new conversations per day
+  const { data: senderProfile } = await admin
+    .from('profiles').select('created_at').eq('id', user.id).single()
+  const accountAgeDays = (Date.now() - new Date(senderProfile!.created_at).getTime()) / 86_400_000
+  if (accountAgeDays < 7) {
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+    const { count: convosToday } = await admin
+      .from('conversations')
+      .select('*', { count: 'exact', head: true })
+      .or(`participant1_id.eq.${user.id},participant2_id.eq.${user.id}`)
+      .gte('created_at', todayStart.toISOString())
+    if ((convosToday ?? 0) >= 3) {
+      throw new Error('New accounts can start up to 3 new conversations per day.')
+    }
+  }
 
   const { data: convo, error } = await admin
     .from('conversations')

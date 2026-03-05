@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { HIGH_RISK_COUNTRIES, computeRiskFlags } from '@/lib/risk'
+import { computeScammerScore, type ScammerInput, type ScammerResult } from '@/lib/scammer-score'
 
 function getServiceClient() {
   return createServiceClient(
@@ -910,4 +911,168 @@ export async function setUserRole(userId: string, role: 'user' | 'moderator' | '
   if (!profile || profile.role !== 'super_admin') throw new Error('Only super admins can change roles')
   const admin = getServiceClient()
   await admin.from('profiles').update({ role }).eq('id', userId)
+}
+
+// ─── Scammer Analysis ────────────────────────────────────────────────────────
+
+export interface ScammerAnalysis {
+  profile: AdminUserDetail
+  result: ScammerResult
+}
+
+export async function getScammerAnalysis(userId: string): Promise<ScammerAnalysis | null> {
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  // Parallel fetch all data
+  const [
+    profile,
+    { data: sentMessages },
+    { count: receivedCount },
+    { data: conversations },
+    { data: frSent },
+    { count: frReceivedCount },
+    { count: reportsAgainst },
+    { count: blocksAgainst },
+    { count: contentFlags },
+  ] = await Promise.all([
+    getUserDetail(userId),
+    admin
+      .from('messages')
+      .select('id, content, created_at, conversation_id')
+      .eq('sender_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(500),
+    admin
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .neq('sender_id', userId)
+      .in('conversation_id',
+        // subquery: all conversations this user is in
+        // We'll resolve this after
+        [],
+      ),
+    admin
+      .from('conversations')
+      .select('id, participant1_id, participant2_id, created_at')
+      .or(`participant1_id.eq.${userId},participant2_id.eq.${userId}`),
+    admin
+      .from('friendships')
+      .select('created_at, status')
+      .eq('requester_id', userId),
+    admin
+      .from('friendships')
+      .select('*', { count: 'exact', head: true })
+      .eq('addressee_id', userId),
+    admin
+      .from('reports')
+      .select('*', { count: 'exact', head: true })
+      .eq('reported_type', 'profile')
+      .eq('reported_id', userId),
+    admin
+      .from('blocks')
+      .select('*', { count: 'exact', head: true })
+      .eq('blocked_id', userId),
+    admin
+      .from('content_flags')
+      .select('*', { count: 'exact', head: true })
+      .eq('sender_id', userId),
+  ])
+
+  if (!profile) return null
+
+  // Now get received messages count using actual conversation IDs
+  const convIds = (conversations ?? []).map((c) => c.id)
+  let actualReceivedCount = receivedCount ?? 0
+  if (convIds.length > 0) {
+    const { count } = await admin
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .neq('sender_id', userId)
+      .in('conversation_id', convIds)
+    actualReceivedCount = count ?? 0
+  }
+
+  // Map messages to include recipient IDs
+  const convMap = new Map<string, { participant1_id: string; participant2_id: string }>()
+  for (const c of conversations ?? []) {
+    convMap.set(c.id, { participant1_id: c.participant1_id, participant2_id: c.participant2_id })
+  }
+
+  const messagesSent = (sentMessages ?? []).map((m) => {
+    const conv = convMap.get(m.conversation_id)
+    const recipientId = conv
+      ? (conv.participant1_id === userId ? conv.participant2_id : conv.participant1_id)
+      : null
+    return { content: m.content, created_at: m.created_at, recipient_id: recipientId }
+  })
+
+  // Determine which conversations the user initiated (sent the first message)
+  // For simplicity, count conversations where the first message in our data is from the user
+  const firstMessageByConv = new Map<string, string>()
+  // sentMessages is sorted desc, so iterate in reverse for chronological order
+  for (let i = (sentMessages ?? []).length - 1; i >= 0; i--) {
+    const m = sentMessages![i]
+    if (!firstMessageByConv.has(m.conversation_id)) {
+      firstMessageByConv.set(m.conversation_id, m.conversation_id)
+    }
+  }
+  // A user "initiated" if they appear to have sent the first message we have
+  const conversationsInitiated = firstMessageByConv.size
+
+  const accountAgeDays = Math.max(
+    1,
+    Math.floor((Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24)),
+  )
+
+  const input: ScammerInput = {
+    accountAgeDays,
+    bio: profile.bio,
+    ridingStyle: null, // not in AdminUserDetail, treated as null
+    postCount: profile.post_count,
+    commentCount: profile.comment_count,
+    profileCity: profile.city,
+    profileState: profile.state,
+    signupCountry: profile.signup_country,
+    signupCity: profile.signup_city,
+    messagesSent,
+    messagesReceivedCount: actualReceivedCount,
+    conversationsInitiated,
+    conversationsTotal: convIds.length,
+    friendRequestsSent: (frSent ?? []).map((f) => ({
+      created_at: f.created_at,
+      status: f.status,
+    })),
+    friendRequestsReceivedCount: frReceivedCount ?? 0,
+    reportsAgainstCount: reportsAgainst ?? 0,
+    blocksAgainstCount: blocksAgainst ?? 0,
+    contentFlagsCount: contentFlags ?? 0,
+  }
+
+  const result = computeScammerScore(input)
+
+  return { profile, result }
+}
+
+export interface AdminSearchResult {
+  id: string
+  username: string | null
+  first_name: string
+  last_name: string
+  profile_photo_url: string | null
+}
+
+export async function searchUsersForAdmin(query: string): Promise<AdminSearchResult[]> {
+  await requireAdmin()
+  const admin = getServiceClient()
+  const term = query.replace(/^@/, '').trim()
+  if (!term) return []
+
+  const { data } = await admin
+    .from('profiles')
+    .select('id, username, first_name, last_name, profile_photo_url')
+    .or(`username.ilike.%${term}%,first_name.ilike.%${term}%,last_name.ilike.%${term}%`)
+    .limit(10)
+
+  return (data ?? []) as AdminSearchResult[]
 }

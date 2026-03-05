@@ -144,12 +144,57 @@ export async function completeOnboarding(
       .eq('id', user.id)
   }
 
+  let bikeIds: string[] = []
   if (bikes.length > 0) {
-    const { error: bikesError } = await admin
+    const { data: insertedBikes, error: bikesError } = await admin
       .from('user_bikes')
       .insert(bikes.map((b) => ({ ...b, make: normalizeMake(b.make), user_id: user.id })))
+      .select('id')
     if (bikesError) throw new Error(bikesError.message)
+    bikeIds = (insertedBikes ?? []).map((b: { id: string }) => b.id)
   }
 
-  return { username }
+  return { username, bikeIds }
+}
+
+export async function uploadOnboardingBikePhoto(bikeId: string, formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const admin = getServiceClient()
+
+  // Verify ownership
+  const { data: bike } = await admin
+    .from('user_bikes')
+    .select('id')
+    .eq('id', bikeId)
+    .eq('user_id', user.id)
+    .single()
+  if (!bike) throw new Error('Bike not found')
+
+  const file = formData.get('file') as File
+  if (!file) throw new Error('No file provided')
+  validateImageFile(file)
+
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+  const photoId = crypto.randomUUID()
+  const path = `${user.id}/${bikeId}/${photoId}.${ext}`
+  const arrayBuffer = await file.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
+
+  const { error: uploadError } = await admin.storage
+    .from('bikes')
+    .upload(path, buffer, { contentType: file.type })
+  if (uploadError) throw new Error(uploadError.message)
+
+  await admin.from('bike_photos').insert({
+    bike_id: bikeId,
+    user_id: user.id,
+    storage_path: path,
+    is_primary: true,
+  })
+
+  // Set as the bike's photo_url
+  await admin.from('user_bikes').update({ photo_url: path }).eq('id', bikeId)
 }

@@ -107,14 +107,12 @@ export default function BikePhotoGallery({ bikeId, initialPhotos, isOwnGarage }:
   return (
     <div>
       {/* Main photo */}
-      <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-800">
+      <div className="relative rounded-xl overflow-hidden bg-zinc-800 flex items-center justify-center max-w-4xl mx-auto">
         {selectedPhoto && (
-          <Image
+          <img
             src={getImageUrl('bikes', selectedPhoto.storage_path)}
             alt="Bike photo"
-            fill
-            className="object-cover"
-            priority
+            className="w-full h-auto max-h-[70vh] object-contain"
           />
         )}
 

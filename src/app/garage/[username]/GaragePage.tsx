@@ -56,12 +56,12 @@ export default function GaragePage({
   return (
     <div className="space-y-6">
       {/* Bike tabs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {bikes.map((bike) => (
           <button
             key={bike.id}
             onClick={() => setActiveBikeId(bike.id)}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left truncate ${
+            className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors text-left truncate ${
               bike.id === activeBikeId
                 ? 'bg-orange-500 text-white'
                 : 'bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700'

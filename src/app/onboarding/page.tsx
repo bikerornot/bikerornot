@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { RIDING_STYLES } from '@/lib/supabase/types'
-import { uploadAvatar, completeOnboarding } from './actions'
+import { uploadAvatar, completeOnboarding, uploadOnboardingBikePhoto } from './actions'
 import BikeSelector, { BikeData } from '@/app/settings/BikeSelector'
 import { compressImage } from '@/lib/compress'
 
@@ -209,20 +209,61 @@ function StepPhoto({
 function StepBikes({
   bikes,
   setBikes,
+  bikePhotos,
+  setBikePhotos,
 }: {
   bikes: BikeData[]
   setBikes: React.Dispatch<React.SetStateAction<BikeData[]>>
+  bikePhotos: (File | null)[]
+  setBikePhotos: React.Dispatch<React.SetStateAction<(File | null)[]>>
 }) {
+  const [photoPreviews, setPhotoPreviews] = useState<(string | null)[]>(bikes.map(() => null))
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([])
+
   function updateBike(index: number, val: BikeData) {
     setBikes((prev) => prev.map((b, i) => (i === index ? val : b)))
   }
 
   function addBike() {
     setBikes((prev) => [...prev, { year: '', make: '', model: '' }])
+    setBikePhotos((prev) => [...prev, null])
+    setPhotoPreviews((prev) => [...prev, null])
   }
 
   function removeBike(index: number) {
+    // Revoke preview URL
+    if (photoPreviews[index]) URL.revokeObjectURL(photoPreviews[index]!)
     setBikes((prev) => prev.filter((_, i) => i !== index))
+    setBikePhotos((prev) => prev.filter((_, i) => i !== index))
+    setPhotoPreviews((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  async function handlePhotoSelect(index: number, e: React.ChangeEvent<HTMLInputElement>) {
+    setPhotoError(null)
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+
+    try {
+      const compressed = await compressImage(file, 1, 1920)
+      if (compressed.size > 5 * 1024 * 1024) {
+        setPhotoError('Image is too large. Please choose a smaller file.')
+        return
+      }
+      // Revoke old preview
+      if (photoPreviews[index]) URL.revokeObjectURL(photoPreviews[index]!)
+      setBikePhotos((prev) => prev.map((p, i) => (i === index ? compressed : p)))
+      setPhotoPreviews((prev) => prev.map((p, i) => (i === index ? URL.createObjectURL(compressed) : p)))
+    } catch {
+      setPhotoError('Failed to process image')
+    }
+  }
+
+  function removePhoto(index: number) {
+    if (photoPreviews[index]) URL.revokeObjectURL(photoPreviews[index]!)
+    setBikePhotos((prev) => prev.map((p, i) => (i === index ? null : p)))
+    setPhotoPreviews((prev) => prev.map((p, i) => (i === index ? null : p)))
   }
 
   return (
@@ -248,8 +289,60 @@ function StepBikes({
               )}
             </div>
             <BikeSelector value={bike} onChange={(val) => updateBike(index, val)} />
+
+            {/* Photo upload area */}
+            <div className="mt-3 pt-3 border-t border-zinc-700/50">
+              {photoPreviews[index] ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-zinc-700 flex-shrink-0 relative">
+                    <img
+                      src={photoPreviews[index]!}
+                      alt="Bike preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRefs.current[index]?.click()}
+                      className="text-orange-400 hover:text-orange-300 text-xs font-medium transition-colors text-left"
+                    >
+                      Change photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(index)}
+                      className="text-zinc-500 hover:text-zinc-300 text-xs transition-colors text-left"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRefs.current[index]?.click()}
+                  className="flex items-center gap-2 text-zinc-500 hover:text-orange-400 text-xs transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                  </svg>
+                  Add a photo (optional)
+                </button>
+              )}
+              <input
+                ref={(el) => { fileInputRefs.current[index] = el }}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => handlePhotoSelect(index, e)}
+              />
+            </div>
           </div>
         ))}
+
+        {photoError && <p className="text-red-400 text-xs">{photoError}</p>}
 
         <button
           type="button"
@@ -280,6 +373,7 @@ export default function OnboardingPage() {
 
   // Step 3
   const [bikes, setBikes] = useState<BikeData[]>([{ year: '', make: '', model: '' }])
+  const [bikePhotos, setBikePhotos] = useState<(File | null)[]>([null])
 
   function canAdvanceStep1() {
     return usernameStatus === 'available'
@@ -317,21 +411,33 @@ export default function OnboardingPage() {
 
       // Complete onboarding via server action (bypasses client-side auth issues)
       const refUrl = localStorage.getItem('signup_ref_url') ?? null
-      await completeOnboarding(
-        username,
-        photoPath,
-        skipBikes
-          ? []
-          : bikes
-              .filter((b) => b.year && b.make.trim() && b.model.trim())
-              .map((b) => ({
-                year: parseInt(b.year),
-                make: b.make.trim(),
-                model: b.model.trim(),
-              })),
-        refUrl
-      )
+      const validBikes = skipBikes
+        ? []
+        : bikes
+            .filter((b) => b.year && b.make.trim() && b.model.trim())
+            .map((b) => ({
+              year: parseInt(b.year),
+              make: b.make.trim(),
+              model: b.model.trim(),
+            }))
+      const result = await completeOnboarding(username, photoPath, validBikes, refUrl)
       localStorage.removeItem('signup_ref_url')
+
+      // Upload bike photos (best-effort — don't block completion)
+      if (result.bikeIds.length > 0 && !skipBikes) {
+        const uploadPromises = result.bikeIds.map(async (bikeId, i) => {
+          const photo = bikePhotos[i]
+          if (!photo) return
+          try {
+            const formData = new FormData()
+            formData.append('file', photo)
+            await uploadOnboardingBikePhoto(bikeId, formData)
+          } catch {
+            // Photo upload failure shouldn't block onboarding
+          }
+        })
+        await Promise.all(uploadPromises)
+      }
 
       if (typeof window !== 'undefined' && (window as any).fbq) {
         ;(window as any).fbq('track', 'CompleteRegistration')
@@ -378,7 +484,7 @@ export default function OnboardingPage() {
               setPhotoPreview={setPhotoPreview}
             />
           )}
-          {step === 3 && <StepBikes bikes={bikes} setBikes={setBikes} />}
+          {step === 3 && <StepBikes bikes={bikes} setBikes={setBikes} bikePhotos={bikePhotos} setBikePhotos={setBikePhotos} />}
 
           {error && (
             <div className="mt-4 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm">

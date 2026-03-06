@@ -299,6 +299,7 @@ export interface AdminUserRow {
   post_count: number
   message_count: number
   comment_count: number
+  friend_requests_sent: number
   risk_flags: string[]
 }
 
@@ -328,6 +329,8 @@ export interface AdminUserDetail {
   post_count: number
   message_count: number
   comment_count: number
+  friend_requests_sent: number
+  friend_requests_received: number
   report_count: number
   recent_posts: Array<{
     id: string
@@ -399,12 +402,19 @@ export async function getUsers({
   let postCountMap: Record<string, number> = {}
   let messageCountMap: Record<string, number> = {}
   let commentCountMap: Record<string, number> = {}
+  let friendRequestCountMap: Record<string, number> = {}
   if (userIds.length > 0) {
-    const { data: counts } = await admin.rpc('get_user_activity_counts', { user_ids: userIds })
+    const [{ data: counts }, { data: friendRequests }] = await Promise.all([
+      admin.rpc('get_user_activity_counts', { user_ids: userIds }),
+      admin.from('friendships').select('requester_id').in('requester_id', userIds),
+    ])
     for (const row of counts ?? []) {
       postCountMap[row.user_id] = Number(row.post_count)
       messageCountMap[row.user_id] = Number(row.message_count)
       commentCountMap[row.user_id] = Number(row.comment_count)
+    }
+    for (const row of friendRequests ?? []) {
+      friendRequestCountMap[row.requester_id] = (friendRequestCountMap[row.requester_id] ?? 0) + 1
     }
   }
 
@@ -414,6 +424,7 @@ export async function getUsers({
       post_count: postCountMap[u.id] ?? 0,
       message_count: messageCountMap[u.id] ?? 0,
       comment_count: commentCountMap[u.id] ?? 0,
+      friend_requests_sent: friendRequestCountMap[u.id] ?? 0,
       risk_flags: computeRiskFlags(u),
     })) as AdminUserRow[],
     total: count ?? 0,
@@ -490,14 +501,16 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     }
   }
 
-  // Report / message / comment counts
-  const [{ count: profileReports }, { count: postReports }, { count: totalMessages }, { count: totalComments }] = await Promise.all([
+  // Report / message / comment / friend request counts
+  const [{ count: profileReports }, { count: postReports }, { count: totalMessages }, { count: totalComments }, { count: frSent }, { count: frReceived }] = await Promise.all([
     admin.from('reports').select('*', { count: 'exact', head: true }).eq('reported_type', 'profile').eq('reported_id', userId),
     postIds.length > 0
       ? admin.from('reports').select('*', { count: 'exact', head: true }).eq('reported_type', 'post').in('reported_id', postIds)
       : Promise.resolve({ count: 0 }),
     admin.from('messages').select('*', { count: 'exact', head: true }).eq('sender_id', userId),
     admin.from('comments').select('*', { count: 'exact', head: true }).eq('author_id', userId).is('deleted_at', null),
+    admin.from('friendships').select('*', { count: 'exact', head: true }).eq('requester_id', userId),
+    admin.from('friendships').select('*', { count: 'exact', head: true }).eq('addressee_id', userId),
   ])
 
   // Recent comments by this user
@@ -557,6 +570,8 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     post_count: (posts ?? []).length,
     message_count: totalMessages ?? 0,
     comment_count: totalComments ?? 0,
+    friend_requests_sent: frSent ?? 0,
+    friend_requests_received: frReceived ?? 0,
     report_count: (profileReports ?? 0) + (postReports ?? 0),
     recent_posts: (posts ?? []).slice(0, 10).map((p) => ({
       id: p.id,

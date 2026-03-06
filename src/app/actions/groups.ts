@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { Group, GroupMember, Post, Profile } from '@/lib/supabase/types'
 import { validateImageFile } from '@/lib/rate-limit'
+import { moderateImage } from '@/lib/sightengine'
 
 function getServiceClient() {
   return createServiceClient(
@@ -57,6 +58,8 @@ export async function createGroup(
     const ext = coverFile.name.split('.').pop() ?? 'jpg'
     const path = `groups/${user.id}/${slug}.${ext}`
     const bytes = await coverFile.arrayBuffer()
+    const coverModeration = await moderateImage(bytes, coverFile.type)
+    if (coverModeration === 'rejected') throw new Error('This image was rejected by our content filter. Please choose a different photo.')
     const { error: uploadErr } = await admin.storage
       .from('covers')
       .upload(path, bytes, { contentType: coverFile.type, upsert: true })
@@ -544,6 +547,8 @@ export async function updateGroup(
     const ext = updates.coverFile.name.split('.').pop() ?? 'jpg'
     const path = `groups/${user.id}/${group.slug}.${ext}`
     const bytes = await updates.coverFile.arrayBuffer()
+    const coverModeration = await moderateImage(bytes, updates.coverFile.type)
+    if (coverModeration === 'rejected') throw new Error('This image was rejected by our content filter. Please choose a different photo.')
     const { error: uploadErr } = await admin.storage
       .from('covers')
       .upload(path, bytes, { contentType: updates.coverFile.type, upsert: true })

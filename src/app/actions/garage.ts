@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { validateImageFile } from '@/lib/rate-limit'
+import { moderateImage } from '@/lib/sightengine'
 import { normalizeMake } from '@/lib/normalize-make'
 import type { BikePhoto } from '@/lib/supabase/types'
 
@@ -95,6 +96,9 @@ export async function uploadBikePhoto(bikeId: string, formData: FormData): Promi
   const arrayBuffer = await file.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
 
+  const moderation = await moderateImage(arrayBuffer, file.type)
+  if (moderation === 'rejected') throw new Error('This image was rejected by our content filter. Please choose a different photo.')
+
   const admin = getServiceClient()
   const { error: uploadError } = await admin.storage
     .from('bikes')
@@ -168,6 +172,9 @@ export async function uploadBikeGalleryPhoto(bikeId: string, formData: FormData)
   const path = `${user.id}/${bikeId}/${photoId}.${ext}`
   const arrayBuffer = await file.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
+
+  const moderation = await moderateImage(arrayBuffer, file.type)
+  if (moderation === 'rejected') throw new Error('This image was rejected by our content filter. Please choose a different photo.')
 
   const { error: uploadError } = await admin.storage
     .from('bikes')

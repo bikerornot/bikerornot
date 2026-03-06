@@ -67,6 +67,12 @@ export async function uploadCoverPhoto(formData: FormData): Promise<void> {
   const admin = getServiceClient()
   const arrayBuffer = await file.arrayBuffer()
 
+  // Moderate before storing
+  const moderation = await moderateImage(arrayBuffer, file.type)
+  if (moderation === 'rejected') {
+    throw new Error('This image was rejected by our content filter. Please choose a different photo.')
+  }
+
   const { error: uploadError } = await admin.storage
     .from('covers')
     .upload(path, arrayBuffer, { contentType: file.type, upsert: true })

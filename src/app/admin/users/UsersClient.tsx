@@ -241,6 +241,7 @@ export default function UsersClient({
                           <span className="text-zinc-400"><span className="text-zinc-500">P </span>{u.post_count}</span>
                           <span className="text-zinc-400"><span className="text-zinc-500">M </span>{u.message_count}</span>
                           <span className="text-zinc-400"><span className="text-zinc-500">C </span>{u.comment_count}</span>
+                          <span className="text-zinc-400"><span className="text-zinc-500">F </span>{u.friend_requests_sent}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3">

@@ -110,6 +110,7 @@ function OwnerCard({
 }) {
   const { profile, bike, distanceMiles } = owner
   const bikeLabel = [bike.year, bike.make, bike.model].filter(Boolean).join(' ')
+  const bikePhotoUrl = bike.photo_url ? getImageUrl('bikes', bike.photo_url) : null
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex gap-4 items-start">
@@ -135,8 +136,22 @@ function OwnerCard({
           <p className="text-sm text-zinc-400 mt-0.5">🏍️ {bikeLabel}</p>
         )}
 
+        {bikePhotoUrl && (
+          <Link href={`/profile/${profile.username}?tab=Garage`} className="mt-2 block">
+            <div className="w-full aspect-[16/9] max-w-xs rounded-lg overflow-hidden bg-zinc-800">
+              <Image
+                src={bikePhotoUrl}
+                alt={bikeLabel || 'Bike photo'}
+                width={320}
+                height={180}
+                className="object-cover w-full h-full"
+              />
+            </div>
+          </Link>
+        )}
+
         {(profile.city || profile.state) && (
-          <p className="text-sm text-zinc-400 mt-0.5">
+          <p className="text-sm text-zinc-400 mt-1.5">
             📍 {[profile.city, profile.state].filter(Boolean).join(', ')}
           </p>
         )}

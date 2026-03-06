@@ -47,22 +47,30 @@ export async function moderateImage(
 
   const nudityRaw = data.nudity?.raw ?? 0
   const nudityPartial = data.nudity?.partial ?? 0
+  const nuditySexual = data.nudity?.sexual_activity ?? 0
+  const nudityExplicit = data.nudity?.erotica ?? 0
   const gore = data.gore?.prob ?? 0
   const weapon = data.weapon?.prob ?? 0
 
-  // ── Hard rejections (complete nudity only) ───────────────────────────────
+  // ── Hard rejections ────────────────────────────────────────────────────────
   if (
-    nudityRaw > 0.5 ||
-    gore > 0.75
+    nudityRaw > 0.3 ||
+    nudityPartial > 0.6 ||
+    nuditySexual > 0.3 ||
+    nudityExplicit > 0.4 ||
+    gore > 0.6
   ) {
     return 'rejected'
   }
 
   // ── Flag for human review (borderline) ───────────────────────────────────
   if (
-    nudityRaw > 0.3 ||
-    gore > 0.4 ||
-    weapon > 0.75
+    nudityRaw > 0.15 ||
+    nudityPartial > 0.35 ||
+    nuditySexual > 0.15 ||
+    nudityExplicit > 0.2 ||
+    gore > 0.3 ||
+    weapon > 0.6
   ) {
     return 'pending'
   }

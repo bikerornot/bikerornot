@@ -243,7 +243,7 @@ export default async function UserDetailPage({
           {/* Stats */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
             <h3 className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-3">Stats</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="text-center">
                 <p className="text-2xl font-bold text-white">{user.post_count}</p>
                 <p className="text-zinc-500 text-xs mt-0.5">Posts</p>
@@ -255,6 +255,14 @@ export default async function UserDetailPage({
               <div className="text-center">
                 <p className="text-2xl font-bold text-white">{user.comment_count}</p>
                 <p className="text-zinc-500 text-xs mt-0.5">Comments</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-white">{user.friend_requests_sent}</p>
+                <p className="text-zinc-500 text-xs mt-0.5">FR Sent</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-white">{user.friend_requests_received}</p>
+                <p className="text-zinc-500 text-xs mt-0.5">FR Received</p>
               </div>
               <div className="text-center">
                 <p className={`text-2xl font-bold ${user.report_count > 0 ? 'text-orange-400' : 'text-white'}`}>

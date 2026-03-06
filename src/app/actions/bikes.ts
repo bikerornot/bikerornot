@@ -27,7 +27,7 @@ export type FriendshipStatus = 'none' | 'pending_sent' | 'pending_received' | 'a
 
 export interface BikeOwner {
   profile: Profile
-  bike: { year: number | null; make: string | null; model: string | null }
+  bike: { year: number | null; make: string | null; model: string | null; photo_url: string | null }
   friendshipStatus: FriendshipStatus
   distanceMiles: number | null
 }
@@ -68,7 +68,7 @@ export async function findBikeOwners(
   // Build query — make is required, year and model are optional
   let query = admin
     .from('user_bikes')
-    .select('user_id, year, make, model')
+    .select('user_id, year, make, model, photo_url')
     .or(buildMakeOrFilter(make))
     .neq('user_id', user.id)
     .limit(RESULT_LIMIT + 1) // fetch one extra to detect if results were capped
@@ -151,7 +151,7 @@ export async function findBikeOwners(
     const bikeRow = bikeByUserId.get(p.id)
     return {
       profile: p,
-      bike: { year: bikeRow?.year ?? null, make: bikeRow?.make ?? null, model: bikeRow?.model ?? null },
+      bike: { year: bikeRow?.year ?? null, make: bikeRow?.make ?? null, model: bikeRow?.model ?? null, photo_url: bikeRow?.photo_url ?? null },
       friendshipStatus: friendshipMap.get(p.id) ?? 'none',
       distanceMiles,
     }

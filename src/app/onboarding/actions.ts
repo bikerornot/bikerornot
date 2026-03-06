@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { geocodeZip } from '@/lib/geocode'
 import { validateImageFile } from '@/lib/rate-limit'
+import { moderateImage } from '@/lib/sightengine'
 import { normalizeMake } from '@/lib/normalize-make'
 
 async function getSignupLocation(): Promise<{
@@ -69,6 +70,10 @@ export async function uploadAvatar(formData: FormData): Promise<string> {
 
   const admin = getServiceClient()
   const arrayBuffer = await file.arrayBuffer()
+
+  const moderation = await moderateImage(arrayBuffer, file.type)
+  if (moderation === 'rejected') throw new Error('This image was rejected by our content filter. Please choose a different photo.')
+
   const { error } = await admin.storage
     .from('avatars')
     .upload(path, arrayBuffer, { contentType: file.type, upsert: true })
@@ -182,6 +187,9 @@ export async function uploadOnboardingBikePhoto(bikeId: string, formData: FormDa
   const path = `${user.id}/${bikeId}/${photoId}.${ext}`
   const arrayBuffer = await file.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
+
+  const moderation = await moderateImage(arrayBuffer, file.type)
+  if (moderation === 'rejected') throw new Error('This image was rejected by our content filter. Please choose a different photo.')
 
   const { error: uploadError } = await admin.storage
     .from('bikes')

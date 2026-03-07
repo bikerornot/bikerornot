@@ -239,14 +239,11 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
               href={`/profile/${author?.username}`}
               className="font-semibold text-white hover:underline text-sm"
             >
-              {displayName}
+              @{displayName}
             </Link>
             <span className="text-zinc-600 text-xs">·</span>
             <span className="text-zinc-500 text-xs">{formatTimeAgo(post.created_at)}</span>
           </div>
-          {author?.username && (
-            <p className="text-zinc-500 text-xs">@{author.username}</p>
-          )}
         </div>
 
         {currentUserId === post.author_id || (wallOwnerId && currentUserId === wallOwnerId) ? (

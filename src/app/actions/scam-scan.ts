@@ -92,18 +92,48 @@ export interface ContentFlag {
     profile_photo_url: string | null
     status: string
   }
+  recipient?: {
+    id: string
+    username: string | null
+    first_name: string
+    last_name: string
+  } | null
 }
 
 export async function getFlaggedContent(): Promise<ContentFlag[]> {
   const admin = getAdmin()
   const { data } = await admin
     .from('content_flags')
-    .select('*, sender:profiles!sender_id(id, username, first_name, last_name, profile_photo_url, status)')
+    .select('*, sender:profiles!sender_id(id, username, first_name, last_name, profile_photo_url, status), message:messages!message_id(conversation_id, conversation:conversations!conversation_id(participant1_id, participant2_id, participant1:profiles!participant1_id(id, username, first_name, last_name), participant2:profiles!participant2_id(id, username, first_name, last_name)))')
     .order('score', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(100)
 
-  return (data ?? []) as ContentFlag[]
+  // Resolve recipient from conversation participants
+  return (data ?? []).map((flag: any) => {
+    let recipient = null
+    const conv = flag.message?.conversation
+    if (conv) {
+      // Recipient is whichever participant is NOT the sender
+      if (conv.participant1_id !== flag.sender_id) {
+        recipient = conv.participant1
+      } else {
+        recipient = conv.participant2
+      }
+    }
+    return {
+      id: flag.id,
+      message_id: flag.message_id,
+      sender_id: flag.sender_id,
+      content: flag.content,
+      score: flag.score,
+      reason: flag.reason,
+      status: flag.status,
+      created_at: flag.created_at,
+      sender: flag.sender,
+      recipient,
+    } as ContentFlag
+  })
 }
 
 export async function dismissFlag(flagId: string): Promise<void> {

@@ -110,7 +110,7 @@ export default function FlagsClient({ initialFlags }: { initialFlags: ContentFla
             >
               {/* Header row */}
               <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0 flex-wrap">
                   <ScoreBadge score={flag.score} />
                   {sender ? (
                     <Link
@@ -124,6 +124,17 @@ export default function FlagsClient({ initialFlags }: { initialFlags: ContentFla
                     </Link>
                   ) : (
                     <span className="text-zinc-500 text-sm">Unknown sender</span>
+                  )}
+                  {flag.recipient && (
+                    <span className="text-zinc-500 text-xs">
+                      to{' '}
+                      <Link
+                        href={`/admin/users/${flag.recipient.id}`}
+                        className="text-zinc-300 hover:text-orange-400 transition-colors font-medium"
+                      >
+                        {flag.recipient.username ? `@${flag.recipient.username}` : `${flag.recipient.first_name} ${flag.recipient.last_name}`}
+                      </Link>
+                    </span>
                   )}
                   {sender?.status === 'banned' && (
                     <span className="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded font-medium">
@@ -153,18 +164,18 @@ export default function FlagsClient({ initialFlags }: { initialFlags: ContentFla
 
               {/* Actions */}
               {flag.status === 'pending' && (
-                <div className="flex gap-2 flex-wrap">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                   <button
                     disabled={isLoading}
                     onClick={() => handleDismiss(flag.id)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border border-zinc-700 transition-colors disabled:opacity-50"
+                    className="px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border border-zinc-700 transition-colors disabled:opacity-50"
                   >
                     Dismiss
                   </button>
                   <button
                     disabled={isLoading}
                     onClick={() => handleReview(flag.id)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/30 transition-colors disabled:opacity-50"
+                    className="px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/30 transition-colors disabled:opacity-50"
                   >
                     Mark Reviewed
                   </button>
@@ -172,7 +183,7 @@ export default function FlagsClient({ initialFlags }: { initialFlags: ContentFla
                     <button
                       disabled={isLoading}
                       onClick={() => handleBan(flag.id, sender.id)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 transition-colors disabled:opacity-50"
+                      className="px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 transition-colors disabled:opacity-50"
                     >
                       Ban User
                     </button>
@@ -180,7 +191,7 @@ export default function FlagsClient({ initialFlags }: { initialFlags: ContentFla
                   {sender && (
                     <Link
                       href={`/admin/users/${sender.id}`}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border border-zinc-700 transition-colors"
+                      className="px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-400 border border-zinc-700 transition-colors text-center"
                     >
                       View Profile
                     </Link>

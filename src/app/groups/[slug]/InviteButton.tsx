@@ -3,14 +3,16 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Profile } from '@/lib/supabase/types'
-import { getFriendsNotInGroup, inviteFriendsToGroup } from '@/app/actions/groups'
+import { getFriendsNotInGroup, inviteFriendsToGroup, canMassInvite } from '@/app/actions/groups'
 import { getImageUrl } from '@/lib/supabase/image'
 
 interface Props {
   groupId: string
+  autoOpen?: boolean
+  onClose?: () => void
 }
 
-export default function InviteButton({ groupId }: Props) {
+export default function InviteButton({ groupId, autoOpen, onClose }: Props) {
   const [open, setOpen] = useState(false)
   const [friends, setFriends] = useState<Profile[]>([])
   const [filtered, setFiltered] = useState<Profile[]>([])
@@ -18,21 +20,37 @@ export default function InviteButton({ groupId }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
-  const [sent, setSent] = useState(false)
+  const [feedback, setFeedback] = useState<{ sent: number; skipped: number } | null>(null)
+  const [massAllowed, setMassAllowed] = useState(false)
+  const [massNextDate, setMassNextDate] = useState<Date | null>(null)
+
+  useEffect(() => {
+    if (autoOpen) openModal()
+  }, [autoOpen])
 
   async function openModal() {
     setOpen(true)
-    setSent(false)
+    setFeedback(null)
     setSelected(new Set())
     setSearch('')
     setLoading(true)
     try {
-      const data = await getFriendsNotInGroup(groupId)
+      const [data, massStatus] = await Promise.all([
+        getFriendsNotInGroup(groupId),
+        canMassInvite(groupId),
+      ])
       setFriends(data)
       setFiltered(data)
+      setMassAllowed(massStatus.allowed)
+      setMassNextDate(massStatus.nextAvailable)
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleClose() {
+    setOpen(false)
+    onClose?.()
   }
 
   useEffect(() => {
@@ -56,17 +74,33 @@ export default function InviteButton({ groupId }: Props) {
     })
   }
 
+  function selectAll() {
+    setSelected(new Set(filtered.map((f) => f.id)))
+  }
+
+  function deselectAll() {
+    setSelected(new Set())
+  }
+
+  const allSelected = filtered.length > 0 && filtered.every((f) => selected.has(f.id))
+
   async function handleSend() {
     if (selected.size === 0 || sending) return
     setSending(true)
+    setFeedback(null)
     try {
-      await inviteFriendsToGroup(groupId, Array.from(selected))
-      setSent(true)
+      const isMass = selected.size === friends.length && friends.length > 3
+      const result = await inviteFriendsToGroup(groupId, Array.from(selected), isMass)
+      setFeedback(result)
       setSelected(new Set())
-      // Remove invited friends from the list
-      setFriends((prev) => prev.filter((f) => !selected.has(f.id)))
+      // Remove successfully invited friends from the list
+      if (result.sent > 0) {
+        const sentIds = new Set(Array.from(selected).slice(0, result.sent))
+        setFriends((prev) => prev.filter((f) => !sentIds.has(f.id)))
+      }
     } catch (err) {
       console.error(err)
+      setFeedback({ sent: 0, skipped: selected.size })
     } finally {
       setSending(false)
     }
@@ -74,54 +108,78 @@ export default function InviteButton({ groupId }: Props) {
 
   return (
     <>
-      <button
-        onClick={openModal}
-        className="text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 px-3 py-1.5 rounded-full font-medium transition-colors"
-      >
-        Invite Friends
-      </button>
+      {!autoOpen && (
+        <button
+          onClick={openModal}
+          className="text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 px-3 py-1.5 rounded-full font-medium transition-colors"
+        >
+          Invite Friends
+        </button>
+      )}
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/70"
-            onClick={() => setOpen(false)}
+            onClick={handleClose}
           />
 
           {/* Modal */}
-          <div className="relative w-full sm:max-w-md bg-zinc-900 border border-zinc-800 rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
+          <div className="relative w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-800 flex-shrink-0">
               <h2 className="text-white font-semibold">Invite Friends</h2>
               <button
-                onClick={() => setOpen(false)}
+                onClick={handleClose}
                 className="text-zinc-500 hover:text-white transition-colors text-lg leading-none"
               >
                 ✕
               </button>
             </div>
 
-            {/* Search */}
-            <div className="px-4 py-3 border-b border-zinc-800 flex-shrink-0">
+            {/* Search + Select All */}
+            <div className="px-4 py-3 border-b border-zinc-800 flex-shrink-0 space-y-2">
               <input
                 type="text"
-                placeholder="Search friends…"
+                placeholder="Search friends..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500 transition-colors"
               />
+              {!loading && friends.length > 0 && (
+                <div className="flex items-center justify-between">
+                  {massAllowed ? (
+                    <button
+                      onClick={allSelected ? deselectAll : selectAll}
+                      className="text-xs text-orange-400 hover:text-orange-300 font-medium transition-colors"
+                    >
+                      {allSelected ? 'Deselect All' : 'Select All'}
+                    </button>
+                  ) : (
+                    <p className="text-xs text-zinc-600">
+                      Select All available{' '}
+                      {massNextDate
+                        ? massNextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        : 'soon'}
+                    </p>
+                  )}
+                  {selected.size > 0 && (
+                    <span className="text-xs text-zinc-500">{selected.size} selected</span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Friend list */}
             <div className="flex-1 overflow-y-auto">
               {loading && (
-                <p className="text-zinc-500 text-sm text-center py-8">Loading…</p>
+                <p className="text-zinc-500 text-sm text-center py-8">Loading...</p>
               )}
 
               {!loading && friends.length === 0 && (
                 <p className="text-zinc-500 text-sm text-center py-8">
-                  All your friends are already in this group.
+                  All your friends are already in this group or have been invited.
                 </p>
               )}
 
@@ -129,9 +187,16 @@ export default function InviteButton({ groupId }: Props) {
                 <p className="text-zinc-500 text-sm text-center py-8">No friends match that search.</p>
               )}
 
-              {sent && (
-                <div className="mx-4 mt-3 bg-green-500/10 border border-green-500/30 text-green-400 text-sm px-4 py-2.5 rounded-xl">
-                  Invites sent!
+              {feedback && (
+                <div className={`mx-4 mt-3 text-sm px-4 py-2.5 rounded-xl ${
+                  feedback.sent > 0
+                    ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+                    : 'bg-zinc-800 border border-zinc-700 text-zinc-400'
+                }`}>
+                  {feedback.sent > 0 && `Sent ${feedback.sent} invite${feedback.sent !== 1 ? 's' : ''}!`}
+                  {feedback.sent > 0 && feedback.skipped > 0 && ' '}
+                  {feedback.skipped > 0 && `${feedback.skipped} skipped (already invited or daily limit).`}
+                  {feedback.sent === 0 && feedback.skipped === 0 && 'No invites to send.'}
                 </div>
               )}
 
@@ -193,14 +258,22 @@ export default function InviteButton({ groupId }: Props) {
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-3 border-t border-zinc-800 flex-shrink-0">
+            <div className="px-4 py-3 border-t border-zinc-800 flex-shrink-0 flex gap-2">
+              {autoOpen && (
+                <button
+                  onClick={handleClose}
+                  className="flex-shrink-0 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium py-2.5 px-4 rounded-xl transition-colors text-sm"
+                >
+                  Skip
+                </button>
+              )}
               <button
                 onClick={handleSend}
                 disabled={selected.size === 0 || sending}
-                className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"
+                className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"
               >
                 {sending
-                  ? 'Sending…'
+                  ? 'Sending...'
                   : selected.size > 0
                   ? `Send ${selected.size} Invite${selected.size !== 1 ? 's' : ''}`
                   : 'Select friends to invite'}

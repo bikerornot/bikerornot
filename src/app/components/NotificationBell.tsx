@@ -8,6 +8,7 @@ import { getImageUrl } from '@/lib/supabase/image'
 import Link from 'next/link'
 import { getNotifications, markRead, markAllRead } from '@/app/actions/notifications'
 import { acceptFriendRequest, declineFriendRequest } from '@/app/actions/friends'
+import { respondToGroupInvite } from '@/app/actions/groups'
 import type { Notification } from '@/lib/supabase/types'
 
 function formatTimeAgo(dateStr: string): string {
@@ -75,9 +76,13 @@ export default function NotificationBell({ userId, username }: Props) {
   const pendingRequests = notifications.filter(
     (n) => n.type === 'friend_request' && !n.read_at
   )
-  // Everything else (including read friend_requests)
+  // Pending group invites = unread group_invite notifications
+  const pendingGroupInvites = notifications.filter(
+    (n) => n.type === 'group_invite' && !n.read_at
+  )
+  // Everything else (including read friend_requests and group_invites)
   const otherNotifications = notifications.filter(
-    (n) => !(n.type === 'friend_request' && !n.read_at)
+    (n) => !(n.type === 'friend_request' && !n.read_at) && !(n.type === 'group_invite' && !n.read_at)
   )
 
   useEffect(() => {
@@ -140,6 +145,25 @@ export default function NotificationBell({ userId, username }: Props) {
     try {
       await declineFriendRequest(n.actor_id)
       markRead(n.id)
+    } finally {
+      setActingOn(null)
+    }
+  }
+
+  async function handleGroupInviteResponse(n: Notification, accept: boolean) {
+    if (!n.group_id) return
+    setActingOn(n.id)
+    markReadOptimistically(n.id)
+    try {
+      await respondToGroupInvite(n.group_id, accept)
+      // Remove the notification from the list since respondToGroupInvite deletes it
+      setNotifications((prev) => prev.filter((x) => x.id !== n.id))
+      if (accept && n.group?.slug) {
+        setOpen(false)
+        router.push(`/groups/${n.group.slug}`)
+      }
+    } catch (err) {
+      console.error(err)
     } finally {
       setActingOn(null)
     }
@@ -256,10 +280,50 @@ export default function NotificationBell({ userId, username }: Props) {
               </div>
             )}
 
+            {/* ── Group invites section ── */}
+            {pendingGroupInvites.length > 0 && (
+              <div>
+                <p className="px-4 pt-3 pb-1 text-[11px] font-semibold text-orange-400 uppercase tracking-wider">
+                  Group Invites
+                </p>
+                {pendingGroupInvites.map((n) => (
+                  <div key={n.id} className="px-4 py-3 bg-zinc-800/50 border-b border-zinc-800">
+                    <div className="flex items-center gap-3">
+                      <Avatar n={n} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-zinc-200 text-sm leading-snug">
+                          <span className="font-semibold text-white">@{n.actor?.username}</span>
+                          {' '}invited you to{' '}
+                          <span className="font-semibold text-white">{n.group?.name ?? 'a group'}</span>
+                        </p>
+                        <p className="text-zinc-500 text-xs mt-0.5">{formatTimeAgo(n.created_at)}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-2.5">
+                      <button
+                        onClick={() => handleGroupInviteResponse(n, true)}
+                        disabled={actingOn === n.id}
+                        className="flex-1 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white text-xs font-semibold py-1.5 rounded-lg transition-colors"
+                      >
+                        {actingOn === n.id ? '...' : 'Join'}
+                      </button>
+                      <button
+                        onClick={() => handleGroupInviteResponse(n, false)}
+                        disabled={actingOn === n.id}
+                        className="flex-1 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-zinc-200 text-xs font-semibold py-1.5 rounded-lg transition-colors"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* ── Other notifications section ── */}
             {otherNotifications.length > 0 && (
               <div>
-                {pendingRequests.length > 0 && (
+                {(pendingRequests.length > 0 || pendingGroupInvites.length > 0) && (
                   <p className="px-4 pt-3 pb-1 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
                     Recent
                   </p>

@@ -50,7 +50,7 @@ export default function CreateGroupForm() {
     setError(null)
     try {
       const group = await createGroup(name.trim(), description.trim() || null, privacy, coverFile)
-      router.push(`/groups/${group.slug}`)
+      router.push(`/groups/${group.slug}?invite=1`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create group')
       setSubmitting(false)

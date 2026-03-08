@@ -490,8 +490,16 @@ export async function getFriendsNotInGroup(groupId: string): Promise<Profile[]> 
 
   const memberSet = new Set((members ?? []).map((m) => m.user_id))
 
-  // Filter out friends who are already members
-  const invitableIds = friendIds.filter((id) => !memberSet.has(id))
+  // Get already-invited users (pending or declined — declined can never be re-invited)
+  const { data: invites } = await admin
+    .from('group_invites')
+    .select('invited_user_id')
+    .eq('group_id', groupId)
+
+  const invitedSet = new Set((invites ?? []).map((i) => i.invited_user_id))
+
+  // Filter out friends who are already members or already invited/declined
+  const invitableIds = friendIds.filter((id) => !memberSet.has(id) && !invitedSet.has(id))
   if (invitableIds.length === 0) return []
 
   const { data: profiles } = await admin
@@ -563,44 +571,220 @@ export async function updateGroup(
   if (error) throw new Error(error.message)
 }
 
-export async function inviteFriendsToGroup(groupId: string, userIds: string[]): Promise<void> {
+const SENDER_DAILY_CAP = 50
+const RECEIVER_DAILY_CAP = 10
+
+export async function inviteFriendsToGroup(
+  groupId: string,
+  userIds: string[],
+  isMassInvite?: boolean
+): Promise<{ sent: number; skipped: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  if (userIds.length === 0) return
+  if (userIds.length === 0) return { sent: 0, skipped: 0 }
 
   const admin = getServiceClient()
 
-  // Verify caller is an admin of the group
+  // Verify caller is a member of the group
   const { data: membership } = await admin
     .from('group_members')
-    .select('role')
+    .select('role, status')
     .eq('group_id', groupId)
     .eq('user_id', user.id)
     .single()
 
-  if (membership?.role !== 'admin') throw new Error('Not authorized')
+  if (!membership || membership.status !== 'active') throw new Error('Not a member of this group')
+
+  // If mass invite, check 30-day cooldown
+  if (isMassInvite) {
+    const { data: lastMass } = await admin
+      .from('group_mass_invites')
+      .select('used_at')
+      .eq('group_id', groupId)
+      .eq('user_id', user.id)
+      .order('used_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (lastMass) {
+      const cooldownEnd = new Date(lastMass.used_at)
+      cooldownEnd.setDate(cooldownEnd.getDate() + 30)
+      if (new Date() < cooldownEnd) {
+        throw new Error(`Mass invite on cooldown until ${cooldownEnd.toLocaleDateString()}`)
+      }
+    }
+  }
+
+  // Check sender daily cap
+  const oneDayAgo = new Date(Date.now() - 86400000).toISOString()
+  const { count: senderCount } = await admin
+    .from('group_invites')
+    .select('*', { count: 'exact', head: true })
+    .eq('invited_by', user.id)
+    .gte('created_at', oneDayAgo)
+
+  const senderRemaining = SENDER_DAILY_CAP - (senderCount ?? 0)
+  if (senderRemaining <= 0) throw new Error('You have reached your daily invite limit. Try again tomorrow.')
 
   // Get existing members to avoid double-inviting
-  const { data: existing } = await admin
+  const { data: existingMembers } = await admin
     .from('group_members')
     .select('user_id')
     .eq('group_id', groupId)
     .in('user_id', userIds)
 
-  const alreadyIn = new Set((existing ?? []).map((m) => m.user_id))
-  const toInvite = userIds.filter((id) => !alreadyIn.has(id))
-  if (toInvite.length === 0) return
+  const memberSet = new Set((existingMembers ?? []).map((m) => m.user_id))
 
-  // Send a group_invite notification to each invitee
-  const notifications = toInvite.map((uid) => ({
+  // Get existing invites (any status — declined can never be re-invited)
+  const { data: existingInvites } = await admin
+    .from('group_invites')
+    .select('invited_user_id')
+    .eq('group_id', groupId)
+    .in('invited_user_id', userIds)
+
+  const invitedSet = new Set((existingInvites ?? []).map((i) => i.invited_user_id))
+
+  // Filter to invitable users, cap by sender limit
+  let toInvite = userIds.filter((id) => !memberSet.has(id) && !invitedSet.has(id))
+  if (toInvite.length > senderRemaining) {
+    toInvite = toInvite.slice(0, senderRemaining)
+  }
+
+  if (toInvite.length === 0) return { sent: 0, skipped: userIds.length }
+
+  // Check receiver daily caps — find who's already at limit today
+  const { data: receiverCounts } = await admin
+    .from('group_invites')
+    .select('invited_user_id')
+    .in('invited_user_id', toInvite)
+    .gte('created_at', oneDayAgo)
+
+  const receiverCountMap: Record<string, number> = {}
+  for (const r of receiverCounts ?? []) {
+    receiverCountMap[r.invited_user_id] = (receiverCountMap[r.invited_user_id] ?? 0) + 1
+  }
+
+  const eligible = toInvite.filter((id) => (receiverCountMap[id] ?? 0) < RECEIVER_DAILY_CAP)
+  const skipped = userIds.length - eligible.length
+
+  if (eligible.length === 0) return { sent: 0, skipped }
+
+  // Insert into group_invites
+  const inviteRows = eligible.map((uid) => ({
+    group_id: groupId,
+    invited_user_id: uid,
+    invited_by: user.id,
+    status: 'pending',
+  }))
+
+  const { error: inviteErr } = await admin.from('group_invites').insert(inviteRows)
+  if (inviteErr) throw new Error(inviteErr.message)
+
+  // Send notifications
+  const notifications = eligible.map((uid) => ({
     user_id: uid,
     type: 'group_invite',
     actor_id: user.id,
     group_id: groupId,
   }))
 
-  const { error } = await admin.from('notifications').insert(notifications)
-  if (error) throw new Error(error.message)
+  await admin.from('notifications').insert(notifications)
+
+  // Record mass invite usage
+  if (isMassInvite) {
+    await admin.from('group_mass_invites').insert({
+      group_id: groupId,
+      user_id: user.id,
+      invite_count: eligible.length,
+    })
+  }
+
+  return { sent: eligible.length, skipped }
+}
+
+export async function canMassInvite(groupId: string): Promise<{ allowed: boolean; nextAvailable: Date | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { allowed: false, nextAvailable: null }
+
+  const admin = getServiceClient()
+
+  const { data: lastMass } = await admin
+    .from('group_mass_invites')
+    .select('used_at')
+    .eq('group_id', groupId)
+    .eq('user_id', user.id)
+    .order('used_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (!lastMass) return { allowed: true, nextAvailable: null }
+
+  const cooldownEnd = new Date(lastMass.used_at)
+  cooldownEnd.setDate(cooldownEnd.getDate() + 30)
+
+  if (new Date() >= cooldownEnd) return { allowed: true, nextAvailable: null }
+
+  return { allowed: false, nextAvailable: cooldownEnd }
+}
+
+export async function respondToGroupInvite(
+  groupId: string,
+  accept: boolean
+): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const admin = getServiceClient()
+
+  // Find the pending invite
+  const { data: invite } = await admin
+    .from('group_invites')
+    .select('id')
+    .eq('group_id', groupId)
+    .eq('invited_user_id', user.id)
+    .eq('status', 'pending')
+    .single()
+
+  if (!invite) throw new Error('Invite not found')
+
+  // Update invite status
+  const { error: updateErr } = await admin
+    .from('group_invites')
+    .update({
+      status: accept ? 'accepted' : 'declined',
+      responded_at: new Date().toISOString(),
+    })
+    .eq('id', invite.id)
+
+  if (updateErr) throw new Error(updateErr.message)
+
+  if (accept) {
+    // Add as member — check group privacy for status
+    const { data: group } = await admin
+      .from('groups')
+      .select('privacy')
+      .eq('id', groupId)
+      .single()
+
+    const memberStatus = group?.privacy === 'private' ? 'pending' : 'active'
+
+    // Insert into group_members (ignore conflict if already a member)
+    const { error: memberErr } = await admin
+      .from('group_members')
+      .insert({ group_id: groupId, user_id: user.id, role: 'member', status: memberStatus })
+
+    if (memberErr && memberErr.code !== '23505') throw new Error(memberErr.message)
+  }
+
+  // Clean up the notification
+  await admin
+    .from('notifications')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('group_id', groupId)
+    .eq('type', 'group_invite')
 }

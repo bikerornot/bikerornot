@@ -19,8 +19,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return { title: `Group — BikerOrNot` }
 }
 
-export default async function GroupPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function GroupPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ invite?: string }> }) {
   const { slug } = await params
+  const { invite } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -143,7 +144,7 @@ export default async function GroupPage({ params }: { params: Promise<{ slug: st
           {user && (
             <div className="mt-3 space-y-3">
               <div className="flex items-center gap-2">
-                {isAdmin && <InviteButton groupId={group.id} />}
+                {isMember && <InviteButton groupId={group.id} autoOpen={invite === '1'} />}
                 <JoinButton
                   groupId={group.id}
                   privacy={group.privacy}

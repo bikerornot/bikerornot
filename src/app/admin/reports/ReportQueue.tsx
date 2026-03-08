@@ -8,6 +8,7 @@ import {
   bulkRemoveContent,
   type ContentReport,
 } from '@/app/actions/reports'
+import { banUser } from '@/app/actions/admin'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 
@@ -121,6 +122,21 @@ export default function ReportQueue({ initialReports }: Props) {
     }
   }
 
+  async function handleBan(contentId: string) {
+    const report = reports.find((r) => r.content_id === contentId)
+    if (!report?.content_author_id) return
+    if (!confirm(`Ban @${report.content_author_username ?? 'this user'}?`)) return
+    setBusy(true)
+    try {
+      await banUser(report.content_author_id, 'Banned by admin from report review')
+      // Also dismiss the reports for this content
+      await bulkDismissReports(report.report_ids)
+      startTransition(() => removeFromList([contentId]))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const selectedReports = reports.filter((r) => selected.has(r.content_id))
   const selectedHasRemovable = selectedReports.some((r) => r.content_type !== 'profile')
 
@@ -223,6 +239,7 @@ export default function ReportQueue({ initialReports }: Props) {
               onToggle={() => toggleSelect(r.content_id)}
               onDismiss={() => handleBulkDismiss([r.content_id])}
               onRemove={() => handleBulkRemove([r.content_id])}
+              onBan={() => handleBan(r.content_id)}
               busy={busy}
             />
           ))}
@@ -257,10 +274,11 @@ interface CardProps {
   onToggle: () => void
   onDismiss: () => void
   onRemove: () => void
+  onBan: () => void
   busy: boolean
 }
 
-function ContentCard({ report: r, isSelected, onToggle, onDismiss, onRemove, busy }: CardProps) {
+function ContentCard({ report: r, isSelected, onToggle, onDismiss, onRemove, onBan, busy }: CardProps) {
   const profileLink = r.content_author_username ? `/profile/${r.content_author_username}` : null
   const adminUserLink = r.content_author_id ? `/admin/users/${r.content_author_id}` : null
   const isRemovable = r.content_type !== 'profile'
@@ -384,6 +402,15 @@ function ContentCard({ report: r, isSelected, onToggle, onDismiss, onRemove, bus
                 className="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-red-400 hover:text-red-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors border border-zinc-700"
               >
                 Remove content
+              </button>
+            )}
+            {r.content_author_id && (
+              <button
+                onClick={onBan}
+                disabled={busy}
+                className="bg-red-500/15 hover:bg-red-500/25 disabled:opacity-40 text-red-400 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors border border-red-500/30"
+              >
+                Ban User
               </button>
             )}
             {adminUserLink && (

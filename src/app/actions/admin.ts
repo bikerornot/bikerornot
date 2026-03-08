@@ -74,6 +74,7 @@ export interface DashboardStats {
   bannedUsers: number
   suspendedUsers: number
   flaggedUsers: number
+  activeWomenUnder40: number
   // Activity feeds
   recentSignups: RecentSignup[]
   recentReports: RecentReport[]
@@ -156,6 +157,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     { count: bannedUsers },
     { count: suspendedUsers },
     { count: flaggedUsers },
+    { count: activeWomenUnder40 },
     // Activity feeds
     { data: recentSignups },
     { data: recentReportsRaw },
@@ -206,6 +208,12 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     c('profiles').eq('status', 'banned'),
     c('profiles').eq('status', 'suspended'),
     c('profiles').in('signup_country', HIGH_RISK_COUNTRIES).eq('status', 'active'),
+    // Active women under 40
+    (() => {
+      const cutoff = new Date()
+      cutoff.setFullYear(cutoff.getFullYear() - 40)
+      return c('profiles').eq('status', 'active').eq('gender', 'female').gte('date_of_birth', cutoff.toISOString().slice(0, 10))
+    })(),
     // Activity feeds
     admin.from('profiles')
       .select('id, username, first_name, last_name, created_at, status, profile_photo_url')
@@ -257,6 +265,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     bannedUsers: bannedUsers ?? 0,
     suspendedUsers: suspendedUsers ?? 0,
     flaggedUsers: flaggedUsers ?? 0,
+    activeWomenUnder40: activeWomenUnder40 ?? 0,
     recentSignups: (recentSignups ?? []) as RecentSignup[],
     recentReports: (recentReportsRaw ?? []).map((r: any) => ({
       id: r.id,
@@ -365,12 +374,14 @@ export async function getUsers({
   search = '',
   status = '',
   gender = '',
+  maxAge = 0,
   page = 1,
   pageSize = 25,
 }: {
   search?: string
   status?: string
   gender?: string
+  maxAge?: number
   page?: number
   pageSize?: number
 } = {}): Promise<{ users: AdminUserRow[]; total: number; pageSize: number }> {
@@ -394,6 +405,11 @@ export async function getUsers({
     query = query.eq('gender', gender) as typeof query
   } else if (gender === 'unknown') {
     query = query.is('gender', null) as typeof query
+  }
+  if (maxAge > 0) {
+    const cutoff = new Date()
+    cutoff.setFullYear(cutoff.getFullYear() - maxAge)
+    query = query.gte('date_of_birth', cutoff.toISOString().slice(0, 10)) as typeof query
   }
 
   const { data, count } = await query

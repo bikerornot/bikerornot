@@ -7,11 +7,11 @@ export const dynamic = 'force-dynamic'
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; status?: string; gender?: string; page?: string }>
+  searchParams: Promise<{ search?: string; status?: string; gender?: string; maxAge?: string; page?: string }>
 }) {
-  const { search = '', status = '', gender = '', page = '1' } = await searchParams
+  const { search = '', status = '', gender = '', maxAge = '', page = '1' } = await searchParams
   const [{ users, total, pageSize }, genderCounts] = await Promise.all([
-    getUsers({ search, status, gender, page: parseInt(page) || 1 }),
+    getUsers({ search, status, gender, maxAge: parseInt(maxAge) || 0, page: parseInt(page) || 1 }),
     getGenderCounts(),
   ])
 
@@ -31,6 +31,7 @@ export default async function AdminUsersPage({
         initialSearch={search}
         initialStatus={status}
         initialGender={gender}
+        initialMaxAge={parseInt(maxAge) || 0}
         initialPage={parseInt(page) || 1}
       />
     </div>

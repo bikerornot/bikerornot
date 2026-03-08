@@ -50,6 +50,7 @@ interface Props {
   initialSearch: string
   initialStatus: string
   initialGender: string
+  initialMaxAge: number
   initialPage: number
 }
 
@@ -60,6 +61,7 @@ export default function UsersClient({
   initialSearch,
   initialStatus,
   initialGender,
+  initialMaxAge,
   initialPage,
 }: Props) {
   const router = useRouter()
@@ -68,42 +70,67 @@ export default function UsersClient({
   const [debounceTimer, setDebounceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
 
   const navigate = useCallback(
-    (params: { search?: string; status?: string; gender?: string; page?: number }) => {
+    (params: { search?: string; status?: string; gender?: string; maxAge?: number; page?: number }) => {
       const sp = new URLSearchParams()
       if (params.search ?? initialSearch) sp.set('search', params.search ?? initialSearch)
       if (params.status ?? initialStatus) sp.set('status', params.status ?? initialStatus)
       if (params.gender ?? initialGender) sp.set('gender', params.gender ?? initialGender)
+      const age = params.maxAge ?? initialMaxAge
+      if (age > 0) sp.set('maxAge', String(age))
       if ((params.page ?? initialPage) > 1) sp.set('page', String(params.page ?? initialPage))
       startTransition(() => {
         router.push(`/admin/users${sp.toString() ? '?' + sp.toString() : ''}`)
       })
     },
-    [router, initialSearch, initialStatus, initialGender, initialPage, startTransition]
+    [router, initialSearch, initialStatus, initialGender, initialMaxAge, initialPage, startTransition]
   )
 
   function handleSearch(value: string) {
     setSearch(value)
     if (debounceTimer) clearTimeout(debounceTimer)
-    const t = setTimeout(() => navigate({ search: value, status: initialStatus, gender: initialGender, page: 1 }), 400)
+    const t = setTimeout(() => navigate({ search: value, status: initialStatus, gender: initialGender, maxAge: initialMaxAge, page: 1 }), 400)
     setDebounceTimer(t)
   }
 
   function handleStatus(value: string) {
-    navigate({ search, status: value, gender: initialGender, page: 1 })
+    navigate({ search, status: value, gender: initialGender, maxAge: initialMaxAge, page: 1 })
   }
 
   function handleGender(value: string) {
-    navigate({ search, status: initialStatus, gender: value, page: 1 })
+    navigate({ search, status: initialStatus, gender: value, maxAge: initialMaxAge, page: 1 })
   }
 
   function handlePage(page: number) {
-    navigate({ search, status: initialStatus, gender: initialGender, page })
+    navigate({ search, status: initialStatus, gender: initialGender, maxAge: initialMaxAge, page })
   }
 
   const totalPages = Math.ceil(total / pageSize)
 
+  const isWomenUnder40 = initialStatus === 'active' && initialGender === 'female' && initialMaxAge === 40
+
   return (
     <div className="space-y-4">
+      {/* Quick filters */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => {
+            if (isWomenUnder40) {
+              navigate({ search: '', status: '', gender: '', maxAge: 0, page: 1 })
+            } else {
+              navigate({ search: '', status: 'active', gender: 'female', maxAge: 40, page: 1 })
+            }
+          }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+            isWomenUnder40
+              ? 'bg-pink-500 text-white'
+              : 'bg-pink-500/15 text-pink-400 border border-pink-500/30 hover:bg-pink-500/25'
+          }`}
+        >
+          ♀ Active Women Under 40
+          {isWomenUnder40 && <span className="ml-1">✕</span>}
+        </button>
+      </div>
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
@@ -149,6 +176,14 @@ export default function UsersClient({
             </button>
           ))}
         </div>
+        {initialMaxAge > 0 && (
+          <button
+            onClick={() => navigate({ search, status: initialStatus, gender: initialGender, maxAge: 0, page: 1 })}
+            className="flex items-center gap-1.5 px-3 py-2 bg-pink-500/15 text-pink-400 border border-pink-500/30 rounded-lg text-xs font-semibold hover:bg-pink-500/25 transition-colors"
+          >
+            Under {initialMaxAge} <span className="text-pink-300">✕</span>
+          </button>
+        )}
       </div>
 
       {/* Table */}

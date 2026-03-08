@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 import { createClient } from '@/lib/supabase/server'
-import { getUserDetail, getGroupsByCreator } from '@/app/actions/admin'
+import { getUserDetail, getGroupsByCreator, isOnWatchlist } from '@/app/actions/admin'
 import { computeRiskFlags } from '@/lib/risk'
 import { getImageUrl } from '@/lib/supabase/image'
 import UserActions from './UserActions'
@@ -53,9 +53,10 @@ export default async function UserDetailPage({
   const { data: adminProfile } = await supabase
     .from('profiles').select('role').eq('id', adminUser!.id).single()
 
-  const [user, createdGroups] = await Promise.all([
+  const [user, createdGroups, watchlistStatus] = await Promise.all([
     getUserDetail(id),
     getGroupsByCreator(id),
+    isOnWatchlist(id),
   ])
   if (!user) notFound()
 
@@ -283,6 +284,7 @@ export default async function UserDetailPage({
             currentRole={user.role}
             isSuperAdmin={isSuperAdmin}
             friendshipStatus={friendshipStatus}
+            initialOnWatchlist={watchlistStatus.onWatchlist}
           />
 
           {/* Recent posts */}

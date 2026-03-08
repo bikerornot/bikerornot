@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { suspendUser, banUser, reinstateUser, setUserRole, adminSendFriendRequest } from '@/app/actions/admin'
+import { suspendUser, banUser, reinstateUser, setUserRole, adminSendFriendRequest, addToWatchlist, removeFromWatchlist } from '@/app/actions/admin'
 
 const SUSPEND_DURATIONS = [
   { label: '1 day', days: 1 },
@@ -20,19 +20,22 @@ interface Props {
   currentRole: string
   isSuperAdmin: boolean
   friendshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'accepted'
+  initialOnWatchlist: boolean
 }
 
-export default function UserActions({ userId, currentStatus, currentRole, isSuperAdmin, friendshipStatus }: Props) {
+export default function UserActions({ userId, currentStatus, currentRole, isSuperAdmin, friendshipStatus, initialOnWatchlist }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
 
-  const [modal, setModal] = useState<'suspend' | 'ban' | 'reinstate' | 'role' | null>(null)
+  const [modal, setModal] = useState<'suspend' | 'ban' | 'reinstate' | 'role' | 'watchlist' | null>(null)
   const [suspendDays, setSuspendDays] = useState<number | null>(7)
   const [suspendReason, setSuspendReason] = useState('')
   const [banReason, setBanReason] = useState('')
+  const [watchlistNote, setWatchlistNote] = useState('')
   const [selectedRole, setSelectedRole] = useState(currentRole)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [onWatchlist, setOnWatchlist] = useState(initialOnWatchlist)
 
   async function run(fn: () => Promise<void>) {
     setBusy(true)
@@ -125,6 +128,22 @@ export default function UserActions({ userId, currentStatus, currentRole, isSupe
             <span className="bg-emerald-500/10 text-emerald-600 text-xs font-semibold px-4 py-2 rounded-lg border border-emerald-500/20 cursor-default">
               Friends
             </span>
+          )}
+          {onWatchlist ? (
+            <button
+              onClick={() => run(async () => { await removeFromWatchlist(userId); setOnWatchlist(false) })}
+              disabled={busy}
+              className="bg-yellow-500/15 hover:bg-yellow-500/25 text-yellow-400 text-xs font-semibold px-4 py-2 rounded-lg transition-colors border border-yellow-500/30 disabled:opacity-40"
+            >
+              On Watchlist
+            </button>
+          ) : (
+            <button
+              onClick={() => { setWatchlistNote(''); setModal('watchlist') }}
+              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold px-4 py-2 rounded-lg transition-colors border border-zinc-700"
+            >
+              Add to Watchlist
+            </button>
           )}
         </div>
       </div>
@@ -240,6 +259,42 @@ export default function UserActions({ userId, currentStatus, currentRole, isSupe
                 className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
               >
                 {busy ? 'Reinstating…' : 'Reinstate User'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Watchlist modal */}
+      {modal === 'watchlist' && (
+        <Modal title="Add to Watchlist" onClose={() => setModal(null)}>
+          <div className="space-y-4">
+            <p className="text-zinc-400 text-sm">
+              Add a note about why this user is suspicious. You can monitor them from the Watchlist page.
+            </p>
+            <div>
+              <label className="text-zinc-400 text-xs font-semibold uppercase tracking-wider block mb-2">
+                Note <span className="text-zinc-600 font-normal normal-case">(optional)</span>
+              </label>
+              <textarea
+                value={watchlistNote}
+                onChange={(e) => setWatchlistNote(e.target.value)}
+                placeholder="e.g. Suspicious message patterns, possible romance scam..."
+                rows={3}
+                className="w-full bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500 transition-colors resize-none"
+              />
+            </div>
+            {error && <p className="text-red-400 text-xs">{error}</p>}
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setModal(null)} className="px-4 py-2 text-zinc-400 hover:text-white text-sm transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={() => run(async () => { await addToWatchlist(userId, watchlistNote); setOnWatchlist(true) })}
+                disabled={busy}
+                className="bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+              >
+                {busy ? 'Adding...' : 'Add to Watchlist'}
               </button>
             </div>
           </div>

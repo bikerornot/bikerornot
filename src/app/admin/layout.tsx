@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import AdminSidebar from './AdminSidebar'
 import { getPendingFlagsCount } from '@/app/actions/scam-scan'
+import { getWatchlistCount } from '@/app/actions/admin'
 
 const ADMIN_ROLES = ['moderator', 'admin', 'super_admin']
 
@@ -26,10 +27,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
 
-  const [{ count: pendingReports }, { count: pendingDmca }, pendingFlags, { count: activeUsers }] = await Promise.all([
+  const [{ count: pendingReports }, { count: pendingDmca }, pendingFlags, watchlistCount, { count: activeUsers }] = await Promise.all([
     admin.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     admin.from('dmca_notices').select('*', { count: 'exact', head: true }).eq('status', 'received'),
     getPendingFlagsCount(),
+    getWatchlistCount(),
     admin.from('profiles').select('*', { count: 'exact', head: true }).gte('last_seen_at', fiveMinutesAgo),
   ])
 
@@ -41,6 +43,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         pendingReports={pendingReports ?? 0}
         pendingDmca={pendingDmca ?? 0}
         pendingFlags={pendingFlags}
+        watchlistCount={watchlistCount}
         initialActiveUsers={activeUsers ?? 0}
       />
       <main className="flex-1 min-w-0 min-h-screen">

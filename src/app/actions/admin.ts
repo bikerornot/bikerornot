@@ -1091,3 +1091,114 @@ export async function searchUsersForAdmin(query: string): Promise<AdminSearchRes
 
   return (data ?? []) as AdminSearchResult[]
 }
+
+// ── Watchlist ──
+
+export interface WatchlistEntry {
+  id: string
+  user_id: string
+  added_by: string
+  note: string | null
+  created_at: string
+  user?: {
+    id: string
+    username: string | null
+    first_name: string
+    last_name: string
+    profile_photo_url: string | null
+    status: string
+  }
+  activity?: {
+    message_count: number
+    friend_requests_sent: number
+    content_flags: number
+    reports_against: number
+  }
+}
+
+export async function getWatchlist(): Promise<WatchlistEntry[]> {
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  const { data } = await admin
+    .from('admin_watchlist')
+    .select('*, user:profiles!user_id(id, username, first_name, last_name, profile_photo_url, status)')
+    .order('created_at', { ascending: false })
+
+  if (!data || data.length === 0) return []
+
+  // Fetch activity stats for each watched user
+  const userIds = data.map((w: any) => w.user_id)
+
+  const [{ data: msgCounts }, { data: frCounts }, { data: flagCounts }, { data: reportCounts }] = await Promise.all([
+    admin.from('messages').select('sender_id').in('sender_id', userIds),
+    admin.from('friendships').select('requester_id').in('requester_id', userIds),
+    admin.from('content_flags').select('sender_id').in('sender_id', userIds).eq('status', 'pending'),
+    admin.from('reports').select('reported_user_id').in('reported_user_id', userIds),
+  ])
+
+  const msgMap: Record<string, number> = {}
+  for (const m of msgCounts ?? []) msgMap[m.sender_id] = (msgMap[m.sender_id] ?? 0) + 1
+  const frMap: Record<string, number> = {}
+  for (const f of frCounts ?? []) frMap[f.requester_id] = (frMap[f.requester_id] ?? 0) + 1
+  const flagMap: Record<string, number> = {}
+  for (const f of flagCounts ?? []) flagMap[f.sender_id] = (flagMap[f.sender_id] ?? 0) + 1
+  const reportMap: Record<string, number> = {}
+  for (const r of reportCounts ?? []) reportMap[r.reported_user_id] = (reportMap[r.reported_user_id] ?? 0) + 1
+
+  return data.map((w: any) => ({
+    ...w,
+    activity: {
+      message_count: msgMap[w.user_id] ?? 0,
+      friend_requests_sent: frMap[w.user_id] ?? 0,
+      content_flags: flagMap[w.user_id] ?? 0,
+      reports_against: reportMap[w.user_id] ?? 0,
+    },
+  })) as WatchlistEntry[]
+}
+
+export async function addToWatchlist(userId: string, note: string): Promise<void> {
+  const adminId = await requireAdmin()
+  const admin = getServiceClient()
+
+  const { error } = await admin
+    .from('admin_watchlist')
+    .insert({ user_id: userId, added_by: adminId, note: note.trim() || null })
+
+  if (error && error.code === '23505') throw new Error('User is already on the watchlist')
+  if (error) throw new Error(error.message)
+}
+
+export async function removeFromWatchlist(userId: string): Promise<void> {
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  const { error } = await admin
+    .from('admin_watchlist')
+    .delete()
+    .eq('user_id', userId)
+
+  if (error) throw new Error(error.message)
+}
+
+export async function isOnWatchlist(userId: string): Promise<{ onWatchlist: boolean; note: string | null }> {
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  const { data } = await admin
+    .from('admin_watchlist')
+    .select('note')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  return { onWatchlist: !!data, note: data?.note ?? null }
+}
+
+export async function getWatchlistCount(): Promise<number> {
+  await requireAdmin()
+  const admin = getServiceClient()
+  const { count } = await admin
+    .from('admin_watchlist')
+    .select('*', { count: 'exact', head: true })
+  return count ?? 0
+}

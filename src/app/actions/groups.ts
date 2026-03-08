@@ -506,6 +506,8 @@ export async function getFriendsNotInGroup(groupId: string): Promise<Profile[]> 
     .from('profiles')
     .select('*')
     .in('id', invitableIds)
+    .eq('status', 'active')
+    .is('deactivated_at', null)
     .order('username', { ascending: true })
 
   return (profiles ?? []) as Profile[]

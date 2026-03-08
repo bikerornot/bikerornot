@@ -32,7 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     admin.from('dmca_notices').select('*', { count: 'exact', head: true }).eq('status', 'received'),
     getPendingFlagsCount(),
     getWatchlistCount(),
-    admin.from('profiles').select('*', { count: 'exact', head: true }).gte('last_seen_at', fiveMinutesAgo),
+    admin.from('profiles').select('*', { count: 'exact', head: true }).eq('status', 'active').gte('last_seen_at', fiveMinutesAgo),
   ])
 
   return (

@@ -26,6 +26,7 @@ export async function GET() {
   const { count } = await admin
     .from('profiles')
     .select('*', { count: 'exact', head: true })
+    .eq('status', 'active')
     .gte('last_seen_at', fiveMinutesAgo)
 
   return NextResponse.json({ count: count ?? 0 })

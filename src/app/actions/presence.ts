@@ -16,4 +16,5 @@ export async function updateLastSeen() {
     .from('profiles')
     .update({ last_seen_at: new Date().toISOString() })
     .eq('id', user.id)
+    .eq('status', 'active')
 }

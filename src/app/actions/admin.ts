@@ -784,6 +784,7 @@ export async function getOnlineUsers(): Promise<OnlineUser[]> {
   const { data } = await admin
     .from('profiles')
     .select('id, username, first_name, last_name, profile_photo_url, status, role, city, state, last_seen_at')
+    .eq('status', 'active')
     .gte('last_seen_at', fiveMinutesAgo)
     .order('last_seen_at', { ascending: false })
   return (data ?? []) as OnlineUser[]

@@ -1282,3 +1282,54 @@ export async function getDailyMemberCounts(
 
   return result
 }
+
+// ── Daily Post Counts ──
+
+export interface DailyPostCount {
+  date: string
+  count: number
+}
+
+export async function getDailyPostCounts(
+  startDate: string,
+  endDate: string,
+): Promise<DailyPostCount[]> {
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  const dailyMap: Record<string, number> = {}
+  let offset = 0
+  const PAGE_SIZE = 1000
+  while (true) {
+    const { data: page } = await admin
+      .from('posts')
+      .select('created_at')
+      .is('deleted_at', null)
+      .gte('created_at', `${startDate}T00:00:00Z`)
+      .lte('created_at', `${endDate}T23:59:59Z`)
+      .order('created_at')
+      .range(offset, offset + PAGE_SIZE - 1)
+
+    if (!page || page.length === 0) break
+
+    for (const row of page) {
+      const day = row.created_at.slice(0, 10)
+      dailyMap[day] = (dailyMap[day] ?? 0) + 1
+    }
+
+    if (page.length < PAGE_SIZE) break
+    offset += PAGE_SIZE
+  }
+
+  const result: DailyPostCount[] = []
+  const current = new Date(startDate + 'T00:00:00Z')
+  const end = new Date(endDate + 'T00:00:00Z')
+
+  while (current <= end) {
+    const day = current.toISOString().slice(0, 10)
+    result.push({ date: day, count: dailyMap[day] ?? 0 })
+    current.setUTCDate(current.getUTCDate() + 1)
+  }
+
+  return result
+}

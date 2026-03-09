@@ -10,7 +10,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts'
-import { getDailyMemberCounts, type DailyMemberCount } from '@/app/actions/admin'
+import { getDailyMemberCounts, getDailyPostCounts, type DailyMemberCount, type DailyPostCount } from '@/app/actions/admin'
 
 const PRESETS = [
   { label: 'Last 7 days', days: 7 },
@@ -36,13 +36,18 @@ export default function AnalyticsClient() {
   const [startDate, setStartDate] = useState(thirtyAgo)
   const [endDate, setEndDate] = useState(today)
   const [data, setData] = useState<DailyMemberCount[] | null>(null)
+  const [postData, setPostData] = useState<DailyPostCount[] | null>(null)
   const [pending, startTransition] = useTransition()
   const [activePreset, setActivePreset] = useState(30)
 
   function fetchData(start: string, end: string) {
     startTransition(async () => {
-      const result = await getDailyMemberCounts(start, end)
-      setData(result)
+      const [members, posts] = await Promise.all([
+        getDailyMemberCounts(start, end),
+        getDailyPostCounts(start, end),
+      ])
+      setData(members)
+      setPostData(posts)
     })
   }
 
@@ -196,7 +201,58 @@ export default function AnalyticsClient() {
         )}
       </div>
 
-      {/* Daily signups bar */}
+      {/* Daily posts */}
+      {!pending && postData && postData.length > 0 && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-semibold text-sm">Posts per Day</h3>
+            <span className="text-zinc-500 text-xs">
+              {postData.reduce((s, d) => s + d.count, 0).toLocaleString()} total
+            </span>
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={postData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="postsGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+              <XAxis
+                dataKey="date"
+                tickFormatter={formatDateLabel}
+                stroke="#52525b"
+                tick={{ fontSize: 11, fill: '#71717a' }}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                stroke="#52525b"
+                tick={{ fontSize: 11, fill: '#71717a' }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#18181b',
+                  border: '1px solid #3f3f46',
+                  borderRadius: '0.75rem',
+                  fontSize: '0.8rem',
+                }}
+                labelFormatter={(label: any) => formatDateLabel(String(label))}
+                formatter={(value: any) => [Number(value).toLocaleString(), 'Posts']}
+              />
+              <Area
+                type="monotone"
+                dataKey="count"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                fill="url(#postsGradient)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Daily signups */}
       {data && data.length > 0 && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
           <h3 className="text-white font-semibold text-sm mb-3">Daily New Signups</h3>

@@ -237,7 +237,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
           <div className="flex items-center gap-2">
             <Link
               href={`/profile/${author?.username}`}
-              className="font-semibold text-white hover:underline text-sm"
+              className="font-semibold text-white hover:underline text-base sm:text-sm"
             >
               @{displayName}
             </Link>

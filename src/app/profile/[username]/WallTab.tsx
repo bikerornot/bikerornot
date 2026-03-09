@@ -36,7 +36,7 @@ export default function WallTab({
       const base = supabase
         .from('posts')
         .select('*, author:profiles!author_id(*), images:post_images(*)')
-        .eq('wall_owner_id', profileId)
+        .or(`wall_owner_id.eq.${profileId},and(author_id.eq.${profileId},wall_owner_id.is.null,group_id.is.null,bike_id.is.null)`)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(PAGE_SIZE)

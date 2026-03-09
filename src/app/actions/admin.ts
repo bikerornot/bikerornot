@@ -1241,19 +1241,29 @@ export async function getDailyMemberCounts(
     .select('*', { count: 'exact', head: true })
     .lt('created_at', `${startDate}T00:00:00Z`)
 
-  // Get all signups in the date range
-  const { data } = await admin
-    .from('profiles')
-    .select('created_at')
-    .gte('created_at', `${startDate}T00:00:00Z`)
-    .lte('created_at', `${endDate}T23:59:59Z`)
-    .order('created_at')
-
-  // Bucket signups by day
+  // Get daily signup counts using Supabase RPC or paginated fetch
+  // Default select limit is 1000 rows, so we paginate to get all signups
   const dailyMap: Record<string, number> = {}
-  for (const row of data ?? []) {
-    const day = row.created_at.slice(0, 10)
-    dailyMap[day] = (dailyMap[day] ?? 0) + 1
+  let offset = 0
+  const PAGE_SIZE = 1000
+  while (true) {
+    const { data: page } = await admin
+      .from('profiles')
+      .select('created_at')
+      .gte('created_at', `${startDate}T00:00:00Z`)
+      .lte('created_at', `${endDate}T23:59:59Z`)
+      .order('created_at')
+      .range(offset, offset + PAGE_SIZE - 1)
+
+    if (!page || page.length === 0) break
+
+    for (const row of page) {
+      const day = row.created_at.slice(0, 10)
+      dailyMap[day] = (dailyMap[day] ?? 0) + 1
+    }
+
+    if (page.length < PAGE_SIZE) break
+    offset += PAGE_SIZE
   }
 
   // Build cumulative array for every day in range

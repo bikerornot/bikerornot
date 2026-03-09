@@ -1,8 +1,10 @@
 'use server'
 
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { scanCommentForScam } from '@/app/actions/scam-scan'
 
 function getServiceClient() {
   return createServiceClient(
@@ -57,6 +59,13 @@ export async function createComment(postId: string, content: string, parentComme
     .single()
 
   if (error) throw new Error(error.message)
+
+  // Async AI scam scan (non-blocking)
+  after(async () => {
+    try {
+      await scanCommentForScam(comment.id, postId, user.id, content.trim())
+    } catch { /* best-effort */ }
+  })
 
   // Send notification
   if (parentCommentId) {

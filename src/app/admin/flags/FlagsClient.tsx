@@ -8,6 +8,21 @@ import { dismissFlag, reviewFlag, type ContentFlag } from '@/app/actions/scam-sc
 const STATUS_FILTER = ['all', 'pending', 'reviewed', 'dismissed'] as const
 type StatusFilter = (typeof STATUS_FILTER)[number]
 
+const TYPE_FILTER = ['all', 'message', 'comment'] as const
+type TypeFilter = (typeof TYPE_FILTER)[number]
+
+function TypeBadge({ type }: { type: 'message' | 'comment' }) {
+  return type === 'comment' ? (
+    <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
+      Comment
+    </span>
+  ) : (
+    <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
+      DM
+    </span>
+  )
+}
+
 function ScoreBadge({ score }: { score: number }) {
   const pct = Math.round(score * 100)
   const color =
@@ -26,9 +41,14 @@ function ScoreBadge({ score }: { score: number }) {
 export default function FlagsClient({ initialFlags }: { initialFlags: ContentFlag[] }) {
   const [flags, setFlags] = useState(initialFlags)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending')
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [loadingId, setLoadingId] = useState<string | null>(null)
 
-  const visible = flags.filter((f) => statusFilter === 'all' || f.status === statusFilter)
+  const visible = flags.filter((f) => {
+    if (statusFilter !== 'all' && f.status !== statusFilter) return false
+    if (typeFilter !== 'all' && f.flag_type !== typeFilter) return false
+    return true
+  })
 
   const pendingCount = flags.filter((f) => f.status === 'pending').length
 
@@ -64,7 +84,7 @@ export default function FlagsClient({ initialFlags }: { initialFlags: ContentFla
   return (
     <div>
       {/* Filter tabs */}
-      <div className="flex gap-2 mb-5 flex-wrap">
+      <div className="flex gap-2 mb-3 flex-wrap">
         {STATUS_FILTER.map((s) => {
           const count = s === 'pending' ? pendingCount : undefined
           return (
@@ -86,6 +106,23 @@ export default function FlagsClient({ initialFlags }: { initialFlags: ContentFla
             </button>
           )
         })}
+      </div>
+
+      {/* Type filter */}
+      <div className="flex gap-2 mb-5 flex-wrap">
+        {TYPE_FILTER.map((t) => (
+          <button
+            key={t}
+            onClick={() => setTypeFilter(t)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${
+              typeFilter === t
+                ? 'bg-zinc-700 text-white border border-zinc-600'
+                : 'bg-zinc-800/50 text-zinc-500 border border-zinc-800 hover:text-zinc-300'
+            }`}
+          >
+            {t === 'all' ? 'All Types' : t === 'message' ? 'DMs' : 'Comments'}
+          </button>
+        ))}
       </div>
 
       {visible.length === 0 && (
@@ -112,6 +149,7 @@ export default function FlagsClient({ initialFlags }: { initialFlags: ContentFla
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex items-center gap-3 min-w-0 flex-wrap">
                   <ScoreBadge score={flag.score} />
+                  <TypeBadge type={flag.flag_type} />
                   {sender ? (
                     <Link
                       href={`/admin/users/${sender.id}`}
@@ -125,7 +163,7 @@ export default function FlagsClient({ initialFlags }: { initialFlags: ContentFla
                   ) : (
                     <span className="text-zinc-500 text-sm">Unknown sender</span>
                   )}
-                  {flag.recipient && (
+                  {flag.flag_type === 'message' && flag.recipient && (
                     <span className="text-zinc-500 text-xs">
                       to{' '}
                       <Link
@@ -135,6 +173,9 @@ export default function FlagsClient({ initialFlags }: { initialFlags: ContentFla
                         {flag.recipient.username ? `@${flag.recipient.username}` : `${flag.recipient.first_name} ${flag.recipient.last_name}`}
                       </Link>
                     </span>
+                  )}
+                  {flag.flag_type === 'comment' && (
+                    <span className="text-zinc-500 text-xs">on a post</span>
                   )}
                   {sender?.status === 'banned' && (
                     <span className="text-xs bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded font-medium">

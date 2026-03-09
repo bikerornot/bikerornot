@@ -10,43 +10,66 @@ function getAdmin() {
   )
 }
 
+const SCAM_PATTERNS = `- Romance scam tactics (sudden love/attraction, wanting to move off platform)
+- Requests for money, gift cards, wire transfers, or cryptocurrency
+- Investment or "opportunity" pitches
+- Phishing links or suspicious URLs
+- Fabricated emergencies needing financial help
+- Too-good-to-be-true offers
+- Excessive flattery to build false trust`
+
+async function runScamScan(content: string, context: 'message' | 'comment'): Promise<{ score: number; reason: string | null }> {
+  const contextDesc = context === 'message'
+    ? 'private message'
+    : 'public comment on a post'
+
+  const openai = getOpenAI()
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'system',
+        content: `You are a scam detection system for a motorcycle enthusiast social network. Analyze this ${contextDesc} and rate its scam likelihood from 0.0 (legitimate) to 1.0 (definite scam). Flag these patterns:
+${SCAM_PATTERNS}
+
+Normal motorcycle conversation (rides, bikes, gear, meetups, routes) scores 0.0.${context === 'comment' ? '\nPublic comments are shorter and more casual — only flag if the scam intent is clear.' : ''}
+
+Reply ONLY with valid JSON: {"score": 0.0, "reason": "brief explanation under 100 chars"}`,
+      },
+      { role: 'user', content },
+    ],
+    max_tokens: 150,
+    temperature: 0,
+    response_format: { type: 'json_object' },
+  })
+
+  const text = response.choices[0]?.message?.content ?? '{}'
+  const parsed = JSON.parse(text) as { score?: number; reason?: string }
+  const score = typeof parsed.score === 'number' ? parsed.score : 0
+  const reason = parsed.reason ?? null
+  return { score, reason }
+}
+
+async function autoBanIfNeeded(admin: ReturnType<typeof getAdmin>, senderId: string, score: number, reason: string | null, context: string) {
+  if (score >= 0.85) {
+    await admin
+      .from('profiles')
+      .update({
+        status: 'banned',
+        ban_reason: `Auto-banned: AI scam detection (${(score * 100).toFixed(0)}% confidence) — ${reason ?? `suspicious ${context} content`}`,
+      })
+      .eq('id', senderId)
+      .eq('status', 'active')
+  }
+}
+
 export async function scanMessageForScam(
   messageId: string,
   senderId: string,
   content: string
 ): Promise<void> {
   try {
-    const openai = getOpenAI()
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `You are a scam detection system for a motorcycle enthusiast social network. Analyze this private message and rate its scam likelihood from 0.0 (legitimate) to 1.0 (definite scam). Flag these patterns:
-- Romance scam tactics (sudden love/attraction, wanting to move off platform)
-- Requests for money, gift cards, wire transfers, or cryptocurrency
-- Investment or "opportunity" pitches
-- Phishing links or suspicious URLs
-- Fabricated emergencies needing financial help
-- Too-good-to-be-true offers
-- Excessive flattery to build false trust
-
-Normal motorcycle conversation (rides, bikes, gear, meetups, routes) scores 0.0.
-
-Reply ONLY with valid JSON: {"score": 0.0, "reason": "brief explanation under 100 chars"}`,
-        },
-        { role: 'user', content },
-      ],
-      max_tokens: 150,
-      temperature: 0,
-      response_format: { type: 'json_object' },
-    })
-
-    const text = response.choices[0]?.message?.content ?? '{}'
-    const parsed = JSON.parse(text) as { score?: number; reason?: string }
-    const score = typeof parsed.score === 'number' ? parsed.score : 0
-    const reason = parsed.reason ?? null
-
+    const { score, reason } = await runScamScan(content, 'message')
     if (score < 0.55) return
 
     const admin = getAdmin()
@@ -58,26 +81,54 @@ Reply ONLY with valid JSON: {"score": 0.0, "reason": "brief explanation under 10
       score,
       reason,
       status: 'pending',
+      flag_type: 'message',
     })
 
-    if (score >= 0.85) {
-      await admin
-        .from('profiles')
-        .update({
-          status: 'banned',
-          ban_reason: `Auto-banned: AI scam detection (${(score * 100).toFixed(0)}% confidence) — ${reason ?? 'suspicious DM content'}`,
-        })
-        .eq('id', senderId)
-        .eq('status', 'active')
-    }
+    await autoBanIfNeeded(admin, senderId, score, reason, 'DM')
   } catch {
     // Scam scanning is best-effort — never block message delivery
+  }
+}
+
+export async function scanCommentForScam(
+  commentId: string,
+  postId: string,
+  senderId: string,
+  content: string
+): Promise<void> {
+  try {
+    // Skip very short comments (emoji reactions, "nice!", etc.)
+    if (content.trim().length < 15) return
+
+    const { score, reason } = await runScamScan(content, 'comment')
+    // Higher threshold for public comments to reduce false positives
+    if (score < 0.65) return
+
+    const admin = getAdmin()
+
+    await admin.from('content_flags').insert({
+      comment_id: commentId,
+      post_id: postId,
+      sender_id: senderId,
+      content,
+      score,
+      reason,
+      status: 'pending',
+      flag_type: 'comment',
+    })
+
+    await autoBanIfNeeded(admin, senderId, score, reason, 'comment')
+  } catch {
+    // Scam scanning is best-effort — never block comment posting
   }
 }
 
 export interface ContentFlag {
   id: string
   message_id: string | null
+  comment_id: string | null
+  post_id: string | null
+  flag_type: 'message' | 'comment'
   sender_id: string
   content: string
   score: number
@@ -109,21 +160,25 @@ export async function getFlaggedContent(): Promise<ContentFlag[]> {
     .order('created_at', { ascending: false })
     .limit(100)
 
-  // Resolve recipient from conversation participants
+  // Resolve recipient from conversation participants (for DM flags)
   return (data ?? []).map((flag: any) => {
     let recipient = null
-    const conv = flag.message?.conversation
-    if (conv) {
-      // Recipient is whichever participant is NOT the sender
-      if (conv.participant1_id !== flag.sender_id) {
-        recipient = conv.participant1
-      } else {
-        recipient = conv.participant2
+    if (flag.flag_type === 'message' || !flag.flag_type) {
+      const conv = flag.message?.conversation
+      if (conv) {
+        if (conv.participant1_id !== flag.sender_id) {
+          recipient = conv.participant1
+        } else {
+          recipient = conv.participant2
+        }
       }
     }
     return {
       id: flag.id,
       message_id: flag.message_id,
+      comment_id: flag.comment_id,
+      post_id: flag.post_id,
+      flag_type: flag.flag_type ?? 'message',
       sender_id: flag.sender_id,
       content: flag.content,
       score: flag.score,

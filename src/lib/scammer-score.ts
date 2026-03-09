@@ -379,7 +379,7 @@ function scoreCommunitySignals(input: ScammerInput): CategoryScore {
 
   if (input.contentFlagsCount > 0) {
     points += 1
-    findings.push(`${input.contentFlagsCount} AI content flag(s) on their messages`)
+    findings.push(`${input.contentFlagsCount} AI content flag(s)`)
   }
 
   return { name: 'Community Signals', points: clamp(points, 0, MAX), maxPoints: MAX, findings }

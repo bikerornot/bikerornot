@@ -54,6 +54,9 @@ export default async function ChatPage({
 
   const otherUser: Profile = convo.participant1_id === user.id ? convo.participant2 : convo.participant1
 
+  // Don't show conversations with banned/suspended users
+  if (otherUser.status !== 'active' || otherUser.deactivated_at) redirect('/messages')
+
   const messages = await getMessages(conversationId)
 
   const otherAvatarUrl = otherUser.profile_photo_url

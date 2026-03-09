@@ -63,7 +63,8 @@ export default function ChatWindow({ conversationId, initialMessages, currentUse
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
         (payload) => {
           const msg = payload.new as Message
-          if (msg.sender_id !== currentUserId) {
+          // Only show messages from the other user if they're still active
+          if (msg.sender_id !== currentUserId && otherUser.status === 'active') {
             setMessages((prev) => [...prev, { ...msg, sender: otherUser }])
           }
         }

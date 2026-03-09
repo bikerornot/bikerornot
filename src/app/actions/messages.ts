@@ -160,7 +160,10 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
     .order('created_at', { ascending: true })
     .limit(200)
 
-  return (data ?? []) as Message[]
+  // Filter out messages from banned/suspended senders
+  return ((data ?? []) as any[]).filter((m) => {
+    return !m.sender || m.sender.status === 'active'
+  }) as Message[]
 }
 
 export async function sendMessage(conversationId: string, content: string): Promise<Message> {

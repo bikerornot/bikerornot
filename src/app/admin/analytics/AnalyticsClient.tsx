@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import {
   ResponsiveContainer,
   AreaChart,
@@ -60,10 +60,11 @@ export default function AnalyticsClient() {
     fetchData(startDate, endDate)
   }
 
-  // Auto-load on first render
-  if (data === null && !pending) {
+  // Auto-load on mount
+  useEffect(() => {
     fetchData(startDate, endDate)
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const totalNew = data?.reduce((sum, d) => sum + d.newSignups, 0) ?? 0
   const latestTotal = data && data.length > 0 ? data[data.length - 1].total : 0

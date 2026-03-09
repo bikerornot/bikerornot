@@ -22,6 +22,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-email": "^5.2.8",
+    "recharts": "^3.8.0",
     "resend": "^4.8.0",
     "server-only": "^0.0.1"
   },

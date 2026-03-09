@@ -103,6 +103,17 @@ const navItems = [
       </svg>
     ),
   },
+  {
+    href: '/admin/analytics',
+    label: 'Analytics',
+    exact: false,
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 16l4-4 4 4 5-5" />
+      </svg>
+    ),
+  },
 ]
 
 export default function AdminSidebar({ username, role, pendingReports, pendingDmca, pendingFlags, watchlistCount, initialActiveUsers }: Props) {

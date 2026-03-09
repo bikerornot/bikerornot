@@ -1219,3 +1219,56 @@ export async function getWatchlistCount(): Promise<number> {
     .select('*', { count: 'exact', head: true })
   return count ?? 0
 }
+
+// ── Growth Analytics ──
+
+export interface DailyMemberCount {
+  date: string    // YYYY-MM-DD
+  total: number   // cumulative total at end of day
+  newSignups: number // signups that day
+}
+
+export async function getDailyMemberCounts(
+  startDate: string,
+  endDate: string,
+): Promise<DailyMemberCount[]> {
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  // Get total users before startDate (the baseline)
+  const { count: baseline } = await admin
+    .from('profiles')
+    .select('*', { count: 'exact', head: true })
+    .lt('created_at', `${startDate}T00:00:00Z`)
+
+  // Get all signups in the date range
+  const { data } = await admin
+    .from('profiles')
+    .select('created_at')
+    .gte('created_at', `${startDate}T00:00:00Z`)
+    .lte('created_at', `${endDate}T23:59:59Z`)
+    .order('created_at')
+
+  // Bucket signups by day
+  const dailyMap: Record<string, number> = {}
+  for (const row of data ?? []) {
+    const day = row.created_at.slice(0, 10)
+    dailyMap[day] = (dailyMap[day] ?? 0) + 1
+  }
+
+  // Build cumulative array for every day in range
+  const result: DailyMemberCount[] = []
+  let running = baseline ?? 0
+  const current = new Date(startDate + 'T00:00:00Z')
+  const end = new Date(endDate + 'T00:00:00Z')
+
+  while (current <= end) {
+    const day = current.toISOString().slice(0, 10)
+    const newSignups = dailyMap[day] ?? 0
+    running += newSignups
+    result.push({ date: day, total: running, newSignups })
+    current.setUTCDate(current.getUTCDate() + 1)
+  }
+
+  return result
+}

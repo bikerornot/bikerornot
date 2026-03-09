@@ -44,7 +44,7 @@ export default function ProfileTabs({
 
   return (
     <div>
-      <div className="flex border-b border-zinc-800 mb-4">
+      <div className="flex border-b border-zinc-800 mb-4 px-4 sm:px-0">
         {TABS.map((tab) => (
           <button
             key={tab}

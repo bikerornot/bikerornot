@@ -430,7 +430,10 @@ export default async function ProfilePage({
           )}
         </div>
 
-        {/* Tabs */}
+      </div>
+
+      {/* Tabs — sm:px-4 so wall posts go edge-to-edge on mobile like the feed */}
+      <div className="max-w-4xl mx-auto sm:px-4">
         <ProfileTabs
           profileId={profile.id}
           isOwnProfile={isOwnProfile}

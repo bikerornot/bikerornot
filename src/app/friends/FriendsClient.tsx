@@ -114,54 +114,56 @@ export default function FriendsClient({ initialRequests, initialFriends }: Props
                 return (
                   <div
                     key={r.id}
-                    className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3"
+                    className="bg-zinc-900 border border-zinc-800 rounded-xl p-3"
                   >
-                    {/* Avatar */}
-                    <Link href={`/profile/${r.username}`} className="flex-shrink-0">
-                      <div className="w-14 h-14 rounded-full bg-zinc-700 overflow-hidden">
-                        {photo ? (
-                          <Image
-                            src={photo}
-                            alt=""
-                            width={56}
-                            height={56}
-                            className="object-cover w-full h-full"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-xl">
-                            {(r.first_name?.[0] ?? '?').toUpperCase()}
-                          </div>
+                    <div className="flex items-center gap-3">
+                      {/* Avatar */}
+                      <Link href={`/profile/${r.username}`} className="flex-shrink-0">
+                        <div className="w-14 h-14 rounded-full bg-zinc-700 overflow-hidden">
+                          {photo ? (
+                            <Image
+                              src={photo}
+                              alt=""
+                              width={56}
+                              height={56}
+                              className="object-cover w-full h-full"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-xl">
+                              {(r.first_name?.[0] ?? '?').toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                      </Link>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/profile/${r.username}`} className="hover:underline">
+                          <p className="text-white font-semibold text-sm truncate">
+                            {r.first_name} {r.last_name}
+                          </p>
+                        </Link>
+                        {r.username && (
+                          <p className="text-zinc-500 text-xs truncate">@{r.username}</p>
+                        )}
+                        {location && (
+                          <p className="text-zinc-600 text-xs truncate">{location}</p>
+                        )}
+                        {r.primary_bike && (
+                          <p className="text-orange-400/70 text-xs truncate">{r.primary_bike}</p>
+                        )}
+                        {r.mutual_count > 0 && (
+                          <p className="text-zinc-500 text-xs">
+                            {r.mutual_count} mutual friend{r.mutual_count !== 1 ? 's' : ''}
+                          </p>
                         )}
                       </div>
-                    </Link>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <Link href={`/profile/${r.username}`} className="hover:underline">
-                        <p className="text-white font-semibold text-sm truncate">
-                          {r.first_name} {r.last_name}
-                        </p>
-                      </Link>
-                      {r.username && (
-                        <p className="text-zinc-500 text-xs truncate">@{r.username}</p>
-                      )}
-                      {location && (
-                        <p className="text-zinc-600 text-xs truncate">{location}</p>
-                      )}
-                      {r.primary_bike && (
-                        <p className="text-orange-400/70 text-xs truncate">{r.primary_bike}</p>
-                      )}
-                      {r.mutual_count > 0 && (
-                        <p className="text-zinc-500 text-xs">
-                          {r.mutual_count} mutual friend{r.mutual_count !== 1 ? 's' : ''}
-                        </p>
-                      )}
                     </div>
 
-                    {/* Action buttons */}
-                    <div className="flex-shrink-0 flex gap-2">
+                    {/* Action buttons — full width row below on mobile */}
+                    <div className="flex gap-2 mt-2.5 pt-2.5 border-t border-zinc-800">
                       {status === 'accepted' ? (
-                        <span className="text-emerald-400 text-xs font-medium px-3 py-1.5">
+                        <span className="text-emerald-400 text-sm font-medium px-3 py-1.5">
                           Accepted
                         </span>
                       ) : (
@@ -169,14 +171,14 @@ export default function FriendsClient({ initialRequests, initialFriends }: Props
                           <button
                             onClick={() => handleAccept(r.id)}
                             disabled={status !== 'idle'}
-                            className="bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                            className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-sm font-semibold py-2 rounded-lg transition-colors"
                           >
                             {status === 'accepting' ? '...' : 'Accept'}
                           </button>
                           <button
                             onClick={() => handleDecline(r.id)}
                             disabled={status !== 'idle'}
-                            className="bg-zinc-800 hover:bg-zinc-700 disabled:bg-zinc-800 disabled:text-zinc-600 text-zinc-400 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors border border-zinc-700"
+                            className="flex-1 bg-zinc-800 hover:bg-zinc-700 disabled:bg-zinc-800 disabled:text-zinc-600 text-zinc-400 text-sm font-semibold py-2 rounded-lg transition-colors border border-zinc-700"
                           >
                             {status === 'declining' ? '...' : 'Decline'}
                           </button>

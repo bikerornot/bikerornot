@@ -64,6 +64,13 @@ export default function UserMenu({ username, displayName, avatarUrl, firstInitia
             My Profile
           </Link>
           <Link
+            href="/friends"
+            onClick={() => setOpen(false)}
+            className="block px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+          >
+            Friends
+          </Link>
+          <Link
             href={`/profile/${username}?tab=Garage`}
             onClick={() => setOpen(false)}
             className="block px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"

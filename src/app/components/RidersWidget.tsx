@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useEffect, useTransition, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { sendFriendRequest } from '@/app/actions/friends'
@@ -27,6 +27,16 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set())
   const [statuses, setStatuses] = useState<Record<string, CardStatus>>({})
   const [mounted, setMounted] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  const updateScrollButtons = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    setCanScrollLeft(el.scrollLeft > 0)
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2)
+  }, [])
 
   // Read localStorage after mount (avoids SSR mismatch)
   useEffect(() => {
@@ -36,6 +46,18 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
     setDismissedIds(new Set(dismissed))
     setMounted(true)
   }, [])
+
+  // Check scroll state on mount and when riders change
+  useEffect(() => {
+    updateScrollButtons()
+  }, [mounted, dismissedIds, updateScrollButtons])
+
+  function scrollBy(dir: 'left' | 'right') {
+    const el = scrollRef.current
+    if (!el) return
+    const amount = dir === 'left' ? -280 : 280
+    el.scrollBy({ left: amount, behavior: 'smooth' })
+  }
 
   // Hide widget entirely at 15+ friends
   if (friendCount >= 15) return null
@@ -97,7 +119,43 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
       </div>
 
       {/* Scrollable card row */}
-      <div className="flex gap-3 overflow-x-auto px-4 py-3 scrollbar-hide">
+      <div className="relative">
+        {/* Left arrow */}
+        {canScrollLeft && (
+          <button
+            onClick={() => scrollBy('left')}
+            className="absolute left-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center shadow-lg transition-colors"
+            aria-label="Scroll left"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
+
+        {/* Right arrow */}
+        {canScrollRight && (
+          <button
+            onClick={() => scrollBy('right')}
+            className="absolute right-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center shadow-lg transition-colors"
+            aria-label="Scroll right"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
+
+        {/* Right fade hint */}
+        {canScrollRight && (
+          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-zinc-900 to-transparent z-[5] pointer-events-none" />
+        )}
+
+      <div
+        ref={scrollRef}
+        onScroll={updateScrollButtons}
+        className="flex gap-3 overflow-x-auto px-4 py-3 scrollbar-hide"
+      >
         {riders.map((rider) => {
           const status = statuses[rider.id] ?? 'idle'
           const photo = rider.profile_photo_url ? avatarUrl(rider.profile_photo_url) : null
@@ -184,6 +242,7 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
             </div>
           )
         })}
+      </div>
       </div>
 
       {/* Phase hint for new users */}

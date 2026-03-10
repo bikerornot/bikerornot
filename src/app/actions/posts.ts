@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { moderateImage, type ModerationResult } from '@/lib/sightengine'
 import { checkRateLimit, validateImageFile } from '@/lib/rate-limit'
+import { notifyIfActive } from '@/lib/notify'
 
 function getServiceClient() {
   return createServiceClient(
@@ -112,13 +113,12 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
 
   // Notify wall owner when someone else posts on their wall
   if (wallOwnerId && wallOwnerId !== user.id) {
-    const { error: notifError } = await admin.from('notifications').insert({
+    await notifyIfActive(user.id, {
       user_id: wallOwnerId,
       type: 'wall_post',
       actor_id: user.id,
       post_id: post.id,
     })
-    if (notifError) console.error('Wall post notification error:', notifError.message)
   }
 
   if (checkedFiles.length > 0) {
@@ -242,7 +242,7 @@ export async function likePost(postId: string): Promise<void> {
     .single()
 
   if (post && post.author_id !== user.id) {
-    await admin.from('notifications').insert({
+    await notifyIfActive(user.id, {
       user_id: post.author_id,
       type: 'post_like',
       actor_id: user.id,

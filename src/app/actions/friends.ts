@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { sendFriendRequestEmail, sendFriendAcceptedEmail } from '@/lib/email'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { notifyIfActive } from '@/lib/notify'
 
 function getServiceClient() {
   return createServiceClient(
@@ -46,7 +47,7 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
   if (error && error.code !== '23505') throw new Error(error.message)
   if (error) return // already exists, skip notification
 
-  await admin.from('notifications').insert({
+  await notifyIfActive(user.id, {
     user_id: addresseeId,
     type: 'friend_request',
     actor_id: user.id,
@@ -104,7 +105,7 @@ export async function acceptFriendRequest(requesterId: string): Promise<void> {
   // duplicate notifications if the request was already accepted.
   if (!updated || updated.length === 0) return
 
-  await admin.from('notifications').insert({
+  await notifyIfActive(user.id, {
     user_id: requesterId,
     type: 'friend_accepted',
     actor_id: user.id,

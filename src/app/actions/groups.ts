@@ -5,6 +5,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { Group, GroupMember, Post, Profile } from '@/lib/supabase/types'
 import { validateImageFile } from '@/lib/rate-limit'
 import { moderateImage } from '@/lib/sightengine'
+import { notifyIfActive } from '@/lib/notify'
 
 function getServiceClient() {
   return createServiceClient(
@@ -692,7 +693,7 @@ export async function inviteFriendsToGroup(
     group_id: groupId,
   }))
 
-  await admin.from('notifications').insert(notifications)
+  await notifyIfActive(user.id, notifications)
 
   // Record mass invite usage
   if (isMassInvite) {

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { scanCommentForScam } from '@/app/actions/scam-scan'
+import { notifyIfActive } from '@/lib/notify'
 
 function getServiceClient() {
   return createServiceClient(
@@ -67,16 +68,15 @@ export async function createComment(postId: string, content: string, parentComme
     } catch { /* best-effort */ }
   })
 
-  // Send notification
+  // Send notification (skipped for banned/suspended users via notifyIfActive)
   if (parentCommentId) {
-    // Reply: notify parent comment author
     const { data: parent } = await admin
       .from('comments')
       .select('author_id')
       .eq('id', parentCommentId)
       .single()
     if (parent && parent.author_id !== user.id) {
-      await admin.from('notifications').insert({
+      await notifyIfActive(user.id, {
         user_id: parent.author_id,
         type: 'comment_reply',
         actor_id: user.id,
@@ -85,14 +85,13 @@ export async function createComment(postId: string, content: string, parentComme
       })
     }
   } else {
-    // Top-level comment: notify post author
     const { data: post } = await admin
       .from('posts')
       .select('author_id')
       .eq('id', postId)
       .single()
     if (post && post.author_id !== user.id) {
-      await admin.from('notifications').insert({
+      await notifyIfActive(user.id, {
         user_id: post.author_id,
         type: 'post_comment',
         actor_id: user.id,
@@ -154,7 +153,7 @@ export async function likeComment(commentId: string): Promise<void> {
     .single()
 
   if (comment && comment.author_id !== user.id) {
-    await admin.from('notifications').insert({
+    await notifyIfActive(user.id, {
       user_id: comment.author_id,
       type: 'comment_like',
       actor_id: user.id,

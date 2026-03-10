@@ -143,6 +143,177 @@ export async function declineFriendRequest(requesterId: string): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
+export interface FriendRequestCard {
+  id: string
+  username: string | null
+  first_name: string
+  last_name: string
+  profile_photo_url: string | null
+  city: string | null
+  state: string | null
+  riding_style: string[]
+  created_at: string // when the request was sent
+  mutual_count: number
+}
+
+export interface FriendCard {
+  id: string
+  username: string | null
+  first_name: string
+  last_name: string
+  profile_photo_url: string | null
+  city: string | null
+  state: string | null
+  riding_style: string[]
+  friends_since: string
+}
+
+export async function getPendingFriendRequests(): Promise<FriendRequestCard[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const admin = getServiceClient()
+
+  // Get pending incoming requests
+  const { data: pending } = await admin
+    .from('friendships')
+    .select('requester_id, created_at')
+    .eq('addressee_id', user.id)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+
+  if (!pending || pending.length === 0) return []
+
+  const requesterIds = pending.map((p) => p.requester_id)
+
+  // Fetch requester profiles
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('id, username, first_name, last_name, profile_photo_url, city, state, riding_style')
+    .in('id', requesterIds)
+    .eq('status', 'active')
+    .is('deactivated_at', null)
+
+  if (!profiles || profiles.length === 0) return []
+
+  // Get my friend list for mutual count
+  const { data: myFriendships } = await admin
+    .from('friendships')
+    .select('requester_id, addressee_id')
+    .eq('status', 'accepted')
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+
+  const myFriendIds = new Set<string>()
+  for (const f of myFriendships ?? []) {
+    myFriendIds.add(f.requester_id === user.id ? f.addressee_id : f.requester_id)
+  }
+
+  // Compute mutual friends per requester
+  const mutualCounts: Record<string, number> = {}
+  if (myFriendIds.size > 0 && requesterIds.length > 0) {
+    const [{ data: dir1 }, { data: dir2 }] = await Promise.all([
+      admin.from('friendships').select('requester_id, addressee_id').eq('status', 'accepted')
+        .in('requester_id', Array.from(myFriendIds).slice(0, 200))
+        .in('addressee_id', requesterIds),
+      admin.from('friendships').select('requester_id, addressee_id').eq('status', 'accepted')
+        .in('requester_id', requesterIds)
+        .in('addressee_id', Array.from(myFriendIds).slice(0, 200)),
+    ])
+    for (const f of dir1 ?? []) {
+      mutualCounts[f.addressee_id] = (mutualCounts[f.addressee_id] ?? 0) + 1
+    }
+    for (const f of dir2 ?? []) {
+      mutualCounts[f.requester_id] = (mutualCounts[f.requester_id] ?? 0) + 1
+    }
+  }
+
+  const profileMap = new Map(profiles.map((p) => [p.id, p]))
+  const requestDateMap = new Map(pending.map((p) => [p.requester_id, p.created_at]))
+
+  return requesterIds
+    .map((id) => {
+      const p = profileMap.get(id)
+      if (!p) return null
+      return {
+        id: p.id,
+        username: p.username,
+        first_name: p.first_name,
+        last_name: p.last_name,
+        profile_photo_url: p.profile_photo_url,
+        city: p.city,
+        state: p.state,
+        riding_style: p.riding_style ?? [],
+        created_at: requestDateMap.get(id) ?? '',
+        mutual_count: mutualCounts[id] ?? 0,
+      }
+    })
+    .filter(Boolean) as FriendRequestCard[]
+}
+
+export async function getMyFriends(): Promise<FriendCard[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const admin = getServiceClient()
+
+  const { data: friendships } = await admin
+    .from('friendships')
+    .select('requester_id, addressee_id, updated_at')
+    .eq('status', 'accepted')
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+    .order('updated_at', { ascending: false })
+
+  if (!friendships || friendships.length === 0) return []
+
+  const friendMap = new Map<string, string>()
+  for (const f of friendships) {
+    const friendId = f.requester_id === user.id ? f.addressee_id : f.requester_id
+    friendMap.set(friendId, f.updated_at)
+  }
+
+  const friendIds = Array.from(friendMap.keys())
+
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('id, username, first_name, last_name, profile_photo_url, city, state, riding_style')
+    .in('id', friendIds)
+    .eq('status', 'active')
+    .is('deactivated_at', null)
+
+  if (!profiles) return []
+
+  return profiles
+    .map((p) => ({
+      id: p.id,
+      username: p.username,
+      first_name: p.first_name,
+      last_name: p.last_name,
+      profile_photo_url: p.profile_photo_url,
+      city: p.city,
+      state: p.state,
+      riding_style: p.riding_style ?? [],
+      friends_since: friendMap.get(p.id) ?? '',
+    }))
+    .sort((a, b) => a.first_name.localeCompare(b.first_name))
+}
+
+export async function getPendingRequestCount(): Promise<number> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return 0
+
+  const admin = getServiceClient()
+  const { count } = await admin
+    .from('friendships')
+    .select('*', { count: 'exact', head: true })
+    .eq('addressee_id', user.id)
+    .eq('status', 'pending')
+
+  return count ?? 0
+}
+
 export async function unfriend(otherUserId: string): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

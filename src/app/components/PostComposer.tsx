@@ -125,7 +125,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
   }
 
   return (
-    <div className="bg-orange-500/5 rounded-xl border border-orange-500/30 p-4 shadow-lg shadow-black/40">
+    <div className="bg-orange-500/5 rounded-xl border border-orange-500/30 p-4 shadow-lg shadow-black/40 focus-within:border-orange-500/60 transition-colors">
       <form onSubmit={handleSubmit}>
         {/* Avatar + textarea row */}
         <div className="flex gap-3">
@@ -152,7 +152,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
               placeholder={bikeId ? "Share something about this ride…" : "Share something with the crew…"}
               rows={3}
               disabled={submitting}
-              className="w-full bg-transparent text-white placeholder-zinc-400 focus:outline-none text-base resize-none"
+              className="w-full bg-transparent text-white placeholder-zinc-300 focus:outline-none text-base resize-none"
             />
 
             {imagePreviews.length > 0 && (
@@ -220,7 +220,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1.5 text-zinc-400 hover:text-orange-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-sm font-medium"
+                className="flex items-center gap-1.5 text-orange-400/70 hover:text-orange-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-sm font-medium"
                 title="Add photos (max 4)"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>

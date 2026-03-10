@@ -148,6 +148,9 @@ export default function FriendsClient({ initialRequests, initialFriends }: Props
                       {location && (
                         <p className="text-zinc-600 text-xs truncate">{location}</p>
                       )}
+                      {r.primary_bike && (
+                        <p className="text-orange-400/70 text-xs truncate">{r.primary_bike}</p>
+                      )}
                       {r.mutual_count > 0 && (
                         <p className="text-zinc-500 text-xs">
                           {r.mutual_count} mutual friend{r.mutual_count !== 1 ? 's' : ''}

@@ -154,6 +154,7 @@ export interface FriendRequestCard {
   riding_style: string[]
   created_at: string // when the request was sent
   mutual_count: number
+  primary_bike: string | null
 }
 
 export interface FriendCard {
@@ -228,6 +229,21 @@ export async function getPendingFriendRequests(): Promise<FriendRequestCard[]> {
     }
   }
 
+  // Fetch primary bike (oldest) for each requester
+  const { data: bikes } = await admin
+    .from('user_bikes')
+    .select('user_id, year, make, model')
+    .in('user_id', requesterIds)
+    .order('created_at', { ascending: true })
+
+  const bikeMap = new Map<string, string>()
+  for (const b of bikes ?? []) {
+    if (!bikeMap.has(b.user_id)) {
+      const parts = [b.year, b.make, b.model].filter(Boolean)
+      if (parts.length > 0) bikeMap.set(b.user_id, parts.join(' '))
+    }
+  }
+
   const profileMap = new Map(profiles.map((p) => [p.id, p]))
   const requestDateMap = new Map(pending.map((p) => [p.requester_id, p.created_at]))
 
@@ -246,6 +262,7 @@ export async function getPendingFriendRequests(): Promise<FriendRequestCard[]> {
         riding_style: p.riding_style ?? [],
         created_at: requestDateMap.get(id) ?? '',
         mutual_count: mutualCounts[id] ?? 0,
+        primary_bike: bikeMap.get(id) ?? null,
       }
     })
     .filter(Boolean) as FriendRequestCard[]

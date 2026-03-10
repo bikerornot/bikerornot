@@ -236,7 +236,7 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
                       : 'bg-orange-500 hover:bg-orange-600 text-white'
                   }`}
                 >
-                  {status === 'sent' ? '✓ Sent' : status === 'pending' ? '…' : '+ Add'}
+                  {status === 'sent' ? '✓ Sent' : status === 'pending' ? '…' : 'Add Friend'}
                 </button>
               </div>
             </div>

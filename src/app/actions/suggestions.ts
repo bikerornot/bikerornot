@@ -134,6 +134,7 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
     .eq('status', 'active')
     .eq('onboarding_complete', true)
     .is('deactivated_at', null)
+    .not('profile_photo_url', 'is', null)
 
   const myLat = me?.latitude
   const myLon = me?.longitude

@@ -152,7 +152,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
               placeholder={bikeId ? "Share something about this ride…" : "Share something with the crew…"}
               rows={3}
               disabled={submitting}
-              className="w-full bg-transparent text-white placeholder-zinc-300 focus:outline-none text-base resize-none"
+              className="w-full bg-transparent text-white placeholder-zinc-500 focus:outline-none text-base resize-none"
             />
 
             {imagePreviews.length > 0 && (

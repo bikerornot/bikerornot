@@ -139,21 +139,21 @@ export default function FriendsClient({ initialRequests, initialFriends }: Props
                       {/* Info */}
                       <div className="flex-1 min-w-0">
                         <Link href={`/profile/${r.username}`} className="hover:underline">
-                          <p className="text-white font-semibold text-sm truncate">
+                          <p className="text-white font-semibold text-base truncate">
                             {r.first_name} {r.last_name}
                           </p>
                         </Link>
                         {r.username && (
-                          <p className="text-zinc-500 text-xs truncate">@{r.username}</p>
+                          <p className="text-zinc-500 text-sm truncate">@{r.username}</p>
                         )}
                         {location && (
-                          <p className="text-zinc-600 text-xs truncate">{location}</p>
+                          <p className="text-zinc-600 text-sm truncate">{location}</p>
                         )}
                         {r.primary_bike && (
-                          <p className="text-orange-400/70 text-xs truncate">{r.primary_bike}</p>
+                          <p className="text-orange-400/70 text-sm">{r.primary_bike}</p>
                         )}
                         {r.mutual_count > 0 && (
-                          <p className="text-zinc-500 text-xs">
+                          <p className="text-zinc-500 text-sm">
                             {r.mutual_count} mutual friend{r.mutual_count !== 1 ? 's' : ''}
                           </p>
                         )}
@@ -257,18 +257,18 @@ export default function FriendsClient({ initialRequests, initialFriends }: Props
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-white font-semibold text-sm truncate">
+                      <p className="text-white font-semibold text-base truncate">
                         {f.first_name} {f.last_name}
                       </p>
                       {f.username && (
-                        <p className="text-zinc-500 text-xs truncate">@{f.username}</p>
+                        <p className="text-zinc-500 text-sm truncate">@{f.username}</p>
                       )}
                       <div className="flex items-center gap-2">
                         {location && (
-                          <p className="text-zinc-600 text-xs truncate">{location}</p>
+                          <p className="text-zinc-600 text-sm truncate">{location}</p>
                         )}
                         {f.riding_style.length > 0 && (
-                          <p className="text-orange-400/70 text-xs truncate">{f.riding_style[0]}</p>
+                          <p className="text-orange-400/70 text-sm truncate">{f.riding_style[0]}</p>
                         )}
                       </div>
                     </div>

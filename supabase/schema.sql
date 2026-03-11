@@ -14,7 +14,7 @@ create table public.profiles (
   date_of_birth date not null,
   zip_code text not null,
   relationship_status text check (
-    relationship_status in ('single', 'in_a_relationship', 'its_complicated')
+    relationship_status in ('single', 'in_a_relationship', 'married', 'its_complicated')
   ),
   display_name text,
   bio text,

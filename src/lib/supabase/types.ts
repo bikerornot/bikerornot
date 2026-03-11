@@ -233,5 +233,6 @@ export const GENDER_OPTIONS = [
 export const RELATIONSHIP_OPTIONS = [
   { value: 'single',            label: '🟢 Single' },
   { value: 'in_a_relationship', label: '💑 In a Relationship' },
+  { value: 'married',            label: '💍 Married' },
   { value: 'its_complicated',   label: "🤷 It's Complicated" },
 ] as const

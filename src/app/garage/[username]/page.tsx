@@ -338,6 +338,7 @@ export default async function GaragePageRoute({
                 <span>
                   {profile.relationship_status === 'single' ? 'Single' :
                    profile.relationship_status === 'in_a_relationship' ? 'In a Relationship' :
+                   profile.relationship_status === 'married' ? 'Married' :
                    "It's Complicated"}
                 </span>
               </div>

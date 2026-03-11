@@ -129,6 +129,7 @@ function FriendAction({
 const RELATIONSHIP_LABEL: Record<string, string> = {
   single: 'Single',
   in_a_relationship: 'In a Relationship',
+  married: 'Married',
   its_complicated: "It's Complicated",
 }
 
@@ -203,6 +204,7 @@ const GENDER_FILTERS = [
 const RELATIONSHIP_FILTERS = [
   { value: 'single', label: 'Single' },
   { value: 'in_a_relationship', label: 'In a Relationship' },
+  { value: 'married', label: 'Married' },
   { value: 'its_complicated', label: "It's Complicated" },
 ]
 

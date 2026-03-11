@@ -21,6 +21,7 @@ interface Props {
 const RELATIONSHIP_LABEL: Record<string, string> = {
   single: 'Single',
   in_a_relationship: 'In a Relationship',
+  married: 'Married',
   its_complicated: "It's Complicated",
 }
 

@@ -216,12 +216,14 @@ export default async function ProfilePage({
   const relationshipLabel: Record<string, string> = {
     single: 'Single',
     in_a_relationship: 'In a Relationship',
+    married: 'Married',
     its_complicated: "It's Complicated",
   }
 
   const relationshipEmoji: Record<string, string> = {
     single: '🟢',
     in_a_relationship: '💑',
+    married: '💍',
     its_complicated: '🤷',
   }
 

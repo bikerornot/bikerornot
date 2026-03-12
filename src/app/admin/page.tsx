@@ -160,7 +160,7 @@ export default async function AdminDashboardPage() {
         />
         <KpiCard
           label="Friend Requests"
-          total={stats.friendRequestsSent7d}
+          total={stats.friendRequestsTotal}
           last24h={stats.friendRequestsSent24h}
           last7d={stats.friendRequestsSent7d}
         />

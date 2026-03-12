@@ -10,7 +10,12 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts'
-import { getDailyMemberCounts, getDailyPostCounts, type DailyMemberCount, type DailyPostCount } from '@/app/actions/admin'
+import {
+  getDailyMemberCounts, getDailyPostCounts,
+  getDailyFriendRequestCounts, getDailyCommentCounts,
+  type DailyMemberCount, type DailyPostCount,
+  type DailyFriendRequestCount, type DailyCommentCount,
+} from '@/app/actions/admin'
 
 const PRESETS = [
   { label: 'Last 7 days', days: 7 },
@@ -37,17 +42,23 @@ export default function AnalyticsClient() {
   const [endDate, setEndDate] = useState(today)
   const [data, setData] = useState<DailyMemberCount[] | null>(null)
   const [postData, setPostData] = useState<DailyPostCount[] | null>(null)
+  const [friendRequestData, setFriendRequestData] = useState<DailyFriendRequestCount[] | null>(null)
+  const [commentData, setCommentData] = useState<DailyCommentCount[] | null>(null)
   const [pending, startTransition] = useTransition()
   const [activePreset, setActivePreset] = useState(30)
 
   function fetchData(start: string, end: string) {
     startTransition(async () => {
-      const [members, posts] = await Promise.all([
+      const [members, posts, friendRequests, comments] = await Promise.all([
         getDailyMemberCounts(start, end),
         getDailyPostCounts(start, end),
+        getDailyFriendRequestCounts(start, end),
+        getDailyCommentCounts(start, end),
       ])
       setData(members)
       setPostData(posts)
+      setFriendRequestData(friendRequests)
+      setCommentData(comments)
     })
   }
 
@@ -292,6 +303,107 @@ export default function AnalyticsClient() {
                 stroke="#10b981"
                 strokeWidth={2}
                 fill="url(#signupGradient)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+      {/* Daily friend requests */}
+      {!pending && friendRequestData && friendRequestData.length > 0 && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-semibold text-sm">Friend Requests per Day</h3>
+            <span className="text-zinc-500 text-xs">
+              {friendRequestData.reduce((s, d) => s + d.count, 0).toLocaleString()} total
+            </span>
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={friendRequestData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="friendReqGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+              <XAxis
+                dataKey="date"
+                tickFormatter={formatDateLabel}
+                stroke="#52525b"
+                tick={{ fontSize: 11, fill: '#71717a' }}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                stroke="#52525b"
+                tick={{ fontSize: 11, fill: '#71717a' }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#18181b',
+                  border: '1px solid #3f3f46',
+                  borderRadius: '0.75rem',
+                  fontSize: '0.8rem',
+                }}
+                labelFormatter={(label: any) => formatDateLabel(String(label))}
+                formatter={(value: any) => [Number(value).toLocaleString(), 'Friend Requests']}
+              />
+              <Area
+                type="monotone"
+                dataKey="count"
+                stroke="#a855f7"
+                strokeWidth={2}
+                fill="url(#friendReqGradient)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Daily comments */}
+      {!pending && commentData && commentData.length > 0 && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-semibold text-sm">Comments per Day</h3>
+            <span className="text-zinc-500 text-xs">
+              {commentData.reduce((s, d) => s + d.count, 0).toLocaleString()} total
+            </span>
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={commentData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="commentsGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#eab308" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#eab308" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+              <XAxis
+                dataKey="date"
+                tickFormatter={formatDateLabel}
+                stroke="#52525b"
+                tick={{ fontSize: 11, fill: '#71717a' }}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                stroke="#52525b"
+                tick={{ fontSize: 11, fill: '#71717a' }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#18181b',
+                  border: '1px solid #3f3f46',
+                  borderRadius: '0.75rem',
+                  fontSize: '0.8rem',
+                }}
+                labelFormatter={(label: any) => formatDateLabel(String(label))}
+                formatter={(value: any) => [Number(value).toLocaleString(), 'Comments']}
+              />
+              <Area
+                type="monotone"
+                dataKey="count"
+                stroke="#eab308"
+                strokeWidth={2}
+                fill="url(#commentsGradient)"
               />
             </AreaChart>
           </ResponsiveContainer>

@@ -10,6 +10,7 @@ import { getImageUrl } from '@/lib/supabase/image'
 import UserActions from './UserActions'
 import AvatarPreview from './AvatarPreview'
 import GroupAdminPanel from './GroupAdminPanel'
+import UserMessages from './UserMessages'
 
 export const metadata = { title: 'User Detail — BikerOrNot Admin' }
 
@@ -388,32 +389,11 @@ export default async function UserDetailPage({
           <GroupAdminPanel groups={createdGroups} creatorId={id} />
 
           {/* Messages sent by this user */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
-              <h2 className="text-white font-semibold text-sm">Sent Messages</h2>
-              <span className="text-zinc-600 text-xs">{user.recent_messages.length} shown (last 50)</span>
-            </div>
-            {user.recent_messages.length === 0 ? (
-              <p className="text-center text-zinc-600 text-sm py-8">No messages sent</p>
-            ) : (
-              <ul>
-                {user.recent_messages.map((m, i) => (
-                  <li
-                    key={m.id}
-                    className={`px-5 py-3 space-y-1 ${i < user.recent_messages.length - 1 ? 'border-b border-zinc-800/50' : ''}`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      {m.recipient_username && (
-                        <span className="text-xs text-orange-400 flex-shrink-0">→ @{m.recipient_username}</span>
-                      )}
-                      <p className="text-zinc-600 text-xs flex-shrink-0 ml-auto">{formatTimeAgo(m.created_at)}</p>
-                    </div>
-                    <p className="text-zinc-300 text-sm leading-relaxed">{m.content}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <UserMessages
+            messages={user.recent_messages}
+            messageCount={user.message_count}
+            userId={user.id}
+          />
 
           {/* Comments posted by this user */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">

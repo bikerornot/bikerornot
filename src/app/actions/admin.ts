@@ -361,6 +361,7 @@ export interface AdminUserDetail {
   }>
   recent_messages: Array<{
     id: string
+    conversation_id: string
     content: string
     created_at: string
     recipient_username: string | null
@@ -609,6 +610,7 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     })),
     recent_messages: (rawMessages ?? []).map((m) => ({
       id: m.id,
+      conversation_id: m.conversation_id,
       content: m.content,
       created_at: m.created_at,
       recipient_username: recipientMap[m.conversation_id] ?? null,
@@ -795,6 +797,9 @@ export interface OnlineUser {
   role: string
   city: string | null
   state: string | null
+  gender: string | null
+  date_of_birth: string | null
+  created_at: string
   last_seen_at: string
 }
 
@@ -803,7 +808,7 @@ export async function getOnlineUsers(): Promise<OnlineUser[]> {
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
   const { data } = await admin
     .from('profiles')
-    .select('id, username, first_name, last_name, profile_photo_url, status, role, city, state, last_seen_at')
+    .select('id, username, first_name, last_name, profile_photo_url, status, role, city, state, gender, date_of_birth, created_at, last_seen_at')
     .eq('status', 'active')
     .gte('last_seen_at', fiveMinutesAgo)
     .order('last_seen_at', { ascending: false })
@@ -937,6 +942,41 @@ export async function getAdminMessages(
   })
 
   return { messages, hasMore }
+}
+
+export interface AdminThreadMessage {
+  id: string
+  sender_id: string
+  content: string
+  created_at: string
+  sender_name: string
+  sender_username: string | null
+}
+
+export async function getConversationThread(
+  conversationId: string,
+  limit = 10,
+): Promise<AdminThreadMessage[]> {
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  const { data } = await admin
+    .from('messages')
+    .select('id, sender_id, content, created_at, sender:profiles!sender_id(first_name, last_name, username)')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (!data) return []
+
+  return data.reverse().map((row: any) => ({
+    id: row.id,
+    sender_id: row.sender_id,
+    content: row.content,
+    created_at: row.created_at,
+    sender_name: row.sender ? `${row.sender.first_name} ${row.sender.last_name}` : 'Unknown',
+    sender_username: row.sender?.username ?? null,
+  }))
 }
 
 export async function setUserRole(userId: string, role: 'user' | 'moderator' | 'admin' | 'super_admin'): Promise<void> {
@@ -1226,10 +1266,30 @@ export async function getWatchlistCount(): Promise<number> {
 
 // ── Growth Analytics ──
 
+// Helper: fetch all banned user IDs into a Set for fast lookups
+async function getBannedUserIds(admin: ReturnType<typeof getServiceClient>): Promise<Set<string>> {
+  const ids = new Set<string>()
+  let offset = 0
+  const PAGE_SIZE = 1000
+  while (true) {
+    const { data } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('status', 'banned')
+      .range(offset, offset + PAGE_SIZE - 1)
+    if (!data || data.length === 0) break
+    for (const row of data) ids.add(row.id)
+    if (data.length < PAGE_SIZE) break
+    offset += PAGE_SIZE
+  }
+  return ids
+}
+
 export interface DailyMemberCount {
   date: string    // YYYY-MM-DD
   total: number   // cumulative total at end of day
   newSignups: number // signups that day
+  organicSignups: number // signups excluding banned users
 }
 
 export async function getDailyMemberCounts(
@@ -1238,6 +1298,8 @@ export async function getDailyMemberCounts(
 ): Promise<DailyMemberCount[]> {
   await requireAdmin()
   const admin = getServiceClient()
+
+  const bannedIds = await getBannedUserIds(admin)
 
   // Get total users before startDate (the baseline)
   const { count: baseline } = await admin
@@ -1248,12 +1310,13 @@ export async function getDailyMemberCounts(
   // Get daily signup counts using Supabase RPC or paginated fetch
   // Default select limit is 1000 rows, so we paginate to get all signups
   const dailyMap: Record<string, number> = {}
+  const organicMap: Record<string, number> = {}
   let offset = 0
   const PAGE_SIZE = 1000
   while (true) {
     const { data: page } = await admin
       .from('profiles')
-      .select('created_at')
+      .select('id, created_at')
       .gte('created_at', `${startDate}T00:00:00Z`)
       .lte('created_at', `${endDate}T23:59:59Z`)
       .order('created_at')
@@ -1264,6 +1327,9 @@ export async function getDailyMemberCounts(
     for (const row of page) {
       const day = row.created_at.slice(0, 10)
       dailyMap[day] = (dailyMap[day] ?? 0) + 1
+      if (!bannedIds.has(row.id)) {
+        organicMap[day] = (organicMap[day] ?? 0) + 1
+      }
     }
 
     if (page.length < PAGE_SIZE) break
@@ -1279,8 +1345,9 @@ export async function getDailyMemberCounts(
   while (current <= end) {
     const day = current.toISOString().slice(0, 10)
     const newSignups = dailyMap[day] ?? 0
+    const organicSignups = organicMap[day] ?? 0
     running += newSignups
-    result.push({ date: day, total: running, newSignups })
+    result.push({ date: day, total: running, newSignups, organicSignups })
     current.setUTCDate(current.getUTCDate() + 1)
   }
 
@@ -1292,6 +1359,7 @@ export async function getDailyMemberCounts(
 export interface DailyPostCount {
   date: string
   count: number
+  organic: number
 }
 
 export async function getDailyPostCounts(
@@ -1301,13 +1369,16 @@ export async function getDailyPostCounts(
   await requireAdmin()
   const admin = getServiceClient()
 
+  const bannedIds = await getBannedUserIds(admin)
+
   const dailyMap: Record<string, number> = {}
+  const organicMap: Record<string, number> = {}
   let offset = 0
   const PAGE_SIZE = 1000
   while (true) {
     const { data: page } = await admin
       .from('posts')
-      .select('created_at')
+      .select('created_at, author_id')
       .is('deleted_at', null)
       .gte('created_at', `${startDate}T00:00:00Z`)
       .lte('created_at', `${endDate}T23:59:59Z`)
@@ -1319,6 +1390,9 @@ export async function getDailyPostCounts(
     for (const row of page) {
       const day = row.created_at.slice(0, 10)
       dailyMap[day] = (dailyMap[day] ?? 0) + 1
+      if (!bannedIds.has(row.author_id)) {
+        organicMap[day] = (organicMap[day] ?? 0) + 1
+      }
     }
 
     if (page.length < PAGE_SIZE) break
@@ -1331,7 +1405,7 @@ export async function getDailyPostCounts(
 
   while (current <= end) {
     const day = current.toISOString().slice(0, 10)
-    result.push({ date: day, count: dailyMap[day] ?? 0 })
+    result.push({ date: day, count: dailyMap[day] ?? 0, organic: organicMap[day] ?? 0 })
     current.setUTCDate(current.getUTCDate() + 1)
   }
 
@@ -1343,6 +1417,7 @@ export async function getDailyPostCounts(
 export interface DailyFriendRequestCount {
   date: string
   count: number
+  organic: number
 }
 
 export async function getDailyFriendRequestCounts(
@@ -1352,13 +1427,16 @@ export async function getDailyFriendRequestCounts(
   await requireAdmin()
   const admin = getServiceClient()
 
+  const bannedIds = await getBannedUserIds(admin)
+
   const dailyMap: Record<string, number> = {}
+  const organicMap: Record<string, number> = {}
   let offset = 0
   const PAGE_SIZE = 1000
   while (true) {
     const { data: page } = await admin
       .from('friendships')
-      .select('created_at')
+      .select('created_at, requester_id')
       .gte('created_at', `${startDate}T00:00:00Z`)
       .lte('created_at', `${endDate}T23:59:59Z`)
       .order('created_at')
@@ -1369,6 +1447,9 @@ export async function getDailyFriendRequestCounts(
     for (const row of page) {
       const day = row.created_at.slice(0, 10)
       dailyMap[day] = (dailyMap[day] ?? 0) + 1
+      if (!bannedIds.has(row.requester_id)) {
+        organicMap[day] = (organicMap[day] ?? 0) + 1
+      }
     }
 
     if (page.length < PAGE_SIZE) break
@@ -1381,7 +1462,7 @@ export async function getDailyFriendRequestCounts(
 
   while (current <= end) {
     const day = current.toISOString().slice(0, 10)
-    result.push({ date: day, count: dailyMap[day] ?? 0 })
+    result.push({ date: day, count: dailyMap[day] ?? 0, organic: organicMap[day] ?? 0 })
     current.setUTCDate(current.getUTCDate() + 1)
   }
 
@@ -1393,6 +1474,7 @@ export async function getDailyFriendRequestCounts(
 export interface DailyCommentCount {
   date: string
   count: number
+  organic: number
 }
 
 export async function getDailyCommentCounts(
@@ -1402,13 +1484,16 @@ export async function getDailyCommentCounts(
   await requireAdmin()
   const admin = getServiceClient()
 
+  const bannedIds = await getBannedUserIds(admin)
+
   const dailyMap: Record<string, number> = {}
+  const organicMap: Record<string, number> = {}
   let offset = 0
   const PAGE_SIZE = 1000
   while (true) {
     const { data: page } = await admin
       .from('comments')
-      .select('created_at')
+      .select('created_at, author_id')
       .is('deleted_at', null)
       .gte('created_at', `${startDate}T00:00:00Z`)
       .lte('created_at', `${endDate}T23:59:59Z`)
@@ -1420,6 +1505,9 @@ export async function getDailyCommentCounts(
     for (const row of page) {
       const day = row.created_at.slice(0, 10)
       dailyMap[day] = (dailyMap[day] ?? 0) + 1
+      if (!bannedIds.has(row.author_id)) {
+        organicMap[day] = (organicMap[day] ?? 0) + 1
+      }
     }
 
     if (page.length < PAGE_SIZE) break
@@ -1432,7 +1520,7 @@ export async function getDailyCommentCounts(
 
   while (current <= end) {
     const day = current.toISOString().slice(0, 10)
-    result.push({ date: day, count: dailyMap[day] ?? 0 })
+    result.push({ date: day, count: dailyMap[day] ?? 0, organic: organicMap[day] ?? 0 })
     current.setUTCDate(current.getUTCDate() + 1)
   }
 

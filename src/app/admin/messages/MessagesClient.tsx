@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { getAdminMessages, type AdminMessageRow } from '@/app/actions/admin'
+import { getAdminMessages, getConversationThread, type AdminMessageRow, type AdminThreadMessage } from '@/app/actions/admin'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 
@@ -52,6 +52,22 @@ export default function MessagesClient({
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [page, setPage] = useState(0)
   const [isPending, startTransition] = useTransition()
+  const [expandedThread, setExpandedThread] = useState<string | null>(null)
+  const [threadMessages, setThreadMessages] = useState<AdminThreadMessage[]>([])
+  const [threadPending, startThreadTransition] = useTransition()
+
+  function toggleThread(conversationId: string) {
+    if (expandedThread === conversationId) {
+      setExpandedThread(null)
+      setThreadMessages([])
+      return
+    }
+    setExpandedThread(conversationId)
+    startThreadTransition(async () => {
+      const thread = await getConversationThread(conversationId)
+      setThreadMessages(thread)
+    })
+  }
 
   function loadMore() {
     const nextPage = page + 1
@@ -110,16 +126,20 @@ export default function MessagesClient({
                       {recipient && (
                         <span className="text-zinc-600 text-xs">
                           →{' '}
-                          {recipient.username ? (
-                            <Link
-                              href={`/admin/users/${recipient.id}`}
-                              className="hover:text-zinc-400 transition-colors"
-                            >
-                              @{recipient.username}
-                            </Link>
-                          ) : (
-                            `${recipient.first_name} ${recipient.last_name}`
-                          )}
+                          <button
+                            onClick={() => toggleThread(msg.conversation_id)}
+                            className="hover:text-orange-400 transition-colors underline decoration-zinc-700 underline-offset-2 hover:decoration-orange-400"
+                            title="View last 10 messages in this conversation"
+                          >
+                            {recipient.username ? `@${recipient.username}` : `${recipient.first_name} ${recipient.last_name}`}
+                          </button>
+                          {' · '}
+                          <Link
+                            href={`/admin/users/${recipient.id}`}
+                            className="hover:text-zinc-400 transition-colors"
+                          >
+                            profile
+                          </Link>
                         </span>
                       )}
 
@@ -144,6 +164,36 @@ export default function MessagesClient({
                   <p className="text-zinc-300 text-sm break-words leading-relaxed">
                     {msg.content}
                   </p>
+
+                  {/* Expandable thread */}
+                  {expandedThread === msg.conversation_id && (
+                    <div className="mt-3 pt-3 border-t border-zinc-800">
+                      <p className="text-zinc-500 text-xs font-medium mb-2">Last 10 messages in this conversation</p>
+                      {threadPending ? (
+                        <p className="text-zinc-600 text-xs">Loading thread…</p>
+                      ) : threadMessages.length === 0 ? (
+                        <p className="text-zinc-600 text-xs">No messages found.</p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {threadMessages.map((tm) => (
+                            <div key={tm.id} className={`text-xs leading-relaxed ${tm.id === msg.id ? 'bg-orange-500/10 border border-orange-500/20 rounded-lg p-2' : 'px-2 py-1'}`}>
+                              <Link
+                                href={`/admin/users/${tm.sender_id}`}
+                                className={`font-semibold hover:underline ${tm.sender_id === msg.sender_id ? 'text-orange-400' : 'text-blue-400'}`}
+                              >
+                                {tm.sender_name}
+                                {tm.sender_username && (
+                                  <span className="text-zinc-500 font-normal ml-1">@{tm.sender_username}</span>
+                                )}
+                              </Link>
+                              <span className="text-zinc-600 ml-2">{formatTimestamp(tm.created_at)}</span>
+                              <p className="text-zinc-300 mt-0.5 break-words">{tm.content}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

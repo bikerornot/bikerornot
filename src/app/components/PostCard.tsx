@@ -234,13 +234,24 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
         </Link>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <Link
               href={`/profile/${author?.username}`}
               className="font-semibold text-white hover:underline text-base sm:text-sm"
             >
               @{displayName}
             </Link>
+            {post.group && (
+              <>
+                <span className="text-zinc-500 text-xs">posted in</span>
+                <Link
+                  href={`/groups/${post.group.slug}`}
+                  className="font-semibold text-orange-400 hover:text-orange-300 text-sm hover:underline"
+                >
+                  {post.group.name}
+                </Link>
+              </>
+            )}
             <span className="text-zinc-600 text-xs">·</span>
             <span className="text-zinc-500 text-xs">{formatTimeAgo(post.created_at)}</span>
           </div>

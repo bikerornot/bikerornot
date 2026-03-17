@@ -94,6 +94,7 @@ export interface Post {
   comment_count?: number
   is_liked_by_me?: boolean
   shared_post?: Omit<Post, 'shared_post'> | null
+  group?: { name: string; slug: string } | null
 }
 
 export interface Group {

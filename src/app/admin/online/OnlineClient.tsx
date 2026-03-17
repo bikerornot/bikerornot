@@ -14,6 +14,19 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(seconds / 60)}m ago`
 }
 
+function calcAge(dob: string): number {
+  const birth = new Date(dob)
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const m = today.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+  return age
+}
+
+function formatJoined(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 interface Props {
   initialUsers: OnlineUser[]
 }
@@ -55,9 +68,10 @@ export default function OnlineClient({ initialUsers }: Props) {
             <thead>
               <tr className="border-b border-zinc-800 text-zinc-500 text-xs uppercase tracking-wider">
                 <th className="text-left px-4 py-3 font-medium">User</th>
+                <th className="text-left px-4 py-3 font-medium">Age</th>
+                <th className="text-left px-4 py-3 font-medium">Gender</th>
                 <th className="text-left px-4 py-3 font-medium">Location</th>
-                <th className="text-left px-4 py-3 font-medium">Status</th>
-                <th className="text-left px-4 py-3 font-medium">Role</th>
+                <th className="text-left px-4 py-3 font-medium">Joined</th>
                 <th className="text-left px-4 py-3 font-medium">Last seen</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -96,18 +110,17 @@ export default function OnlineClient({ initialUsers }: Props) {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-zinc-400 text-xs">
+                      {u.date_of_birth ? calcAge(u.date_of_birth) : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-zinc-400 text-xs capitalize">
+                      {u.gender ?? '—'}
+                    </td>
+                    <td className="px-4 py-3 text-zinc-400 text-xs">
                       {u.city && u.state ? `${u.city}, ${u.state}` : u.state ?? u.city ?? '—'}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                        u.status === 'banned' ? 'bg-red-500/20 text-red-400' :
-                        u.status === 'suspended' ? 'bg-orange-500/20 text-orange-400' :
-                        'bg-emerald-500/20 text-emerald-400'
-                      }`}>
-                        {u.status}
-                      </span>
+                    <td className="px-4 py-3 text-zinc-400 text-xs whitespace-nowrap">
+                      {formatJoined(u.created_at)}
                     </td>
-                    <td className="px-4 py-3 text-zinc-500 text-xs">{u.role}</td>
                     <td className="px-4 py-3 text-zinc-400 text-xs whitespace-nowrap">
                       {timeAgo(u.last_seen_at)}
                     </td>

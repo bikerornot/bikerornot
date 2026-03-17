@@ -9,6 +9,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
 } from 'recharts'
 import {
   getDailyMemberCounts, getDailyPostCounts,
@@ -32,6 +33,18 @@ function toDateStr(d: Date): string {
 function formatDateLabel(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00Z')
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+}
+
+const tooltipStyle = {
+  backgroundColor: '#18181b',
+  border: '1px solid #3f3f46',
+  borderRadius: '0.75rem',
+  fontSize: '0.8rem',
+}
+
+const axisProps = {
+  stroke: '#52525b',
+  tick: { fontSize: 11, fill: '#71717a' } as const,
 }
 
 export default function AnalyticsClient() {
@@ -153,7 +166,7 @@ export default function AnalyticsClient() {
         </div>
       )}
 
-      {/* Chart */}
+      {/* Total members chart */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
         {pending && (
           <div className="h-80 flex items-center justify-center">
@@ -170,38 +183,17 @@ export default function AnalyticsClient() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={formatDateLabel}
-                stroke="#52525b"
-                tick={{ fontSize: 11, fill: '#71717a' }}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                stroke="#52525b"
-                tick={{ fontSize: 11, fill: '#71717a' }}
-                tickFormatter={(v: number) => v.toLocaleString()}
-              />
+              <XAxis dataKey="date" tickFormatter={formatDateLabel} {...axisProps} interval="preserveStartEnd" />
+              <YAxis {...axisProps} tickFormatter={(v: number) => v.toLocaleString()} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: '#18181b',
-                  border: '1px solid #3f3f46',
-                  borderRadius: '0.75rem',
-                  fontSize: '0.8rem',
-                }}
+                contentStyle={tooltipStyle}
                 labelFormatter={(label: any) => formatDateLabel(String(label))}
                 formatter={(value: any, name: any) => [
                   Number(value).toLocaleString(),
                   name === 'total' ? 'Total Members' : 'New Signups',
                 ]}
               />
-              <Area
-                type="monotone"
-                dataKey="total"
-                stroke="#f97316"
-                strokeWidth={2}
-                fill="url(#totalGradient)"
-              />
+              <Area type="monotone" dataKey="total" stroke="#f97316" strokeWidth={2} fill="url(#totalGradient)" />
             </AreaChart>
           </ResponsiveContainer>
         )}
@@ -212,199 +204,161 @@ export default function AnalyticsClient() {
         )}
       </div>
 
-      {/* Daily posts */}
+      {/* Posts per day */}
       {!pending && postData && postData.length > 0 && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-white font-semibold text-sm">Posts per Day</h3>
             <span className="text-zinc-500 text-xs">
-              {postData.reduce((s, d) => s + d.count, 0).toLocaleString()} total
+              {postData.reduce((s, d) => s + d.count, 0).toLocaleString()} total · {postData.reduce((s, d) => s + d.organic, 0).toLocaleString()} organic
             </span>
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={postData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="postsGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
                   <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="postsOrganicGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={formatDateLabel}
-                stroke="#52525b"
-                tick={{ fontSize: 11, fill: '#71717a' }}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                stroke="#52525b"
-                tick={{ fontSize: 11, fill: '#71717a' }}
-              />
+              <XAxis dataKey="date" tickFormatter={formatDateLabel} {...axisProps} interval="preserveStartEnd" />
+              <YAxis {...axisProps} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: '#18181b',
-                  border: '1px solid #3f3f46',
-                  borderRadius: '0.75rem',
-                  fontSize: '0.8rem',
-                }}
+                contentStyle={tooltipStyle}
                 labelFormatter={(label: any) => formatDateLabel(String(label))}
-                formatter={(value: any) => [Number(value).toLocaleString(), 'Posts']}
+                formatter={(value: any, name: any) => [
+                  Number(value).toLocaleString(),
+                  name === 'count' ? 'Total' : 'Organic',
+                ]}
               />
-              <Area
-                type="monotone"
-                dataKey="count"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                fill="url(#postsGradient)"
-              />
+              <Legend formatter={(value) => (value === 'count' ? 'Total' : 'Organic')} />
+              <Area type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} fill="url(#postsGradient)" />
+              <Area type="monotone" dataKey="organic" stroke="#10b981" strokeWidth={2} fill="url(#postsOrganicGradient)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       )}
 
       {/* Daily signups */}
-      {data && data.length > 0 && (
+      {!pending && data && data.length > 0 && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-          <h3 className="text-white font-semibold text-sm mb-3">Daily New Signups</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-semibold text-sm">Daily New Signups</h3>
+            <span className="text-zinc-500 text-xs">
+              {data.reduce((s, d) => s + d.newSignups, 0).toLocaleString()} total · {data.reduce((s, d) => s + d.organicSignups, 0).toLocaleString()} organic
+            </span>
+          </div>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="signupGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="signupOrganicGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={formatDateLabel}
-                stroke="#52525b"
-                tick={{ fontSize: 11, fill: '#71717a' }}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                stroke="#52525b"
-                tick={{ fontSize: 11, fill: '#71717a' }}
-              />
+              <XAxis dataKey="date" tickFormatter={formatDateLabel} {...axisProps} interval="preserveStartEnd" />
+              <YAxis {...axisProps} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: '#18181b',
-                  border: '1px solid #3f3f46',
-                  borderRadius: '0.75rem',
-                  fontSize: '0.8rem',
-                }}
+                contentStyle={tooltipStyle}
                 labelFormatter={(label: any) => formatDateLabel(String(label))}
-                formatter={(value: any) => [Number(value).toLocaleString(), 'New Signups']}
+                formatter={(value: any, name: any) => [
+                  Number(value).toLocaleString(),
+                  name === 'newSignups' ? 'Total' : 'Organic',
+                ]}
               />
-              <Area
-                type="monotone"
-                dataKey="newSignups"
-                stroke="#10b981"
-                strokeWidth={2}
-                fill="url(#signupGradient)"
-              />
+              <Legend formatter={(value) => (value === 'newSignups' ? 'Total' : 'Organic')} />
+              <Area type="monotone" dataKey="newSignups" stroke="#f97316" strokeWidth={2} fill="url(#signupGradient)" />
+              <Area type="monotone" dataKey="organicSignups" stroke="#10b981" strokeWidth={2} fill="url(#signupOrganicGradient)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       )}
-      {/* Daily friend requests */}
+
+      {/* Friend requests per day */}
       {!pending && friendRequestData && friendRequestData.length > 0 && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-white font-semibold text-sm">Friend Requests per Day</h3>
             <span className="text-zinc-500 text-xs">
-              {friendRequestData.reduce((s, d) => s + d.count, 0).toLocaleString()} total
+              {friendRequestData.reduce((s, d) => s + d.count, 0).toLocaleString()} total · {friendRequestData.reduce((s, d) => s + d.organic, 0).toLocaleString()} organic
             </span>
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={friendRequestData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="friendReqGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
+                  <stop offset="5%" stopColor="#a855f7" stopOpacity={0.15} />
                   <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="friendReqOrganicGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={formatDateLabel}
-                stroke="#52525b"
-                tick={{ fontSize: 11, fill: '#71717a' }}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                stroke="#52525b"
-                tick={{ fontSize: 11, fill: '#71717a' }}
-              />
+              <XAxis dataKey="date" tickFormatter={formatDateLabel} {...axisProps} interval="preserveStartEnd" />
+              <YAxis {...axisProps} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: '#18181b',
-                  border: '1px solid #3f3f46',
-                  borderRadius: '0.75rem',
-                  fontSize: '0.8rem',
-                }}
+                contentStyle={tooltipStyle}
                 labelFormatter={(label: any) => formatDateLabel(String(label))}
-                formatter={(value: any) => [Number(value).toLocaleString(), 'Friend Requests']}
+                formatter={(value: any, name: any) => [
+                  Number(value).toLocaleString(),
+                  name === 'count' ? 'Total' : 'Organic',
+                ]}
               />
-              <Area
-                type="monotone"
-                dataKey="count"
-                stroke="#a855f7"
-                strokeWidth={2}
-                fill="url(#friendReqGradient)"
-              />
+              <Legend formatter={(value) => (value === 'count' ? 'Total' : 'Organic')} />
+              <Area type="monotone" dataKey="count" stroke="#a855f7" strokeWidth={2} fill="url(#friendReqGradient)" />
+              <Area type="monotone" dataKey="organic" stroke="#10b981" strokeWidth={2} fill="url(#friendReqOrganicGradient)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      {/* Daily comments */}
+      {/* Comments per day */}
       {!pending && commentData && commentData.length > 0 && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-white font-semibold text-sm">Comments per Day</h3>
             <span className="text-zinc-500 text-xs">
-              {commentData.reduce((s, d) => s + d.count, 0).toLocaleString()} total
+              {commentData.reduce((s, d) => s + d.count, 0).toLocaleString()} total · {commentData.reduce((s, d) => s + d.organic, 0).toLocaleString()} organic
             </span>
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={commentData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="commentsGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#eab308" stopOpacity={0.3} />
+                  <stop offset="5%" stopColor="#eab308" stopOpacity={0.15} />
                   <stop offset="95%" stopColor="#eab308" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="commentsOrganicGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={formatDateLabel}
-                stroke="#52525b"
-                tick={{ fontSize: 11, fill: '#71717a' }}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                stroke="#52525b"
-                tick={{ fontSize: 11, fill: '#71717a' }}
-              />
+              <XAxis dataKey="date" tickFormatter={formatDateLabel} {...axisProps} interval="preserveStartEnd" />
+              <YAxis {...axisProps} />
               <Tooltip
-                contentStyle={{
-                  backgroundColor: '#18181b',
-                  border: '1px solid #3f3f46',
-                  borderRadius: '0.75rem',
-                  fontSize: '0.8rem',
-                }}
+                contentStyle={tooltipStyle}
                 labelFormatter={(label: any) => formatDateLabel(String(label))}
-                formatter={(value: any) => [Number(value).toLocaleString(), 'Comments']}
+                formatter={(value: any, name: any) => [
+                  Number(value).toLocaleString(),
+                  name === 'count' ? 'Total' : 'Organic',
+                ]}
               />
-              <Area
-                type="monotone"
-                dataKey="count"
-                stroke="#eab308"
-                strokeWidth={2}
-                fill="url(#commentsGradient)"
-              />
+              <Legend formatter={(value) => (value === 'count' ? 'Total' : 'Organic')} />
+              <Area type="monotone" dataKey="count" stroke="#eab308" strokeWidth={2} fill="url(#commentsGradient)" />
+              <Area type="monotone" dataKey="organic" stroke="#10b981" strokeWidth={2} fill="url(#commentsOrganicGradient)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>

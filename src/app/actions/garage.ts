@@ -22,6 +22,65 @@ function validateBikeFields(year: number, make: string, model: string) {
   if (!model.trim() || model.length > 100) throw new Error('Invalid model')
 }
 
+/**
+ * Find the "Added a bike to my garage" feed post and attach a photo to it.
+ * Only attaches if the post exists and has no images yet.
+ */
+async function attachPhotoToGaragePost(
+  admin: ReturnType<typeof getServiceClient>,
+  userId: string,
+  bikeId: string,
+  imageBuffer: Buffer,
+  contentType: string,
+) {
+  // Get bike info to match the announcement text
+  const { data: bike } = await admin
+    .from('user_bikes')
+    .select('year, make, model')
+    .eq('id', bikeId)
+    .single()
+  if (!bike) return
+
+  const bikeName = `${bike.year} ${bike.make} ${bike.model}`
+  const contentPrefix = `Added a ${bikeName} to my garage! 🏍️`
+
+  // Find the announcement post (created within last 24h, no bike_id, matching content)
+  const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const { data: post } = await admin
+    .from('posts')
+    .select('id')
+    .eq('author_id', userId)
+    .like('content', `${contentPrefix}%`)
+    .is('bike_id', null)
+    .gte('created_at', dayAgo)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!post) return
+
+  // Check if already has images
+  const { count } = await admin
+    .from('post_images')
+    .select('*', { count: 'exact', head: true })
+    .eq('post_id', post.id)
+  if ((count ?? 0) > 0) return
+
+  // Upload a copy to the posts bucket
+  const ext = contentType.split('/')[1] ?? 'jpg'
+  const postImagePath = `${userId}/${post.id}/0.${ext}`
+  await admin.storage
+    .from('posts')
+    .upload(postImagePath, imageBuffer, { contentType, upsert: true })
+
+  // Insert post_images row
+  await admin.from('post_images').insert({
+    post_id: post.id,
+    storage_path: postImagePath,
+    order_index: 0,
+  })
+}
+
 export async function addBike(year: number, make: string, model: string): Promise<string> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -38,11 +97,21 @@ export async function addBike(year: number, make: string, model: string): Promis
     .single()
   if (error) throw new Error(error.message)
 
-  // Create a feed story so friends see the new bike
+  // Create a feed story so friends see the new bike (no bike_id so it appears in main feed)
   const bikeName = `${year} ${canonicalMake} ${model}`
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('username')
+    .eq('id', user.id)
+    .single()
+  const garageUrl = profile?.username
+    ? `https://www.bikerornot.com/profile/${profile.username}?tab=Garage`
+    : null
   await admin.from('posts').insert({
     author_id: user.id,
-    content: `Added a ${bikeName} to my garage! 🏍️`,
+    content: garageUrl
+      ? `Added a ${bikeName} to my garage! 🏍️\n${garageUrl}`
+      : `Added a ${bikeName} to my garage! 🏍️`,
   })
 
   return data.id
@@ -131,6 +200,9 @@ export async function uploadBikePhoto(bikeId: string, formData: FormData): Promi
     })
   }
 
+  // Attach photo to the "Added a bike" feed story if it exists and has no images yet
+  await attachPhotoToGaragePost(admin, user.id, bikeId, buffer, file.type)
+
   return path
 }
 
@@ -200,9 +272,10 @@ export async function uploadBikeGalleryPhoto(bikeId: string, formData: FormData)
     .single()
   if (insertError) throw new Error(insertError.message)
 
-  // If first photo, also set as user_bikes.photo_url
+  // If first photo, also set as user_bikes.photo_url and attach to feed story
   if (isFirst) {
     await admin.from('user_bikes').update({ photo_url: path }).eq('id', bikeId)
+    await attachPhotoToGaragePost(admin, user.id, bikeId, buffer, file.type)
   }
 
   return photo as BikePhoto

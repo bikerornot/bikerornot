@@ -190,6 +190,13 @@ export default function TermsPage() {
               agree to use these features responsibly and in accordance with these Terms.
             </p>
             <p>
+              To help protect our community from scams, fraud, and abuse, BikerOrNot may use automated
+              systems, including artificial intelligence, to review messages, comments, and other content
+              shared on the Platform. This monitoring is conducted solely for safety and security purposes.
+              Accounts identified as engaging in scam or fraudulent activity may be suspended or terminated
+              without notice.
+            </p>
+            <p>
               We are not responsible for User Content shared via direct messages or posted by other users.
               If you receive content that you believe violates these Terms, please use our reporting tools
               to notify us. We also provide blocking tools to allow you to restrict unwanted contact from

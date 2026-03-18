@@ -11,6 +11,7 @@ import NotificationBell from '@/app/components/NotificationBell'
 import LastSeenTracker from '@/app/components/LastSeenTracker'
 import MessagesLink from '@/app/components/MessagesLink'
 import BottomNav from '@/app/components/BottomNav'
+import ContentMenu from '@/app/components/ContentMenu'
 import type { Profile } from '@/lib/supabase/types'
 
 export async function generateMetadata({
@@ -113,7 +114,7 @@ export default async function ChatPage({
             </svg>
           </Link>
 
-          <Link href={`/profile/${otherUser.username}`} className="flex items-center gap-2.5 group">
+          <Link href={`/profile/${otherUser.username}`} className="flex items-center gap-2.5 group flex-1 min-w-0">
             <div className="w-8 h-8 rounded-full bg-zinc-700 overflow-hidden flex-shrink-0">
               {otherAvatarUrl ? (
                 <Image src={otherAvatarUrl} alt={otherInitial} width={32} height={32} className="object-cover w-full h-full" />
@@ -123,10 +124,16 @@ export default async function ChatPage({
                 </div>
               )}
             </div>
-            <span className="text-white font-semibold text-sm group-hover:text-orange-400 transition-colors">
+            <span className="text-white font-semibold text-sm group-hover:text-orange-400 transition-colors truncate">
               @{otherUser.username}
             </span>
           </Link>
+
+          <ContentMenu
+            reportType="profile"
+            reportTargetId={otherUser.id}
+            blockUserId={otherUser.id}
+          />
         </div>
       </div>
 

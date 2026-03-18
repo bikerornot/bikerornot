@@ -323,16 +323,26 @@ function ImageCard({
 
       {/* Footer */}
       <div className="bg-zinc-900 px-2.5 pt-2 pb-2.5 space-y-2">
-        {adminUserUrl ? (
-          <Link
-            href={adminUserUrl}
-            className="text-zinc-500 hover:text-orange-400 text-xs truncate block transition-colors"
-          >
-            @{image.author_username ?? 'unknown'}
-          </Link>
-        ) : (
-          <span className="text-zinc-600 text-xs truncate block">unknown</span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {adminUserUrl ? (
+            <a
+              href={adminUserUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-500 hover:text-orange-400 text-xs truncate transition-colors"
+            >
+              @{image.author_username ?? 'unknown'}
+            </a>
+          ) : (
+            <span className="text-zinc-600 text-xs truncate">unknown</span>
+          )}
+          {image.author_status === 'banned' && (
+            <span className="flex-shrink-0 bg-red-500/20 text-red-400 text-[10px] font-bold px-1.5 py-0.5 rounded leading-none">BANNED</span>
+          )}
+          {image.author_status === 'suspended' && (
+            <span className="flex-shrink-0 bg-yellow-500/20 text-yellow-400 text-[10px] font-bold px-1.5 py-0.5 rounded leading-none">SUSPENDED</span>
+          )}
+        </div>
 
         <div className="flex gap-1.5">
           <button

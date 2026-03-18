@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -21,9 +22,50 @@ export async function generateMetadata({
   params,
 }: {
   params: Promise<{ username: string }>
-}) {
+}): Promise<Metadata> {
   const { username } = await params
-  return { title: `@${username} — BikerOrNot` }
+  const supabase = await createClient()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('username, first_name, bio, city, state, profile_photo_url, updated_at')
+    .eq('username', username)
+    .single()
+
+  if (!profile) return { title: `@${username} — BikerOrNot` }
+
+  const displayName = profile.first_name ?? profile.username ?? username
+  const location = [profile.city, profile.state].filter(Boolean).join(', ')
+  const description = profile.bio
+    ? profile.bio.slice(0, 160)
+    : location
+      ? `${displayName} is a motorcycle enthusiast from ${location} on BikerOrNot.`
+      : `${displayName} is a motorcycle enthusiast on BikerOrNot.`
+
+  const avatarUrl = profile.profile_photo_url
+    ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
+    : undefined
+
+  return {
+    title: `@${profile.username} — BikerOrNot`,
+    description,
+    openGraph: {
+      title: `@${profile.username} — BikerOrNot`,
+      description,
+      url: `https://www.bikerornot.com/profile/${profile.username}`,
+      siteName: 'BikerOrNot',
+      type: 'profile',
+      ...(avatarUrl && { images: [{ url: avatarUrl, width: 400, height: 400, alt: `@${profile.username}` }] }),
+    },
+    twitter: {
+      card: avatarUrl ? 'summary' : 'summary',
+      title: `@${profile.username} — BikerOrNot`,
+      description,
+      ...(avatarUrl && { images: [avatarUrl] }),
+    },
+    alternates: {
+      canonical: `https://www.bikerornot.com/profile/${profile.username}`,
+    },
+  }
 }
 
 export default async function ProfilePage({

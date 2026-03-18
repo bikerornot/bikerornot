@@ -14,8 +14,10 @@ import {
 import {
   getDailyMemberCounts, getDailyPostCounts,
   getDailyFriendRequestCounts, getDailyCommentCounts,
+  getDailyMessageCounts,
   type DailyMemberCount, type DailyPostCount,
   type DailyFriendRequestCount, type DailyCommentCount,
+  type DailyMessageCount,
 } from '@/app/actions/admin'
 
 const PRESETS = [
@@ -57,21 +59,24 @@ export default function AnalyticsClient() {
   const [postData, setPostData] = useState<DailyPostCount[] | null>(null)
   const [friendRequestData, setFriendRequestData] = useState<DailyFriendRequestCount[] | null>(null)
   const [commentData, setCommentData] = useState<DailyCommentCount[] | null>(null)
+  const [messageData, setMessageData] = useState<DailyMessageCount[] | null>(null)
   const [pending, startTransition] = useTransition()
   const [activePreset, setActivePreset] = useState(30)
 
   function fetchData(start: string, end: string) {
     startTransition(async () => {
-      const [members, posts, friendRequests, comments] = await Promise.all([
+      const [members, posts, friendRequests, comments, messages] = await Promise.all([
         getDailyMemberCounts(start, end),
         getDailyPostCounts(start, end),
         getDailyFriendRequestCounts(start, end),
         getDailyCommentCounts(start, end),
+        getDailyMessageCounts(start, end),
       ])
       setData(members)
       setPostData(posts)
       setFriendRequestData(friendRequests)
       setCommentData(comments)
+      setMessageData(messages)
     })
   }
 
@@ -359,6 +364,46 @@ export default function AnalyticsClient() {
               <Legend formatter={(value) => (value === 'count' ? 'Total' : 'Organic')} />
               <Area type="monotone" dataKey="count" stroke="#eab308" strokeWidth={2} fill="url(#commentsGradient)" />
               <Area type="monotone" dataKey="organic" stroke="#10b981" strokeWidth={2} fill="url(#commentsOrganicGradient)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Messages per day */}
+      {!pending && messageData && messageData.length > 0 && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-semibold text-sm">Messages per Day</h3>
+            <span className="text-zinc-500 text-xs">
+              {messageData.reduce((s, d) => s + d.count, 0).toLocaleString()} total · {messageData.reduce((s, d) => s + d.organic, 0).toLocaleString()} organic
+            </span>
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <AreaChart data={messageData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="messagesGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="messagesOrganicGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+              <XAxis dataKey="date" tickFormatter={formatDateLabel} {...axisProps} interval="preserveStartEnd" />
+              <YAxis {...axisProps} />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                labelFormatter={(label: any) => formatDateLabel(String(label))}
+                formatter={(value: any, name: any) => [
+                  Number(value).toLocaleString(),
+                  name === 'count' ? 'Total' : 'Organic',
+                ]}
+              />
+              <Legend formatter={(value) => (value === 'count' ? 'Total' : 'Organic')} />
+              <Area type="monotone" dataKey="count" stroke="#06b6d4" strokeWidth={2} fill="url(#messagesGradient)" />
+              <Area type="monotone" dataKey="organic" stroke="#10b981" strokeWidth={2} fill="url(#messagesOrganicGradient)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>

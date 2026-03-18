@@ -19,6 +19,24 @@ interface Props {
   wallOwnerId?: string
 }
 
+const GARAGE_REGEX = /^Added a (.+) to my garage! 🏍️/
+
+function renderGaragePost(text: string, authorUsername?: string | null) {
+  const match = text.match(GARAGE_REGEX)
+  if (!match || !authorUsername) return null
+  const bikeName = match[1]
+  const garageUrl = `/profile/${authorUsername}?tab=Garage`
+  return (
+    <>
+      Added a{' '}
+      <Link href={garageUrl} className="text-orange-400 hover:text-orange-300 font-semibold">
+        {bikeName}
+      </Link>
+      {' '}to my garage! 🏍️
+    </>
+  )
+}
+
 const URL_REGEX = /(https?:\/\/[^\s]+)/g
 
 function renderWithLinks(text: string, excludeUrl?: string) {
@@ -276,12 +294,13 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
 
       {/* Text content */}
       {(post.content || post.shared_post_id) && (() => {
-        const ytVideo = post.content ? extractYouTubeId(post.content) : null
+        const garageContent = post.content ? renderGaragePost(post.content, post.author?.username) : null
+        const ytVideo = !garageContent && post.content ? extractYouTubeId(post.content) : null
         return (
           <div className="px-4 pb-3 space-y-2">
             {post.content && (
               <p className="text-zinc-200 text-lg leading-relaxed whitespace-pre-wrap">
-                {renderWithLinks(post.content, ytVideo?.fullUrl)}
+                {garageContent ?? renderWithLinks(post.content, ytVideo?.fullUrl)}
               </p>
             )}
             {ytVideo && <YouTubeEmbed videoId={ytVideo.id} />}

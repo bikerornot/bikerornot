@@ -1469,6 +1469,63 @@ export async function getDailyFriendRequestCounts(
   return result
 }
 
+// ── Daily Message Counts ──
+
+export interface DailyMessageCount {
+  date: string
+  count: number
+  organic: number
+}
+
+export async function getDailyMessageCounts(
+  startDate: string,
+  endDate: string,
+): Promise<DailyMessageCount[]> {
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  const bannedIds = await getBannedUserIds(admin)
+
+  const dailyMap: Record<string, number> = {}
+  const organicMap: Record<string, number> = {}
+  let offset = 0
+  const PAGE_SIZE = 1000
+  while (true) {
+    const { data: page } = await admin
+      .from('messages')
+      .select('created_at, sender_id')
+      .gte('created_at', `${startDate}T00:00:00Z`)
+      .lte('created_at', `${endDate}T23:59:59Z`)
+      .order('created_at')
+      .range(offset, offset + PAGE_SIZE - 1)
+
+    if (!page || page.length === 0) break
+
+    for (const row of page) {
+      const day = row.created_at.slice(0, 10)
+      dailyMap[day] = (dailyMap[day] ?? 0) + 1
+      if (!bannedIds.has(row.sender_id)) {
+        organicMap[day] = (organicMap[day] ?? 0) + 1
+      }
+    }
+
+    if (page.length < PAGE_SIZE) break
+    offset += PAGE_SIZE
+  }
+
+  const result: DailyMessageCount[] = []
+  const current = new Date(startDate + 'T00:00:00Z')
+  const end = new Date(endDate + 'T00:00:00Z')
+
+  while (current <= end) {
+    const day = current.toISOString().slice(0, 10)
+    result.push({ date: day, count: dailyMap[day] ?? 0, organic: organicMap[day] ?? 0 })
+    current.setUTCDate(current.getUTCDate() + 1)
+  }
+
+  return result
+}
+
 // ── Daily Comment Counts ──
 
 export interface DailyCommentCount {

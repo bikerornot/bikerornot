@@ -99,19 +99,9 @@ export async function addBike(year: number, make: string, model: string): Promis
 
   // Create a feed story so friends see the new bike (no bike_id so it appears in main feed)
   const bikeName = `${year} ${canonicalMake} ${model}`
-  const { data: profile } = await admin
-    .from('profiles')
-    .select('username')
-    .eq('id', user.id)
-    .single()
-  const garageUrl = profile?.username
-    ? `https://www.bikerornot.com/profile/${profile.username}?tab=Garage`
-    : null
   await admin.from('posts').insert({
     author_id: user.id,
-    content: garageUrl
-      ? `Added a ${bikeName} to my garage! 🏍️\n${garageUrl}`
-      : `Added a ${bikeName} to my garage! 🏍️`,
+    content: `Added a ${bikeName} to my garage! 🏍️`,
   })
 
   return data.id

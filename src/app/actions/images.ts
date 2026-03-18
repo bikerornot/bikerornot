@@ -28,6 +28,7 @@ export interface AdminImage {
   author_id: string | null
   author_username: string | null
   author_name: string | null
+  author_status: string | null
   created_at: string
 }
 
@@ -69,7 +70,7 @@ export async function getPostImages(page = 1): Promise<{ images: AdminImage[]; h
 
   const { data: posts } = await admin
     .from('posts')
-    .select('id, created_at, author_id, author:profiles!author_id(id, username, first_name, last_name)')
+    .select('id, created_at, author_id, author:profiles!author_id(id, username, first_name, last_name, status)')
     .is('deleted_at', null)
     .in('id', validPostIds)
     .order('created_at', { ascending: false })
@@ -97,6 +98,7 @@ export async function getPostImages(page = 1): Promise<{ images: AdminImage[]; h
       author_id: post?.author_id ?? null,
       author_username: author?.username ?? null,
       author_name: [author?.first_name, author?.last_name].filter(Boolean).join(' ') || null,
+      author_status: author?.status ?? null,
       created_at: post?.created_at ?? '',
     }
   })
@@ -119,7 +121,7 @@ export async function getAvatarImages(page = 1): Promise<{ images: AdminImage[];
   // Fetch one extra to detect hasMore
   const { data } = await admin
     .from('profiles')
-    .select('id, username, first_name, last_name, profile_photo_url, updated_at')
+    .select('id, username, first_name, last_name, status, profile_photo_url, updated_at')
     .not('profile_photo_url', 'is', null)
     .is('avatar_reviewed_at', null)
     .order('updated_at', { ascending: false })
@@ -134,6 +136,7 @@ export async function getAvatarImages(page = 1): Promise<{ images: AdminImage[];
     author_id: p.id,
     author_username: p.username ?? null,
     author_name: [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
+    author_status: p.status ?? null,
     created_at: p.updated_at,
   }))
 

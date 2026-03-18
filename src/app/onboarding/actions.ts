@@ -7,6 +7,7 @@ import { geocodeZip } from '@/lib/geocode'
 import { validateImageFile } from '@/lib/rate-limit'
 import { moderateImage } from '@/lib/sightengine'
 import { normalizeMake } from '@/lib/normalize-make'
+import { validateUsername } from '@/lib/username-rules'
 
 async function getSignupLocation(): Promise<{
   ip: string | null
@@ -79,6 +80,14 @@ export async function uploadAvatar(formData: FormData): Promise<string> {
     .upload(path, arrayBuffer, { contentType: file.type, upsert: true })
 
   if (error) throw error
+
+  // Auto-approve if Sightengine approved; leave null for borderline (admin review)
+  if (moderation === 'approved') {
+    await admin.from('profiles').update({
+      avatar_reviewed_at: new Date().toISOString(),
+    }).eq('id', user.id)
+  }
+
   return path
 }
 
@@ -93,6 +102,9 @@ export async function completeOnboarding(
   if (!user) throw new Error('Not authenticated')
 
   if (!/^[a-z0-9_]{4,20}$/.test(username)) throw new Error('Invalid username')
+
+  const usernameError = validateUsername(username)
+  if (usernameError) throw new Error(usernameError)
 
   const admin = getServiceClient()
 

@@ -8,11 +8,12 @@ import { RIDING_STYLES } from '@/lib/supabase/types'
 import { uploadAvatar, completeOnboarding, uploadOnboardingBikePhoto } from './actions'
 import BikeSelector, { BikeData } from '@/app/settings/BikeSelector'
 import { compressImage } from '@/lib/compress'
+import { validateUsername } from '@/lib/username-rules'
 
 const USERNAME_REGEX = /^[a-z0-9_]{4,20}$/
 const CURRENT_YEAR = new Date().getFullYear()
 
-type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
+type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'blocked'
 
 // ─── Progress Indicator ───────────────────────────────────────────────────────
 function StepIndicator({ current }: { current: number }) {
@@ -52,9 +53,17 @@ function StepUsername({
 }) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const [blockedReason, setBlockedReason] = useState<string | null>(null)
+
   const checkUsername = useCallback(async (value: string) => {
     if (!USERNAME_REGEX.test(value)) {
       setStatus('invalid')
+      return
+    }
+    const ruleError = validateUsername(value)
+    if (ruleError) {
+      setBlockedReason(ruleError)
+      setStatus('blocked')
       return
     }
     setStatus('checking')
@@ -86,6 +95,7 @@ function StepUsername({
     invalid: username.length > 0
       ? <span className="text-red-400">✗ Must be 4–20 characters, lowercase letters, numbers, and underscores only</span>
       : null,
+    blocked: <span className="text-red-400">✗ {blockedReason}</span>,
   }[status]
 
   return (

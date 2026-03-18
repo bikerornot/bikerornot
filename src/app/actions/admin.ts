@@ -331,6 +331,8 @@ export interface AdminUserDetail {
   status: string
   role: string
   profile_photo_url: string | null
+  avatar_reviewed_at: string | null
+  gender: string | null
   signup_ip: string | null
   signup_country: string | null
   signup_region: string | null
@@ -580,6 +582,8 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     status: profile.status,
     role: profile.role,
     profile_photo_url: profile.profile_photo_url,
+    avatar_reviewed_at: profile.avatar_reviewed_at ?? null,
+    gender: profile.gender ?? null,
     signup_ip: profile.signup_ip ?? null,
     signup_country: profile.signup_country ?? null,
     signup_region: profile.signup_region ?? null,
@@ -1188,8 +1192,12 @@ export async function getWatchlist(): Promise<WatchlistEntry[]> {
 
   if (!data || data.length === 0) return []
 
+  // Exclude banned users — they no longer need monitoring
+  const filtered = data.filter((w: any) => w.user?.status !== 'banned')
+  if (filtered.length === 0) return []
+
   // Fetch activity stats for each watched user
-  const userIds = data.map((w: any) => w.user_id)
+  const userIds = filtered.map((w: any) => w.user_id)
 
   const [{ data: msgCounts }, { data: frCounts }, { data: flagCounts }, { data: reportCounts }] = await Promise.all([
     admin.from('messages').select('sender_id').in('sender_id', userIds),
@@ -1207,7 +1215,7 @@ export async function getWatchlist(): Promise<WatchlistEntry[]> {
   const reportMap: Record<string, number> = {}
   for (const r of reportCounts ?? []) reportMap[r.reported_user_id] = (reportMap[r.reported_user_id] ?? 0) + 1
 
-  return data.map((w: any) => ({
+  return filtered.map((w: any) => ({
     ...w,
     activity: {
       message_count: msgMap[w.user_id] ?? 0,
@@ -1258,10 +1266,11 @@ export async function isOnWatchlist(userId: string): Promise<{ onWatchlist: bool
 export async function getWatchlistCount(): Promise<number> {
   await requireAdmin()
   const admin = getServiceClient()
-  const { count } = await admin
+  // Get all watchlist user IDs, then exclude banned
+  const { data } = await admin
     .from('admin_watchlist')
-    .select('*', { count: 'exact', head: true })
-  return count ?? 0
+    .select('user_id, user:profiles!user_id(status)')
+  return (data ?? []).filter((w: any) => w.user?.status !== 'banned').length
 }
 
 // ── Growth Analytics ──

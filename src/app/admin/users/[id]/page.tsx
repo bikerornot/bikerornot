@@ -112,7 +112,13 @@ export default async function UserDetailPage({
           {/* Profile card */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
             <div className="flex items-start gap-3 mb-4">
-              <AvatarPreview avatarUrl={avatarUrl} firstName={user.first_name} />
+              <AvatarPreview
+                avatarUrl={avatarUrl}
+                firstName={user.first_name}
+                userId={user.id}
+                storagePath={user.profile_photo_url}
+                isReviewed={!!user.avatar_reviewed_at}
+              />
               <div className="flex-1 min-w-0">
                 <p className="text-white font-semibold">{user.first_name} {user.last_name}</p>
                 <p className="text-zinc-400 text-sm">@{user.username ?? 'no username'}</p>

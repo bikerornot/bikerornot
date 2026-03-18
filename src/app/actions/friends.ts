@@ -23,10 +23,30 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
 
   const admin = getServiceClient()
 
-  // Gate 2: New accounts (<7 days) — max 5 friend requests per day
+  // Gate 2: Block friend requests from high-risk unreviewed accounts
+  // (female, under 40, account < 30 days, profile photo not yet approved)
   const { data: senderProfile } = await admin
-    .from('profiles').select('created_at').eq('id', user.id).single()
+    .from('profiles')
+    .select('created_at, gender, date_of_birth, avatar_reviewed_at')
+    .eq('id', user.id)
+    .single()
   const accountAgeDays = (Date.now() - new Date(senderProfile!.created_at).getTime()) / 86_400_000
+  if (
+    accountAgeDays < 30
+    && senderProfile!.gender === 'female'
+    && senderProfile!.date_of_birth
+    && !senderProfile!.avatar_reviewed_at
+  ) {
+    const age = Math.floor(
+      (Date.now() - new Date(senderProfile!.date_of_birth).getTime()) / (365.25 * 86_400_000)
+    )
+    if (age < 40) {
+      // Silently block — don't reveal why
+      return
+    }
+  }
+
+  // Gate 3: New accounts (<7 days) — max 5 friend requests per day
   if (accountAgeDays < 7) {
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)

@@ -104,7 +104,11 @@ export default function AdCard({ ad, onDismiss, preview }: Props) {
 
       {/* Primary text (above image) */}
       {ad.primaryText && (
-        <p className="px-4 pb-2 text-zinc-200 text-base leading-tight whitespace-pre-wrap">{ad.primaryText}</p>
+        <div className="px-4 pt-1.5 pb-2 text-zinc-200 text-base leading-tight">
+          {ad.primaryText.split(/\n\s*\n/).map((para, i) => (
+            <p key={i} className={`whitespace-pre-wrap ${i > 0 ? 'mt-1.5' : ''}`}>{para}</p>
+          ))}
+        </div>
       )}
 
       {/* Image */}

@@ -115,8 +115,12 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       })
       .catch((err) => console.error('Feed fetch error:', err))
       .finally(() => setLoading(false))
-    getNextAd().then(setAd).catch(() => {})
   }, [fetchPosts])
+
+  // Fetch ad once on mount — never re-fetch to avoid jarring swaps
+  useEffect(() => {
+    getNextAd().then(setAd).catch(() => {})
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Realtime: notify when others post
   useEffect(() => {

@@ -167,8 +167,11 @@ export default function AdsClient() {
   }
 
   // Build preview ad for AdCard
+  const selectedCampaign = campaigns.find((c) => c.id === campaignId)
+  const selectedAdvertiser = selectedCampaign ? advertisers.find((a) => a.id === selectedCampaign.advertiser_id) : null
   const previewAd = headline ? {
     id: 'preview',
+    advertiserName: selectedAdvertiser?.name ?? '',
     primaryText: primaryText || null,
     headline,
     description: description || null,

@@ -25,6 +25,7 @@ async function requireAdmin() {
 
 export interface AdData {
   id: string
+  advertiserName: string
   primaryText: string | null
   headline: string
   description: string | null
@@ -61,7 +62,7 @@ export async function getNextAd(): Promise<AdData | null> {
     .from('ads')
     .select(`
       id, primary_text, headline, description, image_url, cta_text, destination_url,
-      campaign:ad_campaigns!campaign_id(status)
+      campaign:ad_campaigns!campaign_id(status, advertiser:advertisers!advertiser_id(name))
     `)
     .eq('status', 'active')
     .limit(1)
@@ -87,6 +88,7 @@ export async function getNextAd(): Promise<AdData | null> {
 
   return {
     id: ad.id,
+    advertiserName: (ad as any).campaign?.advertiser?.name ?? '',
     primaryText: ad.primary_text,
     headline: ad.headline,
     description: ad.description,

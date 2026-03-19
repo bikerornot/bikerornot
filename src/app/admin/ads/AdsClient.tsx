@@ -337,23 +337,22 @@ export default function AdsClient() {
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <h2 className="text-lg font-semibold text-white">Ad Performance</h2>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-[auto_auto_auto_auto] items-center gap-2">
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-white outline-none focus:ring-1 focus:ring-orange-500"
+              className="w-full sm:w-auto bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-white outline-none focus:ring-1 focus:ring-orange-500"
             />
-            <span className="text-zinc-500 text-sm">to</span>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-white outline-none focus:ring-1 focus:ring-orange-500"
+              className="w-full sm:w-auto bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-sm text-white outline-none focus:ring-1 focus:ring-orange-500"
             />
             <button
               onClick={handleFilterApply}
-              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm px-3 py-1.5 rounded-lg border border-zinc-700 transition-colors"
+              className="w-full sm:w-auto bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm px-3 py-1.5 rounded-lg border border-zinc-700 transition-colors"
             >
               Apply
             </button>

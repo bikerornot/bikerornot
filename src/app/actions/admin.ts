@@ -1299,6 +1299,7 @@ export interface DailyMemberCount {
   total: number   // cumulative total at end of day
   newSignups: number // signups that day
   organicSignups: number // signups excluding banned users
+  floridaSignups: number // signups from Florida
 }
 
 export async function getDailyMemberCounts(
@@ -1320,12 +1321,13 @@ export async function getDailyMemberCounts(
   // Default select limit is 1000 rows, so we paginate to get all signups
   const dailyMap: Record<string, number> = {}
   const organicMap: Record<string, number> = {}
+  const floridaMap: Record<string, number> = {}
   let offset = 0
   const PAGE_SIZE = 1000
   while (true) {
     const { data: page } = await admin
       .from('profiles')
-      .select('id, created_at')
+      .select('id, created_at, state')
       .gte('created_at', `${startDate}T00:00:00Z`)
       .lte('created_at', `${endDate}T23:59:59Z`)
       .order('created_at')
@@ -1338,6 +1340,9 @@ export async function getDailyMemberCounts(
       dailyMap[day] = (dailyMap[day] ?? 0) + 1
       if (!bannedIds.has(row.id)) {
         organicMap[day] = (organicMap[day] ?? 0) + 1
+      }
+      if (row.state === 'Florida') {
+        floridaMap[day] = (floridaMap[day] ?? 0) + 1
       }
     }
 
@@ -1355,8 +1360,9 @@ export async function getDailyMemberCounts(
     const day = current.toISOString().slice(0, 10)
     const newSignups = dailyMap[day] ?? 0
     const organicSignups = organicMap[day] ?? 0
+    const floridaSignups = floridaMap[day] ?? 0
     running += newSignups
-    result.push({ date: day, total: running, newSignups, organicSignups })
+    result.push({ date: day, total: running, newSignups, organicSignups, floridaSignups })
     current.setUTCDate(current.getUTCDate() + 1)
   }
 

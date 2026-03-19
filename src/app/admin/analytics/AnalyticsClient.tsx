@@ -255,7 +255,7 @@ export default function AnalyticsClient() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-white font-semibold text-sm">Daily New Signups</h3>
             <span className="text-zinc-500 text-xs">
-              {data.reduce((s, d) => s + d.newSignups, 0).toLocaleString()} total · {data.reduce((s, d) => s + d.organicSignups, 0).toLocaleString()} organic
+              {data.reduce((s, d) => s + d.newSignups, 0).toLocaleString()} total · {data.reduce((s, d) => s + d.organicSignups, 0).toLocaleString()} organic · {data.reduce((s, d) => s + d.floridaSignups, 0).toLocaleString()} FL
             </span>
           </div>
           <ResponsiveContainer width="100%" height={200}>
@@ -269,6 +269,10 @@ export default function AnalyticsClient() {
                   <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
+                <linearGradient id="signupFloridaGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
               <XAxis dataKey="date" tickFormatter={formatDateLabel} {...axisProps} interval="preserveStartEnd" />
@@ -278,12 +282,13 @@ export default function AnalyticsClient() {
                 labelFormatter={(label: any) => formatDateLabel(String(label))}
                 formatter={(value: any, name: any) => [
                   Number(value).toLocaleString(),
-                  name === 'newSignups' ? 'Total' : 'Organic',
+                  name === 'newSignups' ? 'Total' : name === 'organicSignups' ? 'Organic' : 'Florida',
                 ]}
               />
-              <Legend formatter={(value) => (value === 'newSignups' ? 'Total' : 'Organic')} />
+              <Legend formatter={(value) => (value === 'newSignups' ? 'Total' : value === 'organicSignups' ? 'Organic' : 'Florida')} />
               <Area type="monotone" dataKey="newSignups" stroke="#f97316" strokeWidth={2} fill="url(#signupGradient)" />
               <Area type="monotone" dataKey="organicSignups" stroke="#10b981" strokeWidth={2} fill="url(#signupOrganicGradient)" />
+              <Area type="monotone" dataKey="floridaSignups" stroke="#3b82f6" strokeWidth={2} fill="url(#signupFloridaGradient)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>

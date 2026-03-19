@@ -75,9 +75,12 @@ export default function AdCard({ ad, onDismiss, preview }: Props) {
 
   return (
     <div ref={cardRef} className="bg-zinc-900 sm:rounded-xl sm:border sm:border-zinc-800 overflow-hidden">
-      {/* Sponsored label + menu */}
+      {/* Advertiser name + Sponsored label + menu */}
       <div className="flex items-center justify-between px-4 pt-3 pb-1">
-        <span className="text-xs text-zinc-500 font-medium">Sponsored</span>
+        <div className="leading-tight">
+          {ad.advertiserName && <p className="text-white text-sm font-semibold">{ad.advertiserName}</p>}
+          <span className="text-[11px] text-zinc-500 font-medium">Sponsored</span>
+        </div>
         <div ref={menuRef} className="relative">
           <button
             onClick={() => setMenuOpen((v) => !v)}
@@ -101,7 +104,7 @@ export default function AdCard({ ad, onDismiss, preview }: Props) {
 
       {/* Primary text (above image) */}
       {ad.primaryText && (
-        <p className="px-4 pb-2 text-zinc-200 text-base leading-snug whitespace-pre-wrap">{ad.primaryText}</p>
+        <p className="px-4 pb-2 text-zinc-200 text-base leading-tight whitespace-pre-wrap">{ad.primaryText}</p>
       )}
 
       {/* Image */}

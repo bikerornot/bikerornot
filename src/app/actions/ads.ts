@@ -65,7 +65,6 @@ export async function getNextAd(): Promise<AdData | null> {
       campaign:ad_campaigns!campaign_id(status, advertiser:advertisers!advertiser_id(name))
     `)
     .eq('status', 'active')
-    .limit(1)
 
   if (user) {
     // Exclude dismissed ads
@@ -82,9 +81,10 @@ export async function getNextAd(): Promise<AdData | null> {
 
   const { data } = await query
 
-  // Filter to only ads with active campaigns
-  const ad = (data ?? []).find((a: any) => a.campaign?.status === 'active')
-  if (!ad) return null
+  // Filter to only ads with active campaigns, then pick one at random
+  const eligible = (data ?? []).filter((a: any) => a.campaign?.status === 'active')
+  if (eligible.length === 0) return null
+  const ad = eligible[Math.floor(Math.random() * eligible.length)]
 
   return {
     id: ad.id,

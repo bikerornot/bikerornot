@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { Post, Profile } from '@/lib/supabase/types'
 import PostCard from '@/app/components/PostCard'
 import PostComposer from '@/app/components/PostComposer'
+import AdCard from '@/app/components/AdCard'
+import { getNextAd, type AdData } from '@/app/actions/ads'
 
 const PAGE_SIZE = 10
 
@@ -20,6 +22,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [newPostCount, setNewPostCount] = useState(0)
+  const [ad, setAd] = useState<AdData | null>(null)
   const cursorRef = useRef<string | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -112,6 +115,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       })
       .catch((err) => console.error('Feed fetch error:', err))
       .finally(() => setLoading(false))
+    getNextAd().then(setAd).catch(() => {})
   }, [fetchPosts])
 
   // Realtime: notify when others post
@@ -192,13 +196,19 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
         </div>
       )}
 
-      {posts.map((post) => (
-        <PostCard
-          key={post.id}
-          post={post}
-          currentUserId={currentUserId}
-          currentUserProfile={currentUserProfile}
-        />
+      {posts.map((post, idx) => (
+        <div key={post.id}>
+          <PostCard
+            post={post}
+            currentUserId={currentUserId}
+            currentUserProfile={currentUserProfile}
+          />
+          {idx === 0 && ad && (
+            <div className="mt-2 sm:mt-4">
+              <AdCard ad={ad} onDismiss={() => setAd(null)} />
+            </div>
+          )}
+        </div>
       ))}
 
       {/* Sentinel — IntersectionObserver watches this to trigger next page */}

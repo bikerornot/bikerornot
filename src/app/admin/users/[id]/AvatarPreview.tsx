@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import Image from 'next/image'
-import { approveAvatars, removeAvatars } from '@/app/actions/images'
+import { approveAvatars, rejectAvatarAndBan, resetAvatarReview } from '@/app/actions/images'
 
 export default function AvatarPreview({
   avatarUrl,
@@ -19,7 +19,7 @@ export default function AvatarPreview({
 }) {
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
   const [busy, setBusy] = useState(false)
-  const [reviewState, setReviewState] = useState<'pending' | 'approved' | 'removed'>(
+  const [reviewState, setReviewState] = useState<'pending' | 'approved' | 'rejected'>(
     isReviewed ? 'approved' : 'pending'
   )
   const ref = useRef<HTMLDivElement>(null)
@@ -44,18 +44,27 @@ export default function AvatarPreview({
     }
   }
 
-  async function handleRemove() {
-    if (!storagePath) return
+  async function handleReject() {
     setBusy(true)
     try {
-      await removeAvatars([{ userId, storagePath }])
-      setReviewState('removed')
+      await rejectAvatarAndBan(userId)
+      setReviewState('rejected')
     } finally {
       setBusy(false)
     }
   }
 
   const showActions = avatarUrl && reviewState === 'pending'
+
+  async function handleReset() {
+    setBusy(true)
+    try {
+      await resetAvatarReview(userId)
+      setReviewState('pending')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <>
@@ -68,10 +77,10 @@ export default function AvatarPreview({
         >
           <div className={`w-14 h-14 rounded-full bg-zinc-700 overflow-hidden ring-2 ${
             reviewState === 'approved' ? 'ring-emerald-500/50' :
-            reviewState === 'removed' ? 'ring-red-500/50' :
+            reviewState === 'rejected' ? 'ring-red-500/50' :
             avatarUrl ? 'ring-yellow-500/50' : 'ring-transparent'
           }`}>
-            {avatarUrl && reviewState !== 'removed' ? (
+            {avatarUrl ? (
               <Image src={avatarUrl} alt="" width={56} height={56} className="object-cover w-full h-full" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-lg">
@@ -87,8 +96,8 @@ export default function AvatarPreview({
             {reviewState === 'approved' && (
               <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-1.5 py-0.5 rounded">APPROVED</span>
             )}
-            {reviewState === 'removed' && (
-              <span className="text-[10px] font-bold text-red-400 bg-red-500/15 px-1.5 py-0.5 rounded">REMOVED</span>
+            {reviewState === 'rejected' && (
+              <span className="text-[10px] font-bold text-red-400 bg-red-500/15 px-1.5 py-0.5 rounded">BANNED</span>
             )}
             {reviewState === 'pending' && (
               <span className="text-[10px] font-bold text-yellow-400 bg-yellow-500/15 px-1.5 py-0.5 rounded">PENDING</span>
@@ -107,17 +116,28 @@ export default function AvatarPreview({
               Approve
             </button>
             <button
-              onClick={handleRemove}
+              onClick={handleReject}
               disabled={busy}
               className="flex-1 bg-red-500/10 hover:bg-red-500/20 disabled:opacity-40 text-red-400 text-[10px] font-bold py-1 rounded transition-colors"
             >
-              Remove
+              Reject
             </button>
           </div>
         )}
+
+        {/* Reset approved avatar back to pending for re-review */}
+        {avatarUrl && reviewState === 'approved' && (
+          <button
+            onClick={handleReset}
+            disabled={busy}
+            className="w-full bg-yellow-500/10 hover:bg-yellow-500/20 disabled:opacity-40 text-yellow-400 text-[10px] font-bold py-1 rounded transition-colors"
+          >
+            Reset to Pending
+          </button>
+        )}
       </div>
 
-      {avatarUrl && reviewState !== 'removed' && pos && (
+      {avatarUrl && pos && (
         <div
           className="fixed pointer-events-none rounded-xl overflow-hidden shadow-2xl ring-1 ring-zinc-700"
           style={{ top: pos.top, left: pos.left, zIndex: 9999 }}

@@ -39,11 +39,27 @@ export async function uploadProfilePhoto(formData: FormData): Promise<{ error: s
 
   if (uploadError) throw new Error(uploadError.message)
 
+  // Female profiles under 40 always require manual admin avatar review (anti-scam gate)
+  let reviewedAt: string | null = null
+  if (moderation === 'approved') {
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('gender, date_of_birth')
+      .eq('id', user.id)
+      .single()
+    let requiresManualReview = false
+    if (profile?.gender === 'female' && profile?.date_of_birth) {
+      const age = Math.floor((Date.now() - new Date(profile.date_of_birth).getTime()) / (365.25 * 86_400_000))
+      if (age < 40) requiresManualReview = true
+    }
+    if (!requiresManualReview) reviewedAt = new Date().toISOString()
+  }
+
   const { error: updateError } = await admin
     .from('profiles')
     .update({
       profile_photo_url: path,
-      avatar_reviewed_at: moderation === 'approved' ? new Date().toISOString() : null,
+      avatar_reviewed_at: reviewedAt,
       updated_at: new Date().toISOString(),
     })
     .eq('id', user.id)

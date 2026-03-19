@@ -175,6 +175,32 @@ export async function removePostImages(
   ])
 }
 
+export async function rejectAvatarAndBan(userId: string): Promise<void> {
+  await requireAdminOrMod()
+  const admin = getServiceClient()
+  // Shadow ban: set status to banned but leave photo intact so scammer doesn't notice
+  await admin.from('profiles').update({
+    status: 'banned',
+    ban_reason: 'Avatar review rejection (shadow ban)',
+    avatar_reviewed_at: new Date().toISOString(),
+  }).eq('id', userId)
+  // Suspend any groups they created
+  await admin
+    .from('groups')
+    .update({ status: 'suspended', suspended_reason: 'Creator account banned: avatar review rejection' })
+    .eq('creator_id', userId)
+    .eq('status', 'active')
+}
+
+export async function resetAvatarReview(userId: string): Promise<void> {
+  await requireAdminOrMod()
+  const admin = getServiceClient()
+  await admin
+    .from('profiles')
+    .update({ avatar_reviewed_at: null })
+    .eq('id', userId)
+}
+
 export async function removeAvatars(
   items: Array<{ userId: string; storagePath: string }>
 ): Promise<void> {

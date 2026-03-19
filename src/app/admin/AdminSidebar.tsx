@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { toggleAdsEnabled } from '@/app/actions/ads'
 
 interface Props {
   username: string
@@ -12,6 +13,7 @@ interface Props {
   pendingFlags: number
   watchlistCount: number
   initialActiveUsers: number
+  initialAdsEnabled: boolean
 }
 
 const navItems = [
@@ -114,12 +116,33 @@ const navItems = [
       </svg>
     ),
   },
+  {
+    href: '/admin/ads',
+    label: 'Ads',
+    exact: false,
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+      </svg>
+    ),
+  },
 ]
 
-export default function AdminSidebar({ username, role, pendingReports, pendingDmca, pendingFlags, watchlistCount, initialActiveUsers }: Props) {
+export default function AdminSidebar({ username, role, pendingReports, pendingDmca, pendingFlags, watchlistCount, initialActiveUsers, initialAdsEnabled }: Props) {
   const pathname = usePathname()
   const [activeUsers, setActiveUsers] = useState(initialActiveUsers)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [adsEnabled, setAdsEnabled] = useState(initialAdsEnabled)
+  const [adsToggling, setAdsToggling] = useState(false)
+
+  async function handleAdsToggle(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setAdsToggling(true)
+    const newValue = await toggleAdsEnabled()
+    setAdsEnabled(newValue)
+    setAdsToggling(false)
+  }
 
   useEffect(() => {
     setMenuOpen(false)
@@ -185,6 +208,20 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
                   <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
                     {badge > 99 ? '99+' : badge}
                   </span>
+                )}
+                {item.href === '/admin/ads' && (
+                  <button
+                    onClick={handleAdsToggle}
+                    disabled={adsToggling}
+                    className={`relative w-8 h-[18px] rounded-full transition-colors flex-shrink-0 ${
+                      adsEnabled ? 'bg-emerald-500' : 'bg-zinc-600'
+                    }`}
+                    title={adsEnabled ? 'Ads are live — click to pause all' : 'Ads are paused — click to resume'}
+                  >
+                    <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-transform ${
+                      adsEnabled ? 'left-[15px]' : 'left-[2px]'
+                    }`} />
+                  </button>
                 )}
               </Link>
             )
@@ -274,6 +311,19 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
                         <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
                           {badge > 99 ? '99+' : badge}
                         </span>
+                      )}
+                      {item.href === '/admin/ads' && (
+                        <button
+                          onClick={handleAdsToggle}
+                          disabled={adsToggling}
+                          className={`relative w-8 h-[18px] rounded-full transition-colors flex-shrink-0 ${
+                            adsEnabled ? 'bg-emerald-500' : 'bg-zinc-600'
+                          }`}
+                        >
+                          <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-transform ${
+                            adsEnabled ? 'left-[15px]' : 'left-[2px]'
+                          }`} />
+                        </button>
                       )}
                     </Link>
                   )

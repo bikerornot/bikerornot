@@ -81,8 +81,17 @@ export async function uploadAvatar(formData: FormData): Promise<string> {
 
   if (error) throw error
 
-  // Auto-approve if Sightengine approved; leave null for borderline (admin review)
-  if (moderation === 'approved') {
+  // Female profiles under 40 always require manual admin avatar review (anti-scam gate)
+  const gender = user.user_metadata?.gender as string | undefined
+  const dob = user.user_metadata?.date_of_birth as string | undefined
+  let requiresManualReview = false
+  if (gender === 'female' && dob) {
+    const age = Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 86_400_000))
+    if (age < 40) requiresManualReview = true
+  }
+
+  // Auto-approve if Sightengine approved, unless manual review required; leave null for borderline (admin review)
+  if (moderation === 'approved' && !requiresManualReview) {
     await admin.from('profiles').update({
       avatar_reviewed_at: new Date().toISOString(),
     }).eq('id', user.id)

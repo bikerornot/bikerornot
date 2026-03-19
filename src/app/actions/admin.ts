@@ -1341,7 +1341,7 @@ export async function getDailyMemberCounts(
       if (!bannedIds.has(row.id)) {
         organicMap[day] = (organicMap[day] ?? 0) + 1
       }
-      if (row.state === 'Florida') {
+      if (row.state === 'FL') {
         floridaMap[day] = (floridaMap[day] ?? 0) + 1
       }
     }

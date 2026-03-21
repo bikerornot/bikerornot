@@ -86,7 +86,8 @@ export async function saveEmailPreferences(prefs: {
 }
 
 export async function savePrivacySettings(prefs: {
-  show_real_name: boolean
+  show_real_name?: boolean
+  show_birthday?: boolean
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

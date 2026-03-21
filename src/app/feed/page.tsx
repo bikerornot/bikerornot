@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getImageUrl } from '@/lib/supabase/image'
 import FeedClient from './FeedClient'
+import BirthdayCard from '@/app/components/BirthdayCard'
 import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
 import LastSeenTracker from '@/app/components/LastSeenTracker'
@@ -14,6 +15,7 @@ import RidersWidget from '@/app/components/RidersWidget'
 import DmcaBanner from '@/app/components/DmcaBanner'
 import { getNearbyRiders } from '@/app/actions/suggestions'
 import { getBlockedIds } from '@/app/actions/blocks'
+import { getFriendBirthdays } from '@/app/actions/friends'
 
 export const metadata = { title: 'Feed — BikerOrNot' }
 
@@ -65,11 +67,14 @@ export default async function FeedPage() {
   // Fetch rider suggestions (only used when friendCount < 15)
   const { riders: nearbyRiders, friendCount } = await getNearbyRiders()
 
-  // Fetch blocked user IDs for feed filtering
-  const blockedIds = await getBlockedIds(user.id, createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  ))
+  // Fetch blocked user IDs for feed filtering + friend birthdays
+  const [blockedIds, friendBirthdays] = await Promise.all([
+    getBlockedIds(user.id, createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )),
+    getFriendBirthdays(),
+  ])
 
   const avatarUrl = profile.profile_photo_url
     ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
@@ -119,6 +124,11 @@ export default async function FeedPage() {
           }))}
         />
         <RidersWidget initialRiders={nearbyRiders} friendCount={friendCount} />
+        {friendBirthdays.length > 0 && (
+          <div className="mb-2 sm:mb-4">
+            <BirthdayCard birthdays={friendBirthdays} />
+          </div>
+        )}
         <FeedClient currentUserId={user.id} currentUserProfile={profile} userGroupIds={userGroupIds} blockedUserIds={Array.from(blockedIds)} />
       </div>
       <BottomNav />

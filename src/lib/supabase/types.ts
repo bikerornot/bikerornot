@@ -36,6 +36,7 @@ export interface Profile {
   email_friend_requests: boolean
   email_friend_accepted: boolean
   show_real_name: boolean
+  show_birthday: boolean
 }
 
 export interface UserBike {

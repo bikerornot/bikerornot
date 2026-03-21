@@ -346,6 +346,61 @@ export async function getMyFriends(): Promise<FriendCard[]> {
     .sort((a, b) => a.first_name.localeCompare(b.first_name))
 }
 
+export interface BirthdayFriend {
+  id: string
+  username: string | null
+  profile_photo_url: string | null
+}
+
+export async function getFriendBirthdays(): Promise<BirthdayFriend[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const admin = getServiceClient()
+
+  // Get accepted friends
+  const { data: friendships } = await admin
+    .from('friendships')
+    .select('requester_id, addressee_id')
+    .eq('status', 'accepted')
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+
+  if (!friendships || friendships.length === 0) return []
+
+  const friendIds = friendships.map((f) =>
+    f.requester_id === user.id ? f.addressee_id : f.requester_id
+  )
+
+  // Get today's month and day
+  const now = new Date()
+  const month = now.getMonth() + 1
+  const day = now.getDate()
+
+  // Fetch friends who opted in to show birthday and whose DOB matches today
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('id, username, profile_photo_url, date_of_birth')
+    .in('id', friendIds)
+    .eq('status', 'active')
+    .eq('show_birthday', true)
+    .is('deactivated_at', null)
+
+  if (!profiles) return []
+
+  return profiles
+    .filter((p) => {
+      if (!p.date_of_birth) return false
+      const dob = new Date(p.date_of_birth + 'T00:00:00')
+      return dob.getMonth() + 1 === month && dob.getDate() === day
+    })
+    .map((p) => ({
+      id: p.id,
+      username: p.username,
+      profile_photo_url: p.profile_photo_url,
+    }))
+}
+
 export async function getPendingRequestCount(): Promise<number> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

@@ -27,6 +27,7 @@ export default function SettingsForm({ profile }: Props) {
   const [emailFriendRequests, setEmailFriendRequests] = useState(profile.email_friend_requests ?? true)
   const [emailFriendAccepted, setEmailFriendAccepted] = useState(profile.email_friend_accepted ?? true)
   const [showRealName, setShowRealName] = useState(profile.show_real_name ?? false)
+  const [showBirthday, setShowBirthday] = useState(profile.show_birthday ?? false)
 
   const [bio, setBio] = useState(profile.bio ?? '')
   const [location, setLocation] = useState(profile.location ?? '')
@@ -247,6 +248,25 @@ export default function SettingsForm({ profile }: Props) {
             className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors focus:outline-none ${showRealName ? 'bg-orange-500' : 'bg-zinc-700'}`}
           >
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${showRealName ? 'translate-x-5' : 'translate-x-0'}`} />
+          </button>
+        </div>
+        <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
+          <div>
+            <span className="text-sm text-zinc-300">Show my birthday to friends</span>
+            <p className="text-zinc-600 text-xs mt-0.5">Friends will see a birthday notice in their feed.</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showBirthday}
+            onClick={async () => {
+              const next = !showBirthday
+              setShowBirthday(next)
+              await savePrivacySettings({ show_birthday: next })
+            }}
+            className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors focus:outline-none ${showBirthday ? 'bg-orange-500' : 'bg-zinc-700'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${showBirthday ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>
         </div>
       </div>

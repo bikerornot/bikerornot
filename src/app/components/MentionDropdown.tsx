@@ -85,13 +85,14 @@ interface DropdownProps {
   suggestions: MentionSuggestion[]
   activeIndex: number
   onSelect: (username: string) => void
+  inline?: boolean
 }
 
-export default function MentionDropdown({ suggestions, activeIndex, onSelect }: DropdownProps) {
+export default function MentionDropdown({ suggestions, activeIndex, onSelect, inline }: DropdownProps) {
   if (suggestions.length === 0) return null
 
   return (
-    <div className="absolute left-0 right-0 bottom-full mb-1 bg-zinc-800 border border-zinc-700 rounded-xl shadow-xl z-50 overflow-hidden">
+    <div className={`${inline ? '' : 'absolute left-0 right-0 top-full mt-1'} bg-zinc-800 border border-zinc-700 rounded-xl shadow-xl z-50 overflow-hidden`}>
       {suggestions.map((s, i) => {
         const photo = s.profile_photo_url
           ? getImageUrl('avatars', s.profile_photo_url)

@@ -48,12 +48,33 @@ export default function CommentSection({ postId, currentUserId, currentUserProfi
       .eq('post_id', postId)
       .is('deleted_at', null)
       .order('created_at', { ascending: true })
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (data) {
           const blockedSet = new Set(blockedUserIds)
           const visible = (data as Comment[]).filter(
             (c: any) => !['banned', 'suspended'].includes(c.author?.status) && !blockedSet.has(c.author_id)
           )
+
+          if (visible.length > 0 && currentUserId) {
+            const commentIds = visible.map((c) => c.id)
+
+            const [{ data: likeCounts }, { data: myLikes }] = await Promise.all([
+              supabase.from('comment_likes').select('comment_id').in('comment_id', commentIds),
+              supabase.from('comment_likes').select('comment_id').in('comment_id', commentIds).eq('user_id', currentUserId),
+            ])
+
+            const likeMap: Record<string, number> = {}
+            for (const l of likeCounts ?? []) {
+              likeMap[l.comment_id] = (likeMap[l.comment_id] ?? 0) + 1
+            }
+            const myLikeSet = new Set((myLikes ?? []).map((l) => l.comment_id))
+
+            for (const c of visible) {
+              (c as any).like_count = likeMap[c.id] ?? 0;
+              (c as any).is_liked_by_me = myLikeSet.has(c.id)
+            }
+          }
+
           setComments(visible)
         }
         setLoading(false)

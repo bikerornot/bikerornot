@@ -164,31 +164,30 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
           </div>
 
           <div className="flex-1">
-            <div className="relative">
-              <textarea
-                ref={textareaRef}
-                value={content}
-                onChange={(e) => {
-                  setContent(e.target.value)
-                  setCursorPos(e.target.selectionStart ?? 0)
-                }}
-                onKeyDown={(e) => {
-                  if (mention.handleKeyDown(e)) return
-                }}
-                onSelect={(e) => setCursorPos((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
-                placeholder={bikeId ? "Share something about this ride…" : "Share something with the crew…"}
-                rows={3}
-                disabled={submitting}
-                className="w-full bg-transparent text-white placeholder-zinc-500 focus:outline-none text-base resize-none"
+            <textarea
+              ref={textareaRef}
+              value={content}
+              onChange={(e) => {
+                setContent(e.target.value)
+                setCursorPos(e.target.selectionStart ?? 0)
+              }}
+              onKeyDown={(e) => {
+                if (mention.handleKeyDown(e)) return
+              }}
+              onSelect={(e) => setCursorPos((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
+              placeholder={bikeId ? "Share something about this ride…" : "Share something with the crew…"}
+              rows={3}
+              disabled={submitting}
+              className="w-full bg-transparent text-white placeholder-zinc-500 focus:outline-none text-base resize-none"
+            />
+            {mention.visible && (
+              <MentionDropdown
+                suggestions={mention.suggestions}
+                activeIndex={mention.activeIndex}
+                onSelect={mention.selectSuggestion}
+                inline
               />
-              {mention.visible && (
-                <MentionDropdown
-                  suggestions={mention.suggestions}
-                  activeIndex={mention.activeIndex}
-                  onSelect={mention.selectSuggestion}
-                />
-              )}
-            </div>
+            )}
 
             {imagePreviews.length > 0 && (
               <div

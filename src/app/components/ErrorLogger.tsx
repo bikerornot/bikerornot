@@ -10,7 +10,20 @@ import { logError } from '@/app/actions/errors'
  */
 export default function ErrorLogger() {
   useEffect(() => {
+    // Browser extension / autofill noise — not our code
+    const IGNORE = [
+      'setContactAutofillValuesFromBridge',
+      'AutofillValuesFromBridge',
+      'ResizeObserver loop',
+    ]
+
+    function shouldIgnore(msg: string | undefined) {
+      if (!msg) return false
+      return IGNORE.some((pattern) => msg.includes(pattern))
+    }
+
     function handleError(event: ErrorEvent) {
+      if (shouldIgnore(event.message) || shouldIgnore(event.error?.stack)) return
       logError({
         source: 'client',
         message: event.message || 'Unhandled error',
@@ -26,6 +39,7 @@ export default function ErrorLogger() {
 
     function handleRejection(event: PromiseRejectionEvent) {
       const err = event.reason
+      if (shouldIgnore(err?.message) || shouldIgnore(err?.stack)) return
       logError({
         source: 'client',
         message: err?.message ?? String(err) ?? 'Unhandled promise rejection',

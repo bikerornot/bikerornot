@@ -18,5 +18,7 @@ Sentry.init({
     'Non-Error promise rejection',
     /^Loading chunk \d+ failed/,
     /^Loading CSS chunk \d+ failed/,
+    'setContactAutofillValuesFromBridge',
+    'AutofillValuesFromBridge',
   ],
 })

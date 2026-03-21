@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { acceptFriendRequest, declineFriendRequest } from '@/app/actions/friends'
+import { acceptFriendRequest, declineFriendRequest, toggleStarFriend } from '@/app/actions/friends'
 import type { FriendRequestCard, FriendCard } from '@/app/actions/friends'
 import { getImageUrl } from '@/lib/supabase/image'
 
@@ -19,7 +19,7 @@ export default function FriendsClient({ initialRequests, initialFriends }: Props
     initialRequests.length > 0 ? 'requests' : 'friends'
   )
   const [requests, setRequests] = useState(initialRequests)
-  const [friends] = useState(initialFriends)
+  const [friends, setFriends] = useState(initialFriends)
   const [requestStatuses, setRequestStatuses] = useState<Record<string, RequestStatus>>({})
   const [search, setSearch] = useState('')
   const [, startTransition] = useTransition()
@@ -230,30 +230,74 @@ export default function FriendsClient({ initialRequests, initialFriends }: Props
                 const location = [f.city, f.state].filter(Boolean).join(', ')
 
                 return (
-                  <Link
+                  <div
                     key={f.id}
-                    href={`/profile/${f.username}`}
                     className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3 hover:border-zinc-700 transition-colors"
                   >
-                    {/* Avatar */}
-                    <div className="w-12 h-12 rounded-full bg-zinc-700 overflow-hidden flex-shrink-0">
-                      {photo ? (
-                        <Image
-                          src={photo}
-                          alt=""
-                          width={48}
-                          height={48}
-                          className="object-cover w-full h-full"
-                        />
+                    {/* Star button */}
+                    <button
+                      onClick={async () => {
+                        const newStarred = !f.starred
+                        // Optimistic update
+                        setFriends((prev) => {
+                          const updated = prev.map((fr) =>
+                            fr.id === f.id ? { ...fr, starred: newStarred } : fr
+                          )
+                          return updated.sort((a, b) => {
+                            if (a.starred !== b.starred) return a.starred ? -1 : 1
+                            return a.first_name.localeCompare(b.first_name)
+                          })
+                        })
+                        try {
+                          await toggleStarFriend(f.id)
+                        } catch {
+                          // Revert on error
+                          setFriends((prev) => {
+                            const reverted = prev.map((fr) =>
+                              fr.id === f.id ? { ...fr, starred: !newStarred } : fr
+                            )
+                            return reverted.sort((a, b) => {
+                              if (a.starred !== b.starred) return a.starred ? -1 : 1
+                              return a.first_name.localeCompare(b.first_name)
+                            })
+                          })
+                        }
+                      }}
+                      className="flex-shrink-0 p-1 transition-colors"
+                      title={f.starred ? 'Unstar friend' : 'Star friend'}
+                    >
+                      {f.starred ? (
+                        <svg className="w-5 h-5 text-orange-400" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-lg">
-                          {(f.show_real_name ? f.first_name?.[0] : f.username?.[0] ?? '?').toUpperCase()}
-                        </div>
+                        <svg className="w-5 h-5 text-zinc-600 hover:text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
                       )}
-                    </div>
+                    </button>
+
+                    {/* Avatar */}
+                    <Link href={`/profile/${f.username}`} className="flex-shrink-0">
+                      <div className="w-12 h-12 rounded-full bg-zinc-700 overflow-hidden">
+                        {photo ? (
+                          <Image
+                            src={photo}
+                            alt=""
+                            width={48}
+                            height={48}
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-lg">
+                            {(f.show_real_name ? f.first_name?.[0] : f.username?.[0] ?? '?').toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    </Link>
 
                     {/* Info */}
-                    <div className="flex-1 min-w-0">
+                    <Link href={`/profile/${f.username}`} className="flex-1 min-w-0">
                       <p className="text-white font-semibold text-base truncate">
                         {f.show_real_name ? `${f.first_name} ${f.last_name}` : `@${f.username}`}
                       </p>
@@ -268,13 +312,15 @@ export default function FriendsClient({ initialRequests, initialFriends }: Props
                           <p className="text-orange-400/70 text-sm truncate">{f.riding_style[0]}</p>
                         )}
                       </div>
-                    </div>
+                    </Link>
 
                     {/* Arrow */}
-                    <svg className="w-4 h-4 text-zinc-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </Link>
+                    <Link href={`/profile/${f.username}`} className="flex-shrink-0">
+                      <svg className="w-4 h-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </div>
                 )
               })}
             </div>

@@ -193,6 +193,7 @@ export interface FriendCard {
   riding_style: string[]
   friends_since: string
   show_real_name: boolean
+  starred: boolean
 }
 
 export async function getPendingFriendRequests(): Promise<FriendRequestCard[]> {
@@ -307,20 +308,22 @@ export async function getMyFriends(): Promise<FriendCard[]> {
 
   const { data: friendships } = await admin
     .from('friendships')
-    .select('requester_id, addressee_id, updated_at')
+    .select('requester_id, addressee_id, updated_at, starred_by_requester, starred_by_addressee')
     .eq('status', 'accepted')
     .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
     .order('updated_at', { ascending: false })
 
   if (!friendships || friendships.length === 0) return []
 
-  const friendMap = new Map<string, string>()
+  const friendMeta = new Map<string, { friends_since: string; starred: boolean }>()
   for (const f of friendships) {
-    const friendId = f.requester_id === user.id ? f.addressee_id : f.requester_id
-    friendMap.set(friendId, f.updated_at)
+    const isRequester = f.requester_id === user.id
+    const friendId = isRequester ? f.addressee_id : f.requester_id
+    const starred = isRequester ? !!f.starred_by_requester : !!f.starred_by_addressee
+    friendMeta.set(friendId, { friends_since: f.updated_at, starred })
   }
 
-  const friendIds = Array.from(friendMap.keys())
+  const friendIds = Array.from(friendMeta.keys())
 
   const { data: profiles } = await admin
     .from('profiles')
@@ -332,19 +335,27 @@ export async function getMyFriends(): Promise<FriendCard[]> {
   if (!profiles) return []
 
   return profiles
-    .map((p) => ({
-      id: p.id,
-      username: p.username,
-      first_name: p.first_name,
-      last_name: p.last_name,
-      profile_photo_url: p.profile_photo_url,
-      city: p.city,
-      state: p.state,
-      riding_style: p.riding_style ?? [],
-      friends_since: friendMap.get(p.id) ?? '',
-      show_real_name: p.show_real_name ?? false,
-    }))
-    .sort((a, b) => a.first_name.localeCompare(b.first_name))
+    .map((p) => {
+      const meta = friendMeta.get(p.id)
+      return {
+        id: p.id,
+        username: p.username,
+        first_name: p.first_name,
+        last_name: p.last_name,
+        profile_photo_url: p.profile_photo_url,
+        city: p.city,
+        state: p.state,
+        riding_style: p.riding_style ?? [],
+        friends_since: meta?.friends_since ?? '',
+        show_real_name: p.show_real_name ?? false,
+        starred: meta?.starred ?? false,
+      }
+    })
+    .sort((a, b) => {
+      // Starred first, then alphabetical
+      if (a.starred !== b.starred) return a.starred ? -1 : 1
+      return a.first_name.localeCompare(b.first_name)
+    })
 }
 
 export interface BirthdayFriend {
@@ -415,6 +426,40 @@ export async function getPendingRequestCount(): Promise<number> {
     .eq('status', 'pending')
 
   return count ?? 0
+}
+
+export async function toggleStarFriend(friendId: string): Promise<boolean> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const admin = getServiceClient()
+
+  // Find the friendship row
+  const { data: friendship } = await admin
+    .from('friendships')
+    .select('id, requester_id, addressee_id, starred_by_requester, starred_by_addressee')
+    .eq('status', 'accepted')
+    .or(
+      `and(requester_id.eq.${user.id},addressee_id.eq.${friendId}),and(requester_id.eq.${friendId},addressee_id.eq.${user.id})`
+    )
+    .single()
+
+  if (!friendship) throw new Error('Friendship not found')
+
+  const isRequester = friendship.requester_id === user.id
+  const column = isRequester ? 'starred_by_requester' : 'starred_by_addressee'
+  const currentValue = isRequester ? friendship.starred_by_requester : friendship.starred_by_addressee
+  const newValue = currentValue ? null : new Date().toISOString()
+
+  const { error } = await admin
+    .from('friendships')
+    .update({ [column]: newValue })
+    .eq('id', friendship.id)
+
+  if (error) throw new Error(error.message)
+
+  return !!newValue
 }
 
 export async function unfriend(otherUserId: string): Promise<void> {

@@ -191,6 +191,7 @@ export interface FriendCard {
   state: string | null
   riding_style: string[]
   friends_since: string
+  show_real_name: boolean
 }
 
 export async function getPendingFriendRequests(): Promise<FriendRequestCard[]> {
@@ -322,7 +323,7 @@ export async function getMyFriends(): Promise<FriendCard[]> {
 
   const { data: profiles } = await admin
     .from('profiles')
-    .select('id, username, first_name, last_name, profile_photo_url, city, state, riding_style')
+    .select('id, username, first_name, last_name, profile_photo_url, city, state, riding_style, show_real_name')
     .in('id', friendIds)
     .eq('status', 'active')
     .is('deactivated_at', null)
@@ -340,6 +341,7 @@ export async function getMyFriends(): Promise<FriendCard[]> {
       state: p.state,
       riding_style: p.riding_style ?? [],
       friends_since: friendMap.get(p.id) ?? '',
+      show_real_name: p.show_real_name ?? false,
     }))
     .sort((a, b) => a.first_name.localeCompare(b.first_name))
 }

@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Profile, RELATIONSHIP_OPTIONS, GENDER_OPTIONS } from '@/lib/supabase/types'
-import { saveProfileSettings, saveEmailPreferences } from './actions'
+import { saveProfileSettings, saveEmailPreferences, savePrivacySettings } from './actions'
 import { deactivateAccount, scheduleAccountDeletion } from '@/app/actions/account'
 
 interface Props {
@@ -26,6 +26,7 @@ export default function SettingsForm({ profile }: Props) {
 
   const [emailFriendRequests, setEmailFriendRequests] = useState(profile.email_friend_requests ?? true)
   const [emailFriendAccepted, setEmailFriendAccepted] = useState(profile.email_friend_accepted ?? true)
+  const [showRealName, setShowRealName] = useState(profile.show_real_name ?? false)
 
   const [bio, setBio] = useState(profile.bio ?? '')
   const [location, setLocation] = useState(profile.location ?? '')
@@ -221,6 +222,33 @@ export default function SettingsForm({ profile }: Props) {
             </button>
           </div>
         ))}
+      </div>
+    </div>
+
+    {/* ── Privacy ───────────────────────────────────────────────── */}
+    <div className="mt-10 pt-8 border-t border-zinc-800">
+      <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wide mb-1">Privacy</h2>
+      <p className="text-zinc-500 text-xs mb-5">Control what other members can see about you.</p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
+          <div>
+            <span className="text-sm text-zinc-300">Show my real name to friends</span>
+            <p className="text-zinc-600 text-xs mt-0.5">When off, only your username is visible.</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showRealName}
+            onClick={async () => {
+              const next = !showRealName
+              setShowRealName(next)
+              await savePrivacySettings({ show_real_name: next })
+            }}
+            className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors focus:outline-none ${showRealName ? 'bg-orange-500' : 'bg-zinc-700'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${showRealName ? 'translate-x-5' : 'translate-x-0'}`} />
+          </button>
+        </div>
       </div>
     </div>
 

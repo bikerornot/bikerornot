@@ -84,3 +84,14 @@ export async function saveEmailPreferences(prefs: {
   const { error } = await admin.from('profiles').update(prefs).eq('id', user.id)
   if (error) throw new Error(error.message)
 }
+
+export async function savePrivacySettings(prefs: {
+  show_real_name: boolean
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  const admin = getServiceClient()
+  const { error } = await admin.from('profiles').update(prefs).eq('id', user.id)
+  if (error) throw new Error(error.message)
+}

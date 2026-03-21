@@ -247,7 +247,7 @@ export default function FriendsClient({ initialRequests, initialFriends }: Props
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-lg">
-                          {(f.username?.[0] ?? '?').toUpperCase()}
+                          {(f.show_real_name ? f.first_name?.[0] : f.username?.[0] ?? '?').toUpperCase()}
                         </div>
                       )}
                     </div>
@@ -255,8 +255,11 @@ export default function FriendsClient({ initialRequests, initialFriends }: Props
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <p className="text-white font-semibold text-base truncate">
-                        @{f.username}
+                        {f.show_real_name ? `${f.first_name} ${f.last_name}` : `@${f.username}`}
                       </p>
+                      {f.show_real_name && f.username && (
+                        <p className="text-zinc-500 text-sm truncate">@{f.username}</p>
+                      )}
                       <div className="flex items-center gap-2">
                         {location && (
                           <p className="text-zinc-600 text-sm truncate">{location}</p>

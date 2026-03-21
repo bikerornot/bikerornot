@@ -25,6 +25,7 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
   const admin = getServiceClient()
 
   const blockedIds = await getBlockedIds(user.id, admin)
+  // Silently pretend it worked if blocked — don't reveal block status
   if (blockedIds.has(addresseeId)) return
 
   // Gate 2: Block friend requests from high-risk unreviewed accounts
@@ -45,7 +46,7 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
       (Date.now() - new Date(senderProfile!.date_of_birth).getTime()) / (365.25 * 86_400_000)
     )
     if (age < 40) {
-      // Silently block — don't reveal why
+      // Silently pretend it worked — don't reveal anti-scam gate
       return
     }
   }

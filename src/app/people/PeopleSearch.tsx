@@ -66,6 +66,7 @@ function FriendAction({
   onStatusChange: (id: string, status: NearbyUser['friendshipStatus']) => void
 }) {
   const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
   const { friendshipStatus, profile } = user
 
   if (friendshipStatus === 'accepted') {
@@ -82,8 +83,12 @@ function FriendAction({
         disabled={pending}
         onClick={() =>
           startTransition(async () => {
-            await cancelFriendRequest(profile.id)
-            onStatusChange(profile.id, 'none')
+            try {
+              await cancelFriendRequest(profile.id)
+              onStatusChange(profile.id, 'none')
+            } catch {
+              // Ignore — worst case they re-click
+            }
           })
         }
         className="text-xs font-medium text-zinc-400 border border-zinc-600 rounded-full px-3 py-1 hover:border-zinc-400 transition-colors disabled:opacity-50"
@@ -99,8 +104,12 @@ function FriendAction({
         disabled={pending}
         onClick={() =>
           startTransition(async () => {
-            await acceptFriendRequest(profile.id)
-            onStatusChange(profile.id, 'accepted')
+            try {
+              await acceptFriendRequest(profile.id)
+              onStatusChange(profile.id, 'accepted')
+            } catch {
+              // Ignore
+            }
           })
         }
         className="text-xs font-medium text-orange-400 border border-orange-400/50 rounded-full px-3 py-1 hover:bg-orange-400/10 transition-colors disabled:opacity-50"
@@ -111,18 +120,26 @@ function FriendAction({
   }
 
   return (
-    <button
-      disabled={pending}
-      onClick={() =>
-        startTransition(async () => {
-          await sendFriendRequest(profile.id)
-          onStatusChange(profile.id, 'pending_sent')
-        })
-      }
-      className="text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-full px-3 py-1 transition-colors disabled:opacity-50"
-    >
-      {pending ? 'Sending…' : 'Friend Request'}
-    </button>
+    <div className="flex flex-col items-end gap-1">
+      <button
+        disabled={pending}
+        onClick={() => {
+          setError(null)
+          startTransition(async () => {
+            try {
+              await sendFriendRequest(profile.id)
+              onStatusChange(profile.id, 'pending_sent')
+            } catch (err: unknown) {
+              setError(err instanceof Error ? err.message : 'Something went wrong')
+            }
+          })
+        }}
+        className="text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-full px-3 py-1 transition-colors disabled:opacity-50"
+      >
+        {pending ? 'Sending…' : 'Friend Request'}
+      </button>
+      {error && <p className="text-red-400 text-xs max-w-[160px] text-right">{error}</p>}
+    </div>
   )
 }
 

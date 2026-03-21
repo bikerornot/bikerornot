@@ -1,3 +1,5 @@
+import { withSentryConfig } from '@sentry/nextjs'
+
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
@@ -31,4 +33,18 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig, {
+  // Suppress source map upload logs during build
+  silent: true,
+
+  // Upload source maps for better stack traces
+  widenClientFileUpload: true,
+
+  // Hide source maps from users
+  sourcemaps: {
+    deleteSourcemapsAfterUpload: true,
+  },
+
+  // Disable Sentry telemetry
+  disableLogger: true,
+})

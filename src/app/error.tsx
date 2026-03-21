@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
+import * as Sentry from '@sentry/nextjs'
+import { logError } from '@/app/actions/errors'
 
 export default function Error({
   error,
@@ -12,6 +14,14 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error('App error:', error)
+    Sentry.captureException(error)
+    logError({
+      source: 'client',
+      message: error.message || 'Unknown error',
+      stack: error.stack ?? null,
+      url: typeof window !== 'undefined' ? window.location.href : null,
+      metadata: error.digest ? { digest: error.digest } : {},
+    }).catch(() => {})
   }, [error])
 
   return (

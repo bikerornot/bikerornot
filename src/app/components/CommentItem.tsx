@@ -143,7 +143,7 @@ export default function CommentItem({
   const [replyText, setReplyText] = useState('')
   const [submittingReply, setSubmittingReply] = useState(false)
   const [replyCursorPos, setReplyCursorPos] = useState(0)
-  const replyInputRef = useRef<HTMLInputElement>(null)
+  const replyInputRef = useRef<HTMLTextAreaElement>(null)
 
   const handleReplyMentionSelect = useCallback((newText: string, newCursorPos: number) => {
     setReplyText(newText)
@@ -293,21 +293,28 @@ export default function CommentItem({
               )}
             </div>
             <div className="flex-1 relative">
-              <input
+              <textarea
                 ref={replyInputRef}
                 value={replyText}
                 onChange={(e) => {
                   setReplyText(e.target.value)
                   setReplyCursorPos(e.target.selectionStart ?? 0)
+                  e.target.style.height = 'auto'
+                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
                 }}
                 onKeyDown={(e) => {
                   if (replyMention.handleKeyDown(e)) return
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    if (replyText.trim() && !submittingReply) handleReplySubmit(e)
+                  }
                 }}
-                onSelect={(e) => setReplyCursorPos((e.target as HTMLInputElement).selectionStart ?? 0)}
+                onSelect={(e) => setReplyCursorPos((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
                 placeholder={`Reply to @${displayName}…`}
                 autoFocus
                 disabled={submittingReply}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-full px-3 py-1 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-transparent"
+                rows={1}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-3 py-1 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-transparent resize-none overflow-hidden"
               />
               {replyMention.visible && (
                 <MentionDropdown

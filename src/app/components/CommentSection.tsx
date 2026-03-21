@@ -23,7 +23,7 @@ export default function CommentSection({ postId, currentUserId, currentUserProfi
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [cursorPos, setCursorPos] = useState(0)
-  const commentInputRef = useRef<HTMLInputElement>(null)
+  const commentInputRef = useRef<HTMLTextAreaElement>(null)
 
   const handleMentionSelect = useCallback((newText: string, newCursorPos: number) => {
     setText(newText)
@@ -169,21 +169,30 @@ export default function CommentSection({ postId, currentUserId, currentUserProfi
               )}
             </div>
           </div>
-          <div className="flex-1 flex gap-2 relative">
-            <input
+          <div className="flex-1 flex gap-2 relative items-end">
+            <textarea
               ref={commentInputRef}
               value={text}
               onChange={(e) => {
                 setText(e.target.value)
                 setCursorPos(e.target.selectionStart ?? 0)
+                // Auto-grow
+                e.target.style.height = 'auto'
+                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
               }}
               onKeyDown={(e) => {
                 if (mention.handleKeyDown(e)) return
+                // Submit on Enter (without Shift)
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  if (text.trim() && !submitting) handleSubmit(e)
+                }
               }}
-              onSelect={(e) => setCursorPos((e.target as HTMLInputElement).selectionStart ?? 0)}
+              onSelect={(e) => setCursorPos((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
               placeholder="Write a comment…"
               disabled={submitting}
-              className="flex-1 bg-zinc-800 border border-zinc-700 rounded-full px-4 py-1.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              rows={1}
+              className="flex-1 bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-1.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none overflow-hidden"
             />
             {mention.visible && (
               <MentionDropdown

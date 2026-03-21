@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Comment, Profile } from '@/lib/supabase/types'
 import { getImageUrl } from '@/lib/supabase/image'
 import { likeComment, unlikeComment, deleteComment, createComment } from '@/app/actions/comments'
 import ContentMenu from './ContentMenu'
+import { renderContent } from '@/lib/render-content'
+import MentionDropdown, { useMention } from './MentionDropdown'
 
 interface Props {
   comment: Comment
@@ -17,27 +19,6 @@ interface Props {
   onReplyAdded?: (reply: Comment) => void
 }
 
-const URL_REGEX = /(https?:\/\/[^\s]+)/g
-
-function renderWithLinks(text: string) {
-  const parts = text.split(URL_REGEX)
-  return parts.map((part, i) =>
-    URL_REGEX.test(part) ? (
-      <a
-        key={i}
-        href={part}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-orange-400 hover:text-orange-300 underline break-all"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {part}
-      </a>
-    ) : (
-      part
-    )
-  )
-}
 
 function formatTimeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
@@ -112,7 +93,7 @@ function ReplyItem({
           >
             {displayName}
           </Link>
-          <p className="text-zinc-200 text-sm mt-0.5 whitespace-pre-wrap">{renderWithLinks(reply.content)}</p>
+          <p className="text-zinc-200 text-sm mt-0.5 whitespace-pre-wrap">{renderContent(reply.content)}</p>
         </div>
         <div className="flex items-center gap-3 mt-0.5 pl-1">
           <span className="text-zinc-500 text-xs">{formatTimeAgo(reply.created_at)}</span>
@@ -161,6 +142,22 @@ export default function CommentItem({
   const [showReplyInput, setShowReplyInput] = useState(false)
   const [replyText, setReplyText] = useState('')
   const [submittingReply, setSubmittingReply] = useState(false)
+  const [replyCursorPos, setReplyCursorPos] = useState(0)
+  const replyInputRef = useRef<HTMLInputElement>(null)
+
+  const handleReplyMentionSelect = useCallback((newText: string, newCursorPos: number) => {
+    setReplyText(newText)
+    setReplyCursorPos(newCursorPos)
+    setTimeout(() => {
+      const el = replyInputRef.current
+      if (el) {
+        el.focus()
+        el.setSelectionRange(newCursorPos, newCursorPos)
+      }
+    }, 0)
+  }, [])
+
+  const replyMention = useMention(replyText, replyCursorPos, handleReplyMentionSelect)
 
   if (deleted) return null
 
@@ -235,7 +232,7 @@ export default function CommentItem({
           >
             {displayName}
           </Link>
-          <p className="text-zinc-200 text-base mt-0.5 whitespace-pre-wrap">{renderWithLinks(comment.content)}</p>
+          <p className="text-zinc-200 text-base mt-0.5 whitespace-pre-wrap">{renderContent(comment.content)}</p>
         </div>
 
         <div className="flex items-center gap-4 mt-1 pl-1">
@@ -279,7 +276,7 @@ export default function CommentItem({
 
         {/* Inline reply composer */}
         {showReplyInput && (
-          <form onSubmit={handleReplySubmit} className="flex gap-2 mt-2 items-center">
+          <form onSubmit={handleReplySubmit} className="flex gap-2 mt-2 items-center relative">
             <div className="w-6 h-6 rounded-full bg-zinc-700 overflow-hidden flex-shrink-0">
               {currentUserAvatarUrl ? (
                 <Image
@@ -295,14 +292,31 @@ export default function CommentItem({
                 </div>
               )}
             </div>
-            <input
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              placeholder={`Reply to @${displayName}…`}
-              autoFocus
-              disabled={submittingReply}
-              className="flex-1 bg-zinc-800 border border-zinc-700 rounded-full px-3 py-1 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-transparent"
-            />
+            <div className="flex-1 relative">
+              <input
+                ref={replyInputRef}
+                value={replyText}
+                onChange={(e) => {
+                  setReplyText(e.target.value)
+                  setReplyCursorPos(e.target.selectionStart ?? 0)
+                }}
+                onKeyDown={(e) => {
+                  if (replyMention.handleKeyDown(e)) return
+                }}
+                onSelect={(e) => setReplyCursorPos((e.target as HTMLInputElement).selectionStart ?? 0)}
+                placeholder={`Reply to @${displayName}…`}
+                autoFocus
+                disabled={submittingReply}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-full px-3 py-1 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-transparent"
+              />
+              {replyMention.visible && (
+                <MentionDropdown
+                  suggestions={replyMention.suggestions}
+                  activeIndex={replyMention.activeIndex}
+                  onSelect={replyMention.selectSuggestion}
+                />
+              )}
+            </div>
             <button
               type="submit"
               disabled={!replyText.trim() || submittingReply}

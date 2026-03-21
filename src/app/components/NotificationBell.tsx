@@ -31,6 +31,7 @@ function notificationMessage(n: Notification): string {
     case 'comment_like':    return `@${actor} liked your comment`
     case 'group_invite':    return `@${actor} invited you to join ${n.group?.name ?? 'a group'}`
     case 'wall_post':       return `@${actor} posted on your wall`
+    case 'mention':         return `@${actor} mentioned you in a post`
     case 'dmca_takedown':   return `Content you posted was removed following a copyright complaint`
     default:                return `Notification from @${actor}`
   }
@@ -51,6 +52,8 @@ function notificationHref(n: Notification, currentUsername: string): string {
       return n.group?.slug ? `/groups/${n.group.slug}` : '/groups'
     case 'wall_post':
       return n.post_id ? `/posts/${n.post_id}` : `/profile/${currentUsername}`
+    case 'mention':
+      return n.post_id ? `/posts/${n.post_id}` : '/feed'
     case 'dmca_takedown':
       return '/dmca/counter-notice'
     default:

@@ -10,6 +10,7 @@ import PostImages from './PostImages'
 import CommentSection from './CommentSection'
 import ContentMenu from './ContentMenu'
 import { extractYouTubeId, fetchYouTubeMeta } from '@/lib/youtube'
+import { renderContent } from '@/lib/render-content'
 
 interface Props {
   post: Post
@@ -38,27 +39,6 @@ function renderGaragePost(text: string, authorUsername?: string | null) {
   )
 }
 
-const URL_REGEX = /(https?:\/\/[^\s]+)/g
-
-function renderWithLinks(text: string, excludeUrl?: string) {
-  const parts = text.split(URL_REGEX)
-  return parts.map((part, i) => {
-    if (!URL_REGEX.test(part)) return part
-    if (excludeUrl && part === excludeUrl) return null
-    return (
-      <a
-        key={i}
-        href={part}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-orange-400 hover:text-orange-300 underline break-all"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {part}
-      </a>
-    )
-  })
-}
 
 const YT_ICON = (
   <svg className="w-3.5 h-3.5 text-red-500 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
@@ -160,7 +140,7 @@ function SharedPostEmbed({ post }: { post: Omit<Post, 'shared_post'> }) {
         return (
           <div className="px-3 py-2 bg-zinc-800/30 space-y-2">
             <p className="text-zinc-200 text-base leading-relaxed whitespace-pre-wrap">
-              {renderWithLinks(post.content, ytVideo?.fullUrl)}
+              {renderContent(post.content, ytVideo?.fullUrl)}
             </p>
             {ytVideo && <YouTubeEmbed videoId={ytVideo.id} />}
           </div>
@@ -301,7 +281,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
           <div className="px-4 pb-3 space-y-2">
             {post.content && (
               <p className="text-zinc-200 text-lg leading-relaxed whitespace-pre-wrap">
-                {garageContent ?? renderWithLinks(post.content, ytVideo?.fullUrl)}
+                {garageContent ?? renderContent(post.content, ytVideo?.fullUrl)}
               </p>
             )}
             {ytVideo && <YouTubeEmbed videoId={ytVideo.id} />}

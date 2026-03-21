@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -8,6 +8,7 @@ import { Comment, Profile } from '@/lib/supabase/types'
 import { getImageUrl } from '@/lib/supabase/image'
 import CommentItem from './CommentItem'
 import { createComment } from '@/app/actions/comments'
+import MentionDropdown, { useMention } from './MentionDropdown'
 
 interface Props {
   postId: string
@@ -21,6 +22,22 @@ export default function CommentSection({ postId, currentUserId, currentUserProfi
   const [loading, setLoading] = useState(true)
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [cursorPos, setCursorPos] = useState(0)
+  const commentInputRef = useRef<HTMLInputElement>(null)
+
+  const handleMentionSelect = useCallback((newText: string, newCursorPos: number) => {
+    setText(newText)
+    setCursorPos(newCursorPos)
+    setTimeout(() => {
+      const el = commentInputRef.current
+      if (el) {
+        el.focus()
+        el.setSelectionRange(newCursorPos, newCursorPos)
+      }
+    }, 0)
+  }, [])
+
+  const mention = useMention(text, cursorPos, handleMentionSelect)
 
   useEffect(() => {
     const supabase = createClient()
@@ -152,14 +169,29 @@ export default function CommentSection({ postId, currentUserId, currentUserProfi
               )}
             </div>
           </div>
-          <div className="flex-1 flex gap-2">
+          <div className="flex-1 flex gap-2 relative">
             <input
+              ref={commentInputRef}
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                setText(e.target.value)
+                setCursorPos(e.target.selectionStart ?? 0)
+              }}
+              onKeyDown={(e) => {
+                if (mention.handleKeyDown(e)) return
+              }}
+              onSelect={(e) => setCursorPos((e.target as HTMLInputElement).selectionStart ?? 0)}
               placeholder="Write a comment…"
               disabled={submitting}
               className="flex-1 bg-zinc-800 border border-zinc-700 rounded-full px-4 py-1.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
+            {mention.visible && (
+              <MentionDropdown
+                suggestions={mention.suggestions}
+                activeIndex={mention.activeIndex}
+                onSelect={mention.selectSuggestion}
+              />
+            )}
             <button
               type="submit"
               disabled={!text.trim() || submitting}

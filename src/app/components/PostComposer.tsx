@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { Profile } from '@/lib/supabase/types'
 import { getImageUrl } from '@/lib/supabase/image'
 import { createPost } from '@/app/actions/posts'
 import { compressImage } from '@/lib/compress'
 import { extractYouTubeId, fetchYouTubeMeta } from '@/lib/youtube'
+import MentionDropdown, { useMention } from './MentionDropdown'
 
 interface Props {
   currentUserProfile: Profile
@@ -25,7 +26,24 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
   const [error, setError] = useState<string | null>(null)
   const [ytPreview, setYtPreview] = useState<{ id: string; title: string; channel: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const ytIdRef = useRef<string | null>(null)
+  const [cursorPos, setCursorPos] = useState(0)
+
+  const handleMentionSelect = useCallback((newText: string, newCursorPos: number) => {
+    setContent(newText)
+    setCursorPos(newCursorPos)
+    // Set cursor position after React re-renders
+    setTimeout(() => {
+      const ta = textareaRef.current
+      if (ta) {
+        ta.focus()
+        ta.setSelectionRange(newCursorPos, newCursorPos)
+      }
+    }, 0)
+  }, [])
+
+  const mention = useMention(content, cursorPos, handleMentionSelect)
 
   useEffect(() => {
     const yt = extractYouTubeId(content)
@@ -146,14 +164,31 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
           </div>
 
           <div className="flex-1">
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder={bikeId ? "Share something about this ride…" : "Share something with the crew…"}
-              rows={3}
-              disabled={submitting}
-              className="w-full bg-transparent text-white placeholder-zinc-500 focus:outline-none text-base resize-none"
-            />
+            <div className="relative">
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => {
+                  setContent(e.target.value)
+                  setCursorPos(e.target.selectionStart ?? 0)
+                }}
+                onKeyDown={(e) => {
+                  if (mention.handleKeyDown(e)) return
+                }}
+                onSelect={(e) => setCursorPos((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
+                placeholder={bikeId ? "Share something about this ride…" : "Share something with the crew…"}
+                rows={3}
+                disabled={submitting}
+                className="w-full bg-transparent text-white placeholder-zinc-500 focus:outline-none text-base resize-none"
+              />
+              {mention.visible && (
+                <MentionDropdown
+                  suggestions={mention.suggestions}
+                  activeIndex={mention.activeIndex}
+                  onSelect={mention.selectSuggestion}
+                />
+              )}
+            </div>
 
             {imagePreviews.length > 0 && (
               <div

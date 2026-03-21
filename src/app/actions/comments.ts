@@ -6,6 +6,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { scanCommentForScam } from '@/app/actions/scam-scan'
 import { notifyIfActive } from '@/lib/notify'
+import { notifyMentions } from '@/lib/mentions'
 
 function getServiceClient() {
   return createServiceClient(
@@ -66,6 +67,15 @@ export async function createComment(postId: string, content: string, parentComme
     try {
       await scanCommentForScam(comment.id, postId, user.id, content.trim())
     } catch { /* best-effort */ }
+  })
+
+  // Notify mentioned friends
+  await notifyMentions({
+    authorId: user.id,
+    content: content.trim(),
+    postId,
+    commentId: comment.id,
+    admin,
   })
 
   // Send notification (skipped for banned/suspended users via notifyIfActive)

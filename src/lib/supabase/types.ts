@@ -143,7 +143,7 @@ export interface Comment {
 export interface Notification {
   id: string
   user_id: string
-  type: 'friend_request' | 'friend_accepted' | 'post_like' | 'post_comment' | 'comment_reply' | 'comment_like' | 'group_invite' | 'wall_post' | 'dmca_takedown'
+  type: 'friend_request' | 'friend_accepted' | 'post_like' | 'post_comment' | 'comment_reply' | 'comment_like' | 'group_invite' | 'wall_post' | 'dmca_takedown' | 'mention'
   actor_id: string
   post_id: string | null
   comment_id: string | null

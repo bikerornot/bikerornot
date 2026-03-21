@@ -5,6 +5,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { moderateImage, type ModerationResult } from '@/lib/sightengine'
 import { checkRateLimit, validateImageFile } from '@/lib/rate-limit'
 import { notifyIfActive } from '@/lib/notify'
+import { notifyMentions } from '@/lib/mentions'
 
 function getServiceClient() {
   return createServiceClient(
@@ -118,6 +119,16 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
       type: 'wall_post',
       actor_id: user.id,
       post_id: post.id,
+    })
+  }
+
+  // Notify mentioned friends
+  if (content?.trim()) {
+    await notifyMentions({
+      authorId: user.id,
+      content: content.trim(),
+      postId: post.id,
+      admin,
     })
   }
 

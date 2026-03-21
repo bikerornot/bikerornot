@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Logo from '@/app/components/Logo'
 
 export const metadata = {
   title: 'Privacy Policy — BikerOrNot',
@@ -10,9 +11,7 @@ export default function PrivacyPage() {
       {/* Header */}
       <header className="border-b border-zinc-800 bg-zinc-900">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="text-lg font-black tracking-tight">
-            Biker<span className="text-orange-500">Or</span>Not
-          </Link>
+          <Logo />
           <Link href="/login" className="text-sm text-zinc-400 hover:text-white transition-colors">
             Sign in
           </Link>

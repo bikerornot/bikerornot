@@ -95,12 +95,12 @@ function ReplyItem({
           </Link>
           <p className="text-zinc-200 text-sm mt-0.5 whitespace-pre-wrap">{renderContent(reply.content)}</p>
         </div>
-        <div className="flex items-center gap-3 mt-0.5 pl-1">
+        <div className="flex items-center gap-2 mt-0.5 pl-1">
           <span className="text-zinc-500 text-xs">{formatTimeAgo(reply.created_at)}</span>
           {currentUserId && (
             <button
               onClick={handleLike}
-              className={`text-xs font-medium transition-colors ${
+              className={`text-sm font-medium py-1 px-1 transition-colors ${
                 liked ? 'text-orange-400' : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
@@ -111,7 +111,7 @@ function ReplyItem({
           {currentUserId === reply.author_id ? (
             <button
               onClick={handleDelete}
-              className="text-xs text-zinc-500 hover:text-red-400 transition-colors"
+              className="text-sm py-1 px-1 text-zinc-500 hover:text-red-400 transition-colors"
             >
               Delete
             </button>
@@ -235,12 +235,12 @@ export default function CommentItem({
           <p className="text-zinc-200 text-base mt-0.5 whitespace-pre-wrap">{renderContent(comment.content)}</p>
         </div>
 
-        <div className="flex items-center gap-4 mt-1 pl-1">
+        <div className="flex items-center gap-3 mt-1 pl-1">
           <span className="text-zinc-500 text-xs">{formatTimeAgo(comment.created_at)}</span>
           {currentUserId && (
             <button
               onClick={handleLike}
-              className={`text-xs font-medium transition-colors ${
+              className={`text-sm font-medium py-1 px-1 transition-colors ${
                 liked ? 'text-orange-400' : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
@@ -251,7 +251,7 @@ export default function CommentItem({
           {currentUserId && postId && (
             <button
               onClick={() => setShowReplyInput((v) => !v)}
-              className={`text-xs font-medium transition-colors ${
+              className={`text-sm font-medium py-1 px-1 transition-colors ${
                 showReplyInput ? 'text-orange-400' : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
@@ -261,7 +261,7 @@ export default function CommentItem({
           {currentUserId === comment.author_id ? (
             <button
               onClick={handleDelete}
-              className="text-xs text-zinc-500 hover:text-red-400 transition-colors"
+              className="text-sm py-1 px-1 text-zinc-500 hover:text-red-400 transition-colors"
             >
               Delete
             </button>

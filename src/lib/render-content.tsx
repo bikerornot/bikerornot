@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
-const URL_REGEX = /(https?:\/\/[^\s]+)/g
-const MENTION_REGEX = /@([a-zA-Z0-9_]+)/g
+const URL_PATTERN = /^https?:\/\/[^\s]+$/
+const MENTION_PATTERN = /^@([a-zA-Z0-9_]+)$/
 // Combined: split on URLs and mentions, preserving delimiters
 const CONTENT_REGEX = /(https?:\/\/[^\s]+|@[a-zA-Z0-9_]+)/g
 
@@ -11,8 +11,7 @@ export function renderContent(text: string, excludeUrl?: string) {
     if (!part) return null
 
     // URL match
-    if (URL_REGEX.test(part)) {
-      URL_REGEX.lastIndex = 0
+    if (URL_PATTERN.test(part)) {
       if (excludeUrl && part === excludeUrl) return null
       return (
         <a
@@ -29,9 +28,9 @@ export function renderContent(text: string, excludeUrl?: string) {
     }
 
     // @mention match
-    if (MENTION_REGEX.test(part)) {
-      MENTION_REGEX.lastIndex = 0
-      const username = part.slice(1) // remove @
+    const mentionMatch = part.match(MENTION_PATTERN)
+    if (mentionMatch) {
+      const username = mentionMatch[1]
       return (
         <Link
           key={i}

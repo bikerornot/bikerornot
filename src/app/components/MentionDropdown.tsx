@@ -23,10 +23,13 @@ export function useMention(
   const [activeIndex, setActiveIndex] = useState(0)
   const [visible, setVisible] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const generationRef = useRef(0)
 
   const query = getMentionQuery(text, cursorPos)
 
   useEffect(() => {
+    const gen = ++generationRef.current
+
     if (query === null) {
       setVisible(false)
       setSuggestions([])
@@ -37,12 +40,14 @@ export function useMention(
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       const results = await searchFriendsForMention(query)
+      // Only apply if this is still the latest query
+      if (gen !== generationRef.current) return
       setSuggestions(results)
       setVisible(results.length > 0)
     }, 200)
 
     return () => clearTimeout(debounceRef.current)
-  }, [query])
+  }, [query, text, cursorPos])
 
   const selectSuggestion = useCallback((username: string) => {
     const before = text.slice(0, cursorPos)

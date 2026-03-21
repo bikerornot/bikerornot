@@ -5,6 +5,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { geocodeZip, geocodeCity } from '@/lib/geocode'
 import type { Profile } from '@/lib/supabase/types'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { getBlockedIds } from '@/app/actions/blocks'
 
 function getServiceClient() {
   return createServiceClient(
@@ -55,8 +56,11 @@ async function searchNearCoords(
   if (profilesError) return { users: [], error: profilesError.message }
   if (!profiles || profiles.length === 0) return { users: [], error: null }
 
+  const blockedIds = await getBlockedIds(userId, admin)
+
   const nearby = (profiles as Profile[])
     .filter((p) => {
+      if (blockedIds.has(p.id)) return false
       if (filters.gender?.length && !filters.gender.includes(p.gender ?? '')) return false
       if (filters.relationshipStatus?.length && !filters.relationshipStatus.includes(p.relationship_status ?? '')) return false
       return true
@@ -131,7 +135,11 @@ export async function findUsersByUsername(
   if (profilesError) return { users: [], error: profilesError.message }
   if (!profiles || profiles.length === 0) return { users: [], error: null }
 
-  const ids = (profiles as Profile[]).map((p) => p.id)
+  const blockedIds = await getBlockedIds(user.id, admin)
+  const filteredProfiles = (profiles as Profile[]).filter((p) => !blockedIds.has(p.id))
+  if (filteredProfiles.length === 0) return { users: [], error: null }
+
+  const ids = filteredProfiles.map((p) => p.id)
   const { data: friendships } = await admin
     .from('friendships')
     .select('requester_id, addressee_id, status')
@@ -156,7 +164,7 @@ export async function findUsersByUsername(
   }
 
   return {
-    users: (profiles as Profile[]).map((profile) => ({
+    users: filteredProfiles.map((profile) => ({
       profile,
       distanceMiles: null,
       friendshipStatus: friendshipMap.get(profile.id) ?? 'none',
@@ -232,7 +240,8 @@ export async function getDefaultPeopleResults(): Promise<NearbyUser[]> {
     .limit(50)
 
   if (!raw || raw.length === 0) return []
-  const profiles = raw as Profile[]
+  const blockedIds = await getBlockedIds(user.id, admin)
+  const profiles = (raw as Profile[]).filter((p) => !blockedIds.has(p.id))
 
   // Sort by distance when we have the user's coordinates
   const distanceMap = new Map<string, number | null>()

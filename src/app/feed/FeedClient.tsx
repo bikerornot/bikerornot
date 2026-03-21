@@ -14,9 +14,10 @@ interface Props {
   currentUserId: string
   currentUserProfile: Profile
   userGroupIds?: string[]
+  blockedUserIds?: string[]
 }
 
-export default function FeedClient({ currentUserId, currentUserProfile, userGroupIds = [] }: Props) {
+export default function FeedClient({ currentUserId, currentUserProfile, userGroupIds = [], blockedUserIds = [] }: Props) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -53,7 +54,9 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       if (!data || data.length === 0) return []
 
       // Only keep posts where the author is confirmed active (not banned/suspended/missing)
-      const filtered = data.filter((p) => p.author?.status === 'active')
+      // and not from a blocked user
+      const blockedSet = new Set(blockedUserIds)
+      const filtered = data.filter((p) => p.author?.status === 'active' && !blockedSet.has(p.author_id))
 
       const postIds = filtered.map((p) => p.id)
       const sharedPostIds = filtered.map((p) => p.shared_post_id).filter(Boolean) as string[]
@@ -103,7 +106,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       })) as Post[]
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentUserId, userGroupIds.join(',')]
+    [currentUserId, userGroupIds.join(','), blockedUserIds.join(',')]
   )
 
   useEffect(() => {
@@ -131,7 +134,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'posts' },
         (payload) => {
-          if (payload.new.author_id !== currentUserId) {
+          if (payload.new.author_id !== currentUserId && !blockedUserIds.includes(payload.new.author_id)) {
             setNewPostCount((c) => c + 1)
           }
         }
@@ -206,6 +209,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
             post={post}
             currentUserId={currentUserId}
             currentUserProfile={currentUserProfile}
+            blockedUserIds={blockedUserIds}
           />
           {idx === 0 && ad && (
             <div className="mt-2 sm:mt-4">

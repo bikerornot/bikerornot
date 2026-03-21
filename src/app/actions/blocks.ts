@@ -28,6 +28,19 @@ export async function blockUser(blockedId: string): Promise<{ error?: string }> 
   return {}
 }
 
+export async function getBlockedIds(userId: string, admin: any): Promise<Set<string>> {
+  const { data } = await admin
+    .from('blocks')
+    .select('blocker_id, blocked_id')
+    .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`)
+  const ids = new Set<string>()
+  for (const b of data ?? []) {
+    if (b.blocker_id === userId) ids.add(b.blocked_id)
+    else ids.add(b.blocker_id)
+  }
+  return ids
+}
+
 export async function unblockUser(blockedId: string): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

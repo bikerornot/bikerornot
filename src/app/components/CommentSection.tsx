@@ -13,9 +13,10 @@ interface Props {
   postId: string
   currentUserId?: string
   currentUserProfile?: Profile | null
+  blockedUserIds?: string[]
 }
 
-export default function CommentSection({ postId, currentUserId, currentUserProfile }: Props) {
+export default function CommentSection({ postId, currentUserId, currentUserProfile, blockedUserIds = [] }: Props) {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
   const [text, setText] = useState('')
@@ -32,8 +33,9 @@ export default function CommentSection({ postId, currentUserId, currentUserProfi
       .order('created_at', { ascending: true })
       .then(({ data }) => {
         if (data) {
+          const blockedSet = new Set(blockedUserIds)
           const visible = (data as Comment[]).filter(
-            (c: any) => !['banned', 'suspended'].includes(c.author?.status)
+            (c: any) => !['banned', 'suspended'].includes(c.author?.status) && !blockedSet.has(c.author_id)
           )
           setComments(visible)
         }
@@ -59,6 +61,7 @@ export default function CommentSection({ postId, currentUserId, currentUserProfi
           if (data) {
             const author = (data as any).author
             if (['banned', 'suspended'].includes(author?.status)) return
+            if (blockedUserIds.includes((data as any).author_id)) return
             setComments((prev) =>
               prev.some((c) => c.id === data.id) ? prev : [...prev, data as Comment]
             )

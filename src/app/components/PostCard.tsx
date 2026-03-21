@@ -17,6 +17,7 @@ interface Props {
   currentUserProfile?: Profile | null
   initialShowComments?: boolean
   wallOwnerId?: string
+  blockedUserIds?: string[]
 }
 
 const GARAGE_REGEX = /^Added a (.+) to my garage! 🏍️/
@@ -179,7 +180,7 @@ function SharedPostEmbed({ post }: { post: Omit<Post, 'shared_post'> }) {
   )
 }
 
-export default function PostCard({ post, currentUserId, currentUserProfile, initialShowComments, wallOwnerId }: Props) {
+export default function PostCard({ post, currentUserId, currentUserProfile, initialShowComments, wallOwnerId, blockedUserIds }: Props) {
   const [liked, setLiked] = useState(post.is_liked_by_me ?? false)
   const [likeCount, setLikeCount] = useState(post.like_count ?? 0)
   const [commentCount, setCommentCount] = useState(post.comment_count ?? 0)
@@ -398,6 +399,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
             postId={post.id}
             currentUserId={currentUserId}
             currentUserProfile={currentUserProfile}
+            blockedUserIds={blockedUserIds}
           />
         </div>
       )}

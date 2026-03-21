@@ -13,6 +13,7 @@ import BottomNav from '@/app/components/BottomNav'
 import RidersWidget from '@/app/components/RidersWidget'
 import DmcaBanner from '@/app/components/DmcaBanner'
 import { getNearbyRiders } from '@/app/actions/suggestions'
+import { getBlockedIds } from '@/app/actions/blocks'
 
 export const metadata = { title: 'Feed — BikerOrNot' }
 
@@ -64,6 +65,12 @@ export default async function FeedPage() {
   // Fetch rider suggestions (only used when friendCount < 15)
   const { riders: nearbyRiders, friendCount } = await getNearbyRiders()
 
+  // Fetch blocked user IDs for feed filtering
+  const blockedIds = await getBlockedIds(user.id, createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  ))
+
   const avatarUrl = profile.profile_photo_url
     ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
     : null
@@ -112,7 +119,7 @@ export default async function FeedPage() {
           }))}
         />
         <RidersWidget initialRiders={nearbyRiders} friendCount={friendCount} />
-        <FeedClient currentUserId={user.id} currentUserProfile={profile} userGroupIds={userGroupIds} />
+        <FeedClient currentUserId={user.id} currentUserProfile={profile} userGroupIds={userGroupIds} blockedUserIds={Array.from(blockedIds)} />
       </div>
       <BottomNav />
     </div>

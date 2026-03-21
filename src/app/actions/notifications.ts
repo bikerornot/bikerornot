@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { Notification } from '@/lib/supabase/types'
+import { getBlockedIds } from '@/app/actions/blocks'
 
 function getServiceClient() {
   return createServiceClient(
@@ -26,7 +27,13 @@ export async function getNotifications(): Promise<Notification[]> {
     .order('created_at', { ascending: false })
     .limit(30)
 
-  return (data ?? []).filter((n: any) => n.actor?.status === 'active' && !n.actor?.deactivated_at) as Notification[]
+  const blockedIds = await getBlockedIds(user.id, admin)
+
+  return (data ?? []).filter((n: any) => {
+    if (!n.actor || n.actor.status !== 'active' || n.actor.deactivated_at) return false
+    if (n.actor_id && blockedIds.has(n.actor_id)) return false
+    return true
+  }) as Notification[]
 }
 
 export async function markRead(notificationId: string): Promise<void> {

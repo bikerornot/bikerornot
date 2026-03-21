@@ -17,6 +17,7 @@ import MessageButton from '@/app/components/MessageButton'
 import ContentMenu from '@/app/components/ContentMenu'
 import { getMutualFriends } from '@/app/actions/suggestions'
 import BottomNav from '@/app/components/BottomNav'
+import { getBlockedIds } from '@/app/actions/blocks'
 
 export async function generateMetadata({
   params,
@@ -142,6 +143,37 @@ export default async function ProfilePage({
         </div>
       </div>
     )
+  }
+
+  if (user && !isOwnProfile) {
+    const blockAdmin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    const blockedIds = await getBlockedIds(user.id, blockAdmin)
+    if (blockedIds.has(profile.id)) {
+      return (
+        <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
+          <div className="text-center max-w-sm">
+            <div className="w-16 h-16 rounded-full bg-zinc-800 flex items-center justify-center mx-auto mb-5">
+              <svg className="w-7 h-7 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+            </div>
+            <h1 className="text-white text-xl font-bold mb-3">This profile is not available</h1>
+            <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+              You cannot view this profile.
+            </p>
+            <Link
+              href="/feed"
+              className="inline-block bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors"
+            >
+              Back to feed
+            </Link>
+          </div>
+        </div>
+      )
+    }
   }
 
   const { data: currentUserProfile } = user

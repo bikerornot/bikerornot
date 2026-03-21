@@ -6,6 +6,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { ConversationSummary, Message } from '@/lib/supabase/types'
 import { scanMessageForScam } from '@/app/actions/scam-scan'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { getBlockedIds } from '@/app/actions/blocks'
 
 function getServiceClient() {
   return createServiceClient(
@@ -21,6 +22,9 @@ export async function getOrCreateConversation(otherUserId: string): Promise<stri
   if (user.id === otherUserId) throw new Error('Cannot message yourself')
 
   const admin = getServiceClient()
+
+  const blockedIds = await getBlockedIds(user.id, admin)
+  if (blockedIds.has(otherUserId)) throw new Error('Cannot message this user')
 
   // Only friends can message each other
   const { data: friendship } = await admin
@@ -108,6 +112,8 @@ export async function getConversations(): Promise<ConversationSummary[]> {
 
   if (!convos || convos.length === 0) return []
 
+  const blockedIds = await getBlockedIds(user.id, admin)
+
   // Batch fetch unread counts
   const convoIds = convos.map((c) => c.id)
   const { data: unreadRows } = await admin
@@ -132,7 +138,9 @@ export async function getConversations(): Promise<ConversationSummary[]> {
     }))
     .filter((c) => {
       const other = c.other_user as any
-      return other?.status === 'active' && !other?.deactivated_at
+      if (!other || other.status !== 'active' || other.deactivated_at) return false
+      if (blockedIds.has(other.id)) return false
+      return true
     }) as ConversationSummary[]
 }
 
@@ -185,8 +193,12 @@ export async function sendMessage(conversationId: string, content: string): Prom
     throw new Error('Not authorized')
   }
 
-  // Block sending to banned/suspended/deactivated accounts
   const recipientId = convo.participant1_id === user.id ? convo.participant2_id : convo.participant1_id
+
+  const blockedIds = await getBlockedIds(user.id, admin)
+  if (blockedIds.has(recipientId)) throw new Error('Cannot send message to this user')
+
+  // Block sending to banned/suspended/deactivated accounts
   const { data: recipient } = await admin
     .from('profiles')
     .select('status, deactivated_at')
@@ -251,13 +263,15 @@ export async function getUnreadMessageCount(): Promise<number> {
 
   if (!convos || convos.length === 0) return 0
 
-  // Only count unread messages from conversations that are actually visible —
-  // same filter as getConversations so banned/suspended users can't cause a
-  // phantom badge the recipient can never clear.
+  const blockedIds = await getBlockedIds(user.id, admin)
+
   const visibleConvoIds = convos
     .filter((c: any) => {
       const other = c.participant1_id === user.id ? c.participant2 : c.participant1
-      return other?.status === 'active' && !other?.deactivated_at
+      if (!other || other.status !== 'active' || other.deactivated_at) return false
+      const otherId = c.participant1_id === user.id ? c.participant2_id : c.participant1_id
+      if (blockedIds.has(otherId)) return false
+      return true
     })
     .map((c) => c.id)
 

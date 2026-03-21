@@ -5,6 +5,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { sendFriendRequestEmail, sendFriendAcceptedEmail } from '@/lib/email'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { notifyIfActive } from '@/lib/notify'
+import { getBlockedIds } from '@/app/actions/blocks'
 
 function getServiceClient() {
   return createServiceClient(
@@ -22,6 +23,9 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
   checkRateLimit(`sendFriendRequest:${user.id}`, 20, 60_000)
 
   const admin = getServiceClient()
+
+  const blockedIds = await getBlockedIds(user.id, admin)
+  if (blockedIds.has(addresseeId)) return
 
   // Gate 2: Block friend requests from high-risk unreviewed accounts
   // (female, under 40, account < 30 days, profile photo not yet approved)
@@ -206,7 +210,11 @@ export async function getPendingFriendRequests(): Promise<FriendRequestCard[]> {
 
   if (!pending || pending.length === 0) return []
 
-  const requesterIds = pending.map((p) => p.requester_id)
+  const blockedIds = await getBlockedIds(user.id, admin)
+  const filteredPending = pending.filter((p) => !blockedIds.has(p.requester_id))
+  if (filteredPending.length === 0) return []
+
+  const requesterIds = filteredPending.map((p) => p.requester_id)
 
   // Fetch requester profiles
   const { data: profiles } = await admin
@@ -265,7 +273,7 @@ export async function getPendingFriendRequests(): Promise<FriendRequestCard[]> {
   }
 
   const profileMap = new Map(profiles.map((p) => [p.id, p]))
-  const requestDateMap = new Map(pending.map((p) => [p.requester_id, p.created_at]))
+  const requestDateMap = new Map(filteredPending.map((p) => [p.requester_id, p.created_at]))
 
   return requesterIds
     .map((id) => {

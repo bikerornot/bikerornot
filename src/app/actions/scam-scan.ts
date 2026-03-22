@@ -69,10 +69,13 @@ export async function scanMessageForScam(
   content: string
 ): Promise<void> {
   try {
+    // Skip scan for banned users — their content is shadow-hidden, saves OpenAI calls
+    const admin = getAdmin()
+    const { data: sender } = await admin.from('profiles').select('status').eq('id', senderId).single()
+    if (sender?.status === 'banned') return
+
     const { score, reason } = await runScamScan(content, 'message')
     if (score < 0.55) return
-
-    const admin = getAdmin()
 
     await admin.from('content_flags').insert({
       message_id: messageId,
@@ -100,11 +103,14 @@ export async function scanCommentForScam(
     // Skip very short comments (emoji reactions, "nice!", etc.)
     if (content.trim().length < 15) return
 
+    // Skip scan for banned users — their content is shadow-hidden, saves OpenAI calls
+    const admin = getAdmin()
+    const { data: sender } = await admin.from('profiles').select('status').eq('id', senderId).single()
+    if (sender?.status === 'banned') return
+
     const { score, reason } = await runScamScan(content, 'comment')
     // Higher threshold for public comments to reduce false positives
     if (score < 0.65) return
-
-    const admin = getAdmin()
 
     await admin.from('content_flags').insert({
       comment_id: commentId,

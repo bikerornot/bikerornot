@@ -47,10 +47,12 @@ export default function FlagsClient({ initialFlags }: { initialFlags: ContentFla
   const visible = flags.filter((f) => {
     if (statusFilter !== 'all' && f.status !== statusFilter) return false
     if (typeFilter !== 'all' && f.flag_type !== typeFilter) return false
+    // Skip flags from banned users — their content is shadow-hidden anyway
+    if (f.sender?.status === 'banned') return false
     return true
   })
 
-  const pendingCount = flags.filter((f) => f.status === 'pending').length
+  const pendingCount = flags.filter((f) => f.status === 'pending' && f.sender?.status !== 'banned').length
 
   async function handleDismiss(flagId: string) {
     setLoadingId(flagId)

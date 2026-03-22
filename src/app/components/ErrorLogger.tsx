@@ -17,6 +17,9 @@ export default function ErrorLogger() {
       'ResizeObserver loop',
       'Script error',
       'Failed to fetch',
+      'ChunkLoadError',
+      'Load failed',
+      'WebKit.MessageHandlers',
     ]
 
     function shouldIgnore(msg: string | undefined) {

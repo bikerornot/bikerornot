@@ -30,11 +30,24 @@ function formatTime(dateStr: string) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
+function copyOccurrence(issue: ErrorIssue, log: ErrorLog) {
+  const lines: string[] = []
+  lines.push(`${issue.occurrence_count}x ${issue.source} ${issue.message}`)
+  if (log.url) lines.push(log.url)
+  if (log.stack) lines.push(log.stack)
+  if (log.user_agent) lines.push(log.user_agent)
+  if (log.metadata && Object.keys(log.metadata).length > 0) {
+    lines.push(JSON.stringify(log.metadata, null, 2))
+  }
+  navigator.clipboard.writeText(lines.join('\n'))
+}
+
 function IssueRow({ issue, onStatusChange }: { issue: ErrorIssue; onStatusChange: () => void }) {
   const [expanded, setExpanded] = useState(false)
   const [occurrences, setOccurrences] = useState<ErrorLog[] | null>(null)
   const [loadingOccurrences, setLoadingOccurrences] = useState(false)
   const [toggling, setToggling] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
 
   async function handleExpand() {
     if (expanded) {
@@ -129,6 +142,24 @@ function IssueRow({ issue, onStatusChange }: { issue: ErrorIssue; onStatusChange
                       </Link>
                     )}
                     {log.url && <span className="truncate max-w-[250px]">{log.url}</span>}
+                    <button
+                      onClick={() => {
+                        copyOccurrence(issue, log)
+                        setCopied(log.id)
+                        setTimeout(() => setCopied(null), 1500)
+                      }}
+                      className="ml-auto text-zinc-600 hover:text-orange-400 transition-colors flex-shrink-0"
+                      title="Copy error details"
+                    >
+                      {copied === log.id ? (
+                        <span className="text-emerald-400 text-[11px] font-medium">Copied</span>
+                      ) : (
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <rect x="9" y="9" width="13" height="13" rx="2" />
+                          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                   {log.stack && (
                     <pre className="text-zinc-400 text-xs bg-zinc-950 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap max-h-40">{log.stack}</pre>

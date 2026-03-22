@@ -21,10 +21,11 @@ export default function ErrorLogger() {
       'Load failed',
       'WebKit.MessageHandlers',
       'Java object is gone',
+      'Navigator LockManager',
     ]
 
     // Bare rejection with no real info — Safari often swallows the details
-    const IGNORE_EXACT = ['Unhandled promise rejection']
+    const IGNORE_EXACT = ['Unhandled promise rejection', 'undefined']
 
     function shouldIgnore(msg: string | undefined) {
       if (!msg) return false

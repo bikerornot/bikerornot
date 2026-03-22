@@ -94,7 +94,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       const myLikeSet = new Set((myLikes ?? []).map((l) => l.post_id))
       const sharedPostMap: Record<string, Post> = {}
       for (const p of sharedPostsData ?? []) {
-        sharedPostMap[p.id] = p as Post
+        if (p?.id) sharedPostMap[p.id] = p as Post
       }
 
       return filtered.map((post) => ({
@@ -137,7 +137,9 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'posts' },
         (payload) => {
-          if (payload.new.author_id !== currentUserId && !blockedUserIds.includes(payload.new.author_id)) {
+          const newPost = payload.new as Record<string, unknown> | null
+          if (!newPost?.author_id) return
+          if (newPost.author_id !== currentUserId && !blockedUserIds.includes(newPost.author_id as string)) {
             setNewPostCount((c) => c + 1)
           }
         }

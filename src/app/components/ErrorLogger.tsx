@@ -20,7 +20,11 @@ export default function ErrorLogger() {
       'ChunkLoadError',
       'Load failed',
       'WebKit.MessageHandlers',
+      'Java object is gone',
     ]
+
+    // Bare rejection with no real info — Safari often swallows the details
+    const IGNORE_EXACT = ['Unhandled promise rejection']
 
     function shouldIgnore(msg: string | undefined) {
       if (!msg) return false
@@ -67,6 +71,12 @@ export default function ErrorLogger() {
         if (err.statusText) metadata.statusText = err.statusText
         if (err.url) metadata.responseUrl = err.url
       }
+
+      // Skip bare rejections with no useful info
+      if (IGNORE_EXACT.includes(message) && !stack) return
+      // Also check metadata.reason for ignored patterns (e.g. wrapped Failed to fetch)
+      const reasonStr = typeof metadata.reason === 'string' ? metadata.reason : ''
+      if (shouldIgnore(message) || shouldIgnore(reasonStr)) return
 
       logError({
         source: 'client',

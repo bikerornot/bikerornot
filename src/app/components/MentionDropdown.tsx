@@ -24,10 +24,15 @@ export function useMention(
   const [visible, setVisible] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const generationRef = useRef(0)
+  const prevQueryRef = useRef<string | null>(null)
 
   const query = getMentionQuery(text, cursorPos)
 
   useEffect(() => {
+    // Only react when the derived query actually changes
+    if (query === prevQueryRef.current) return
+    prevQueryRef.current = query
+
     const gen = ++generationRef.current
 
     if (query === null) {
@@ -47,7 +52,7 @@ export function useMention(
     }, 200)
 
     return () => clearTimeout(debounceRef.current)
-  }, [query, text, cursorPos])
+  }, [query])
 
   const selectSuggestion = useCallback((username: string) => {
     const before = text.slice(0, cursorPos)

@@ -15,6 +15,8 @@ export default function ErrorLogger() {
       'setContactAutofillValuesFromBridge',
       'AutofillValuesFromBridge',
       'ResizeObserver loop',
+      'Script error',
+      'Failed to fetch',
     ]
 
     function shouldIgnore(msg: string | undefined) {

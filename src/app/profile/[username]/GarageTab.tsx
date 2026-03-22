@@ -408,11 +408,13 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
         {bikes.map((bike) => (
           <div key={bike.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
             <div className="flex items-center gap-4">
-              <PhotoThumbnail
-                photoUrl={bike.photo_url ? getImageUrl('bikes', bike.photo_url) : null}
-                isUploading={false}
-                isOwn={false}
-              />
+              <Link href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}>
+                <PhotoThumbnail
+                  photoUrl={bike.photo_url ? getImageUrl('bikes', bike.photo_url) : null}
+                  isUploading={false}
+                  isOwn={false}
+                />
+              </Link>
               <div className="flex-1 min-w-0">
                 <Link
                   href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}

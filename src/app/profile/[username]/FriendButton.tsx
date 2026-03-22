@@ -20,15 +20,18 @@ export default function FriendButton({ profileId, initialStatus }: Props) {
   const [status, setStatus] = useState<FriendshipStatus>(initialStatus)
   const [loading, setLoading] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function run(action: () => Promise<void>, nextStatus: FriendshipStatus) {
     setLoading(true)
+    setError(null)
     const prev = status
     setStatus(nextStatus)
     try {
       await action()
-    } catch {
+    } catch (err: unknown) {
       setStatus(prev)
+      setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setLoading(false)
       setConfirming(false)
@@ -102,12 +105,15 @@ export default function FriendButton({ profileId, initialStatus }: Props) {
   }
 
   return (
-    <button
-      onClick={() => run(() => sendFriendRequest(profileId), 'pending_sent')}
-      disabled={loading}
-      className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
-    >
-      {loading ? '…' : 'Add Friend'}
-    </button>
+    <div>
+      <button
+        onClick={() => run(() => sendFriendRequest(profileId), 'pending_sent')}
+        disabled={loading}
+        className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+      >
+        {loading ? '…' : 'Add Friend'}
+      </button>
+      {error && <p className="text-red-400 text-xs mt-1.5">{error}</p>}
+    </div>
   )
 }

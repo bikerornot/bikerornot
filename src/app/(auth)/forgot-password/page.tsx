@@ -66,7 +66,7 @@ export default function ForgotPasswordPage() {
             value={email}
             onChange={(e) => { setEmail(e.target.value); setError(null) }}
             autoComplete="email"
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+            className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-base"
             placeholder="jane@example.com"
           />
         </div>
@@ -80,7 +80,7 @@ export default function ForgotPasswordPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg transition-colors text-sm"
+          className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg transition-colors text-base"
         >
           {loading ? 'Sending…' : 'Send reset link'}
         </button>

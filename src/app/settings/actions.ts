@@ -76,6 +76,7 @@ export async function saveProfileSettings(
 export async function saveEmailPreferences(prefs: {
   email_friend_requests: boolean
   email_friend_accepted: boolean
+  email_mentions: boolean
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

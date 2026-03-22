@@ -195,3 +195,87 @@ export async function sendFriendAcceptedEmail({
     `),
   })
 }
+
+export async function sendMentionEmail({
+  toEmail,
+  toName,
+  toAvatarUrl,
+  fromUsername,
+  fromAvatarUrl,
+  postSnippet,
+  postUrl,
+  postImageUrl,
+}: {
+  toEmail: string
+  toName: string
+  toAvatarUrl: string | null
+  fromUsername: string
+  fromAvatarUrl: string | null
+  postSnippet: string
+  postUrl: string
+  postImageUrl: string | null
+}) {
+  const fromAvatarHtml = fromAvatarUrl
+    ? `<img src="${fromAvatarUrl}" alt="@${fromUsername}" width="40" height="40" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />`
+    : `<div style="width:40px;height:40px;border-radius:50%;background:#3f3f46;color:#a1a1aa;font-size:16px;font-weight:700;line-height:40px;text-align:center;">${(fromUsername[0] ?? '?').toUpperCase()}</div>`
+
+  const toAvatarHtml = toAvatarUrl
+    ? `<img src="${toAvatarUrl}" alt="${toName}" width="32" height="32" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />`
+    : ''
+
+  const imageHtml = postImageUrl
+    ? `<img src="${postImageUrl}" alt="" width="440" style="width:100%;max-width:440px;border-radius:8px;margin-top:16px;display:block;" />`
+    : ''
+
+  await resend.emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: `@${fromUsername} mentioned you in a post`,
+    html: layout(`
+      <!-- Recipient greeting with their avatar -->
+      <table cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+        <tr>
+          <td style="vertical-align:middle;padding-right:10px;">
+            ${toAvatarHtml}
+          </td>
+          <td style="vertical-align:middle;">
+            <p style="margin:0;font-size:15px;color:#a1a1aa;">Hey ${toName},</p>
+          </td>
+        </tr>
+      </table>
+
+      <h1 style="margin:0 0 20px;font-size:20px;font-weight:700;color:#ffffff;">
+        You were mentioned in a post
+      </h1>
+
+      <!-- Tagger info + post snippet -->
+      <table cellpadding="0" cellspacing="0" style="background:#09090b;border:1px solid #27272a;border-radius:12px;padding:16px;width:100%;">
+        <tr>
+          <td style="vertical-align:top;padding-right:12px;width:40px;">
+            ${fromAvatarHtml}
+          </td>
+          <td style="vertical-align:top;">
+            <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#ffffff;">
+              @${fromUsername}
+            </p>
+            <p style="margin:0;font-size:14px;color:#d4d4d8;line-height:1.5;">
+              ${postSnippet}
+            </p>
+            ${imageHtml}
+          </td>
+        </tr>
+      </table>
+
+      <!-- CTA -->
+      <table cellpadding="0" cellspacing="0" style="margin-top:24px;">
+        <tr>
+          <td>
+            <a href="${postUrl}" style="display:inline-block;background:#f97316;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:10px;">
+              See what they said
+            </a>
+          </td>
+        </tr>
+      </table>
+    `),
+  })
+}

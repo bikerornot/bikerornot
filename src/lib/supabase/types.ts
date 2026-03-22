@@ -35,6 +35,7 @@ export interface Profile {
   deletion_scheduled_at?: string | null
   email_friend_requests: boolean
   email_friend_accepted: boolean
+  email_mentions: boolean
   show_real_name: boolean
   show_birthday: boolean
 }

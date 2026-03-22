@@ -122,15 +122,7 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
     })
   }
 
-  // Notify mentioned friends
-  if (content?.trim()) {
-    await notifyMentions({
-      authorId: user.id,
-      content: content.trim(),
-      postId: post.id,
-      admin,
-    })
-  }
+  let firstImagePath: string | null = null
 
   if (checkedFiles.length > 0) {
     const now = new Date().toISOString()
@@ -154,8 +146,20 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
       })
     }
 
+    firstImagePath = imageRows[0].storage_path
     const { error: imgError } = await admin.from('post_images').insert(imageRows)
     if (imgError) throw new Error(imgError.message)
+  }
+
+  // Notify mentioned friends (after images so we can include the first image in the email)
+  if (content?.trim()) {
+    await notifyMentions({
+      authorId: user.id,
+      content: content.trim(),
+      postId: post.id,
+      postImageUrl: firstImagePath,
+      admin,
+    })
   }
 
   return { postId: post.id }

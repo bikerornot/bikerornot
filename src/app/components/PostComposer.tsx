@@ -273,6 +273,35 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
               className="hidden"
               onChange={handleImageSelect}
             />
+            <button
+              type="button"
+              onClick={() => {
+                const ta = textareaRef.current
+                if (!ta) return
+                ta.focus()
+                const pos = ta.selectionStart ?? content.length
+                const before = content.slice(0, pos)
+                const after = content.slice(pos)
+                // Add space before @ if needed
+                const needsSpace = before.length > 0 && !/\s$/.test(before)
+                const insert = (needsSpace ? ' ' : '') + '@'
+                const newText = before + insert + after
+                const newPos = pos + insert.length
+                setContent(newText)
+                setCursorPos(newPos)
+                setTimeout(() => {
+                  ta.focus()
+                  ta.setSelectionRange(newPos, newPos)
+                }, 0)
+              }}
+              className="flex items-center gap-1.5 text-orange-400/70 hover:text-orange-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-sm font-medium"
+              title="Tag a friend"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              </svg>
+              <span className="hidden sm:inline">Tag</span>
+            </button>
           </div>
 
           <button

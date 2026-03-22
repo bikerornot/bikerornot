@@ -40,12 +40,35 @@ export default function ErrorLogger() {
     function handleRejection(event: PromiseRejectionEvent) {
       const err = event.reason
       if (shouldIgnore(err?.message) || shouldIgnore(err?.stack)) return
+
+      let message = 'Unhandled promise rejection'
+      let stack: string | null = null
+      const metadata: Record<string, unknown> = { type: 'unhandledrejection' }
+
+      if (err instanceof Error) {
+        message = err.message || message
+        stack = err.stack ?? null
+      } else if (typeof err === 'string') {
+        message = err
+      } else if (err != null) {
+        // Capture non-Error rejection reasons (Response objects, plain objects, etc.)
+        try {
+          message = String(err)
+          metadata.reason = JSON.stringify(err, null, 2).slice(0, 2000)
+        } catch {
+          message = typeof err + ': ' + String(err)
+        }
+        if (err.status) metadata.status = err.status
+        if (err.statusText) metadata.statusText = err.statusText
+        if (err.url) metadata.responseUrl = err.url
+      }
+
       logError({
         source: 'client',
-        message: err?.message ?? String(err) ?? 'Unhandled promise rejection',
-        stack: err?.stack ?? null,
+        message,
+        stack,
         url: window.location.href,
-        metadata: { type: 'unhandledrejection' },
+        metadata,
       }).catch(() => {})
     }
 

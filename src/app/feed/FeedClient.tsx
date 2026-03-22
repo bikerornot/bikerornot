@@ -120,8 +120,11 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       .finally(() => setLoading(false))
   }, [fetchPosts])
 
-  // Fetch ad once on mount — never re-fetch to avoid jarring swaps
+  // Fetch ad exactly once — ref guard prevents StrictMode double-fire
+  const adFetchedRef = useRef(false)
   useEffect(() => {
+    if (adFetchedRef.current) return
+    adFetchedRef.current = true
     getNextAd().then(setAd).catch(() => {})
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 

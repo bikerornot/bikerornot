@@ -55,18 +55,17 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
     }
   }
 
-  // Gate 3: New accounts (<7 days) — max 5 friend requests per day
-  if (accountAgeDays < 7) {
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
-    const { count: requestsToday } = await admin
-      .from('friendships')
-      .select('*', { count: 'exact', head: true })
-      .eq('requester_id', user.id)
-      .gte('created_at', todayStart.toISOString())
-    if ((requestsToday ?? 0) >= 5) {
-      throw new Error('New accounts can send up to 5 friend requests per day.')
-    }
+  // Gate 3: Daily friend request cap — 30/day for all accounts, 5/day for new (<7 days)
+  const dailyLimit = accountAgeDays < 7 ? 5 : 30
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const { count: requestsToday } = await admin
+    .from('friendships')
+    .select('*', { count: 'exact', head: true })
+    .eq('requester_id', user.id)
+    .gte('created_at', todayStart.toISOString())
+  if ((requestsToday ?? 0) >= dailyLimit) {
+    throw new Error(`You can send up to ${dailyLimit} friend requests per day.`)
   }
 
   const { error } = await admin

@@ -71,7 +71,7 @@ export default async function ChatPage({
     : null
 
   return (
-    <div className="h-screen bg-zinc-950 flex flex-col overflow-hidden pb-20 sm:pb-0">
+    <div className="h-dvh bg-zinc-950 flex flex-col overflow-hidden pb-20 sm:pb-0">
       <LastSeenTracker />
       {/* Main nav header */}
       <header className="bg-zinc-900 border-b border-zinc-800 flex-shrink-0 z-40">

@@ -32,9 +32,13 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
   // (female, under 40, account < 30 days, profile photo not yet approved)
   const { data: senderProfile } = await admin
     .from('profiles')
-    .select('created_at, gender, date_of_birth, avatar_reviewed_at')
+    .select('created_at, gender, date_of_birth, avatar_reviewed_at, status')
     .eq('id', user.id)
     .single()
+
+  // Silently block if sender is banned/suspended (shadow ban)
+  if (senderProfile?.status && senderProfile.status !== 'active') return
+
   const accountAgeDays = (Date.now() - new Date(senderProfile!.created_at).getTime()) / 86_400_000
   if (
     accountAgeDays < 30

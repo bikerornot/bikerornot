@@ -783,12 +783,23 @@ export async function transferGroupOwnership(
 export async function reinstateUser(userId: string): Promise<void> {
   await requireAdmin()
   const admin = getServiceClient()
-  await admin.from('profiles').update({
+  const { error } = await admin.from('profiles').update({
     status: 'active',
     suspension_reason: null,
     suspended_until: null,
     ban_reason: null,
   }).eq('id', userId)
+
+  if (error) throw new Error(`Failed to reinstate user: ${error.message}`)
+
+  // Clean up orphaned pending friend requests sent while banned/suspended.
+  // Delete outbound pending requests so the user can re-send them fresh,
+  // since recipients couldn't see requests from a non-active profile.
+  await admin
+    .from('friendships')
+    .delete()
+    .eq('requester_id', userId)
+    .eq('status', 'pending')
 }
 
 export interface OnlineUser {

@@ -388,15 +388,27 @@ export default function OnboardingPage() {
   const [bikePhotos, setBikePhotos] = useState<(File | null)[]>([null])
 
   // Detect if phone verification will be required (female under 40)
+  // If they already completed steps 1-3 (have username + phone_verification_required), skip to step 4
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
       const gender = user.user_metadata?.gender as string | undefined
       const dob = user.user_metadata?.date_of_birth as string | undefined
       if (gender === 'female' && dob) {
         const age = Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 86_400_000))
-        if (age < 40) setPhoneRequired(true)
+        if (age < 40) {
+          setPhoneRequired(true)
+          // Check if they already completed steps 1-3 (returning to finish phone verification)
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('username, phone_verification_required')
+            .eq('id', user.id)
+            .single()
+          if (profile?.username && profile?.phone_verification_required) {
+            setStep(4)
+          }
+        }
       }
     })
   }, [])

@@ -52,16 +52,17 @@ export async function requestPhoneVerification(
 
   const admin = getServiceClient()
 
-  // Check uniqueness — reject if already verified on another account
+  // Check uniqueness — reject if verified on another account OR used by a banned account
   const { data: existing } = await admin
     .from('profiles')
-    .select('id')
+    .select('id, status, phone_verified_at')
     .eq('phone_number', normalized)
-    .not('phone_verified_at', 'is', null)
     .neq('id', user.id)
-    .single()
 
-  if (existing) {
+  const blocked = (existing ?? []).some(
+    (p) => p.phone_verified_at !== null || p.status === 'banned'
+  )
+  if (blocked) {
     return { error: 'This phone number is already verified on another account.' }
   }
 
@@ -128,6 +129,15 @@ export async function removePhoneVerification(): Promise<void> {
   if (!user) throw new Error('Not authenticated')
 
   const admin = getServiceClient()
+
+  // Don't let banned users remove their phone — keeps the number locked
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('status')
+    .eq('id', user.id)
+    .single()
+  if (profile?.status === 'banned') throw new Error('Cannot remove phone verification.')
+
   await admin
     .from('profiles')
     .update({ phone_number: null, phone_verified_at: null })

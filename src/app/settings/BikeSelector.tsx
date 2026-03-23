@@ -34,7 +34,8 @@ const ALL_MAKES = Object.values(MAKES_BY_COUNTRY).flat()
 export default function BikeSelector({ value, onChange }: Props) {
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
-  const isOtherMake = !!value.make && !ALL_MAKES.includes(value.make)
+  const [otherMode, setOtherMode] = useState(() => !!value.make && !ALL_MAKES.includes(value.make))
+  const isOtherMake = otherMode || (!!value.make && !ALL_MAKES.includes(value.make))
 
   // Fetch models whenever year + make change (skip for "Other")
   useEffect(() => {
@@ -62,8 +63,10 @@ export default function BikeSelector({ value, onChange }: Props) {
 
   function handleMakeSelect(selected: string) {
     if (selected === '__other__') {
+      setOtherMode(true)
       onChange({ year: value.year, make: '', model: '' })
     } else {
+      setOtherMode(false)
       onChange({ year: value.year, make: selected, model: '' })
     }
   }
@@ -107,10 +110,10 @@ export default function BikeSelector({ value, onChange }: Props) {
       </div>
 
       {/* Other make text input */}
-      {isOtherMake || makeSelectValue === '__other__' ? (
+      {isOtherMake ? (
         <input
           type="text"
-          value={isOtherMake ? value.make : ''}
+          value={value.make}
           onChange={(e) => onChange({ year: value.year, make: e.target.value, model: '' })}
           placeholder="Enter make"
           autoFocus

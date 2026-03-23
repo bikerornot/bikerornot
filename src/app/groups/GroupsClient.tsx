@@ -154,7 +154,7 @@ export default function GroupsClient({ initialGroups, currentUserId, userLat, us
       </div>
 
       {/* My Groups / All Groups toggle */}
-      <div className="flex gap-1 mb-4 bg-zinc-900 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 mb-6 bg-zinc-900 rounded-xl p-1 w-fit">
         {(['all', 'my'] as const).map((f) => (
           <button
             key={f}
@@ -171,10 +171,10 @@ export default function GroupsClient({ initialGroups, currentUserId, userLat, us
       </div>
 
       {/* Category pills */}
-      <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide pb-1">
+      <div className="flex flex-wrap gap-2 mb-4">
         <button
           onClick={() => setCategoryFilter(null)}
-          className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
             categoryFilter === null
               ? 'bg-orange-500 text-white'
               : 'bg-zinc-800 text-zinc-400 hover:text-white'
@@ -186,7 +186,7 @@ export default function GroupsClient({ initialGroups, currentUserId, userLat, us
           <button
             key={c.value}
             onClick={() => setCategoryFilter(categoryFilter === c.value ? null : c.value)}
-            className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
               categoryFilter === c.value
                 ? 'bg-orange-500 text-white'
                 : 'bg-zinc-800 text-zinc-400 hover:text-white'
@@ -228,7 +228,7 @@ export default function GroupsClient({ initialGroups, currentUserId, userLat, us
       )}
 
       {/* Group cards */}
-      <div className="space-y-3">
+      <div className="space-y-6">
         {filtered.map((group) => {
           const coverUrl = group.cover_photo_url
             ? getImageUrl('covers', group.cover_photo_url)
@@ -246,21 +246,17 @@ export default function GroupsClient({ initialGroups, currentUserId, userLat, us
           return (
             <div
               key={group.id}
-              className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden"
+              className="bg-zinc-900 rounded-xl border border-zinc-800 border-l-orange-500/40 border-l-2 overflow-hidden"
             >
-              {/* Cover */}
-              <Link href={`/groups/${group.slug}`} className="block">
-                <div className="h-24 bg-zinc-800 relative overflow-hidden">
-                  {coverUrl ? (
+              {/* Cover — only shown when group has a cover photo */}
+              {coverUrl && (
+                <Link href={`/groups/${group.slug}`} className="block">
+                  <div className="h-44 relative overflow-hidden">
                     <Image src={coverUrl} alt={group.name} fill className="object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="text-4xl">🏍</span>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                </div>
-              </Link>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  </div>
+                </Link>
+              )}
 
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">

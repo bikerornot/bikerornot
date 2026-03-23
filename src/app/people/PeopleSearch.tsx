@@ -7,6 +7,7 @@ import { findNearbyUsers, findNearbyUsersByCity, findUsersByUsername, type Nearb
 import { sendFriendRequest, cancelFriendRequest, acceptFriendRequest } from '@/app/actions/friends'
 import { getImageUrl } from '@/lib/supabase/image'
 import { US_STATES } from '@/lib/supabase/types'
+import VerifiedBadge from '@/app/components/VerifiedBadge'
 
 const RADIUS_OPTIONS = [
   { label: '25 mi', value: 25 },
@@ -152,9 +153,10 @@ function UserCard({
         <div className="flex items-start justify-between gap-2">
           <Link
             href={`/profile/${profile.username}`}
-            className="font-semibold text-white hover:text-orange-400 transition-colors truncate"
+            className="font-semibold text-white hover:text-orange-400 transition-colors truncate flex items-center gap-1"
           >
             @{profile.username}
+            {profile.phone_verified_at && <VerifiedBadge />}
           </Link>
           {distanceMiles !== null && (
             <span className="text-xs text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 flex-shrink-0">

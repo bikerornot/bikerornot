@@ -11,6 +11,7 @@ import CommentSection from './CommentSection'
 import ContentMenu from './ContentMenu'
 import { extractYouTubeId, fetchYouTubeMeta } from '@/lib/youtube'
 import { renderContent } from '@/lib/render-content'
+import VerifiedBadge from './VerifiedBadge'
 
 interface Props {
   post: Post
@@ -130,8 +131,9 @@ function SharedPostEmbed({ post }: { post: Omit<Post, 'shared_post'> }) {
             )}
           </div>
         </Link>
-        <Link href={`/profile/${author?.username}`} className="text-sm font-semibold text-white hover:underline">
+        <Link href={`/profile/${author?.username}`} className="text-sm font-semibold text-white hover:underline inline-flex items-center gap-1">
           {author?.username ?? 'Unknown'}
+          {author?.phone_verified_at && <VerifiedBadge className="w-3.5 h-3.5" />}
         </Link>
         <span className="text-zinc-500 text-xs">· {formatTimeAgo(post.created_at)}</span>
       </div>
@@ -236,9 +238,10 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <Link
               href={`/profile/${author?.username}`}
-              className="font-semibold text-white hover:underline text-base sm:text-sm"
+              className="font-semibold text-white hover:underline text-base sm:text-sm inline-flex items-center gap-1"
             >
               @{displayName}
+              {author?.phone_verified_at && <VerifiedBadge />}
             </Link>
             {post.group && (
               <>

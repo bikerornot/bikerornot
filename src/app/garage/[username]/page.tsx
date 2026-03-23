@@ -181,6 +181,7 @@ export default async function GaragePageRoute({
         .in('id', userIds)
         .eq('onboarding_complete', true)
         .eq('status', 'active')
+        .is('deactivated_at', null)
 
       const allOwners = (profiles ?? []) as typeof initialOwnersMap[string]
       ownerCountsMap[b.id] = allOwners.length

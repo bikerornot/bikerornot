@@ -264,6 +264,7 @@ export async function getBikeOwnersPaginated(
     .in('id', userIds)
     .eq('onboarding_complete', true)
     .eq('status', 'active')
+    .is('deactivated_at', null)
 
   return (profiles ?? []) as BikeProfileOwner[]
 }

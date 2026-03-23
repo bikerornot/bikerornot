@@ -220,6 +220,7 @@ export default async function ProfilePage({
             .in('id', userIds)
             .eq('onboarding_complete', true)
             .eq('status', 'active')
+            .is('deactivated_at', null)
 
           ownerCounts[bike.id] = count ?? 0
         }

@@ -19,6 +19,7 @@ import ContentMenu from '@/app/components/ContentMenu'
 import { getMutualFriends } from '@/app/actions/suggestions'
 import BottomNav from '@/app/components/BottomNav'
 import { getBlockedIds } from '@/app/actions/blocks'
+import VerifiedBadge from '@/app/components/VerifiedBadge'
 
 export async function generateMetadata({
   params,
@@ -404,7 +405,10 @@ export default async function ProfilePage({
 
         {/* Username — full width so it never gets truncated on mobile */}
         <div className="mb-4">
-          <h1 className="text-2xl font-bold text-white">@{profile.username}</h1>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-1.5">
+            @{profile.username}
+            {profile.phone_verified_at && <VerifiedBadge className="w-5 h-5" />}
+          </h1>
         </div>
 
         {/* Stats */}

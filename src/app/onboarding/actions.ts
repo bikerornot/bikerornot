@@ -81,17 +81,8 @@ export async function uploadAvatar(formData: FormData): Promise<string> {
 
   if (error) throw error
 
-  // Female profiles under 40 always require manual admin avatar review (anti-scam gate)
-  const gender = user.user_metadata?.gender as string | undefined
-  const dob = user.user_metadata?.date_of_birth as string | undefined
-  let requiresManualReview = false
-  if (gender === 'female' && dob) {
-    const age = Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 86_400_000))
-    if (age < 40) requiresManualReview = true
-  }
-
-  // Auto-approve if Sightengine approved, unless manual review required; leave null for borderline (admin review)
-  if (moderation === 'approved' && !requiresManualReview) {
+  // Auto-approve if Sightengine approved; leave null for borderline (admin review)
+  if (moderation === 'approved') {
     await admin.from('profiles').update({
       avatar_reviewed_at: new Date().toISOString(),
     }).eq('id', user.id)
@@ -100,12 +91,12 @@ export async function uploadAvatar(formData: FormData): Promise<string> {
   return path
 }
 
-export async function completeOnboarding(
+export async function saveOnboardingData(
   username: string,
   photoPath: string | null,
   bikes: Array<{ year: number; make: string; model: string }>,
   refUrl?: string | null
-) {
+): Promise<{ username: string; bikeIds: string[]; phoneRequired: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
@@ -117,13 +108,22 @@ export async function completeOnboarding(
 
   const admin = getServiceClient()
 
+  // Determine if phone verification is required (female under 40)
+  const gender = user.user_metadata?.gender as string | undefined
+  const dob = user.user_metadata?.date_of_birth as string | undefined
+  let phoneRequired = false
+  if (gender === 'female' && dob) {
+    const age = Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 86_400_000))
+    if (age < 40) phoneRequired = true
+  }
+
   const { error: profileError } = await admin
     .from('profiles')
     .update({
       username,
       display_name: username,
       ...(photoPath ? { profile_photo_url: photoPath } : {}),
-      onboarding_complete: true,
+      ...(phoneRequired ? { phone_verification_required: true } : { onboarding_complete: true }),
     })
     .eq('id', user.id)
 
@@ -134,7 +134,6 @@ export async function completeOnboarding(
 
   // Geocode zip, capture IP, and store gender from signup metadata
   const zipCode = user.user_metadata?.zip_code as string | undefined
-  const gender = user.user_metadata?.gender as string | undefined
   const geoUpdate: Record<string, unknown> = {}
   if (gender) geoUpdate.gender = gender
 
@@ -180,7 +179,30 @@ export async function completeOnboarding(
     bikeIds = (insertedBikes ?? []).map((b: { id: string }) => b.id)
   }
 
-  return { username, bikeIds }
+  return { username, bikeIds, phoneRequired }
+}
+
+/** For backwards compatibility — calls saveOnboardingData and always finalizes */
+export async function completeOnboarding(
+  username: string,
+  photoPath: string | null,
+  bikes: Array<{ year: number; make: string; model: string }>,
+  refUrl?: string | null
+) {
+  return saveOnboardingData(username, photoPath, bikes, refUrl)
+}
+
+/** Finalize onboarding after phone verification (for users who required it) */
+export async function finalizeOnboarding() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const admin = getServiceClient()
+  await admin
+    .from('profiles')
+    .update({ onboarding_complete: true })
+    .eq('id', user.id)
 }
 
 export async function uploadOnboardingBikePhoto(bikeId: string, formData: FormData) {

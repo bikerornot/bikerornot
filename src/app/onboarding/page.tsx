@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { RIDING_STYLES } from '@/lib/supabase/types'
-import { uploadAvatar, completeOnboarding, uploadOnboardingBikePhoto } from './actions'
+import { uploadAvatar, saveOnboardingData, finalizeOnboarding, uploadOnboardingBikePhoto } from './actions'
 import BikeSelector, { BikeData } from '@/app/settings/BikeSelector'
 import { compressImage } from '@/lib/compress'
 import { validateUsername } from '@/lib/username-rules'
+import PhoneVerifyForm from '@/app/components/PhoneVerifyForm'
 
 const USERNAME_REGEX = /^[a-z0-9_]{4,20}$/
 const CURRENT_YEAR = new Date().getFullYear()
@@ -16,10 +17,10 @@ const CURRENT_YEAR = new Date().getFullYear()
 type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'blocked'
 
 // ─── Progress Indicator ───────────────────────────────────────────────────────
-function StepIndicator({ current }: { current: number }) {
+function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
     <div className="flex items-center justify-center gap-2 mb-8">
-      {[1, 2, 3].map((step) => (
+      {Array.from({ length: total }, (_, i) => i + 1).map((step) => (
         <div key={step} className="flex items-center gap-2">
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
@@ -32,7 +33,7 @@ function StepIndicator({ current }: { current: number }) {
           >
             {step < current ? '✓' : step}
           </div>
-          {step < 3 && <div className={`w-12 h-0.5 ${step < current ? 'bg-orange-500' : 'bg-zinc-700'}`} />}
+          {step < total && <div className={`w-12 h-0.5 ${step < current ? 'bg-orange-500' : 'bg-zinc-700'}`} />}
         </div>
       ))}
     </div>
@@ -372,6 +373,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [phoneRequired, setPhoneRequired] = useState(false)
 
   // Step 1
   const [username, setUsername] = useState('')
@@ -385,12 +387,27 @@ export default function OnboardingPage() {
   const [bikes, setBikes] = useState<BikeData[]>([{ year: '', make: '', model: '' }])
   const [bikePhotos, setBikePhotos] = useState<(File | null)[]>([null])
 
+  // Detect if phone verification will be required (female under 40)
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      const gender = user.user_metadata?.gender as string | undefined
+      const dob = user.user_metadata?.date_of_birth as string | undefined
+      if (gender === 'female' && dob) {
+        const age = Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 86_400_000))
+        if (age < 40) setPhoneRequired(true)
+      }
+    })
+  }, [])
+
+  const totalSteps = phoneRequired ? 4 : 3
+
   function canAdvanceStep1() {
     return usernameStatus === 'available'
   }
 
   function bikesAreValid() {
-    // If the user added any bike rows, all fields must be filled in
     return bikes.every(
       (b) =>
         b.make.trim() &&
@@ -419,7 +436,6 @@ export default function OnboardingPage() {
         photoPath = await uploadAvatar(formData)
       }
 
-      // Complete onboarding via server action (bypasses client-side auth issues)
       const refUrl = localStorage.getItem('signup_ref_url') ?? null
       const validBikes = skipBikes
         ? []
@@ -430,7 +446,7 @@ export default function OnboardingPage() {
               make: b.make.trim(),
               model: b.model.trim(),
             }))
-      const result = await completeOnboarding(username, photoPath, validBikes, refUrl)
+      const result = await saveOnboardingData(username, photoPath, validBikes, refUrl)
       localStorage.removeItem('signup_ref_url')
 
       // Upload bike photos (best-effort — don't block completion)
@@ -449,11 +465,17 @@ export default function OnboardingPage() {
         await Promise.all(uploadPromises)
       }
 
-      if (typeof window !== 'undefined' && (window as any).fbq) {
-        ;(window as any).fbq('track', 'CompleteRegistration')
+      if (result.phoneRequired) {
+        // Advance to step 4 for phone verification
+        setStep(4)
+        setSubmitting(false)
+      } else {
+        // Onboarding complete — profile already activated
+        if (typeof window !== 'undefined' && (window as any).fbq) {
+          ;(window as any).fbq('track', 'CompleteRegistration')
+        }
+        router.push('/feed')
       }
-
-      router.push('/feed')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
       if (message === 'USERNAME_TAKEN') {
@@ -462,6 +484,18 @@ export default function OnboardingPage() {
         setError(message)
       }
       setSubmitting(false)
+    }
+  }
+
+  async function handlePhoneVerified() {
+    try {
+      await finalizeOnboarding()
+      if (typeof window !== 'undefined' && (window as any).fbq) {
+        ;(window as any).fbq('track', 'CompleteRegistration')
+      }
+      router.push('/feed')
+    } catch {
+      setError('Something went wrong. Please try again.')
     }
   }
 
@@ -475,7 +509,7 @@ export default function OnboardingPage() {
           <p className="text-zinc-400 text-sm mt-1">Let&apos;s set up your profile</p>
         </div>
 
-        <StepIndicator current={step} />
+        <StepIndicator current={step} total={totalSteps} />
 
         <div className="bg-zinc-900 rounded-2xl p-8 shadow-2xl border border-zinc-800">
           {step === 1 && (
@@ -495,6 +529,13 @@ export default function OnboardingPage() {
             />
           )}
           {step === 3 && <StepBikes bikes={bikes} setBikes={setBikes} bikePhotos={bikePhotos} setBikePhotos={setBikePhotos} />}
+          {step === 4 && (
+            <div>
+              <h2 className="text-xl font-semibold text-white mb-1">Verify your phone</h2>
+              <p className="text-zinc-400 text-sm mb-6">One last step to activate your account.</p>
+              <PhoneVerifyForm onVerified={handlePhoneVerified} />
+            </div>
+          )}
 
           {error && (
             <div className="mt-4 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm">
@@ -504,7 +545,7 @@ export default function OnboardingPage() {
 
           {/* Navigation */}
           <div className="flex gap-3 mt-8">
-            {step > 1 && (
+            {step > 1 && step < 4 && (
               <button
                 type="button"
                 onClick={() => { setStep((s) => s - 1); setError(null) }}
@@ -542,7 +583,7 @@ export default function OnboardingPage() {
                   disabled={submitting || !bikesAreValid()}
                   className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-lg transition-colors text-sm"
                 >
-                  {submitting ? 'Setting up…' : 'Complete setup'}
+                  {submitting ? 'Setting up…' : phoneRequired ? 'Next' : 'Complete setup'}
                 </button>
               </>
             )}

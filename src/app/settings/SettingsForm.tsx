@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Profile, RELATIONSHIP_OPTIONS, GENDER_OPTIONS } from '@/lib/supabase/types'
 import { saveProfileSettings, saveEmailPreferences, savePrivacySettings } from './actions'
 import { deactivateAccount, scheduleAccountDeletion } from '@/app/actions/account'
+import { removePhoneVerification } from '@/app/actions/phone-verification'
+import PhoneVerifyForm from '@/app/components/PhoneVerifyForm'
 
 interface Props {
   profile: Profile
@@ -29,6 +31,9 @@ export default function SettingsForm({ profile }: Props) {
   const [emailMentions, setEmailMentions] = useState(profile.email_mentions ?? true)
   const [showRealName, setShowRealName] = useState(profile.show_real_name ?? false)
   const [showBirthday, setShowBirthday] = useState(profile.show_birthday ?? false)
+  const [phoneVerified, setPhoneVerified] = useState(!!profile.phone_verified_at)
+  const [showPhoneForm, setShowPhoneForm] = useState(false)
+  const [removingPhone, setRemovingPhone] = useState(false)
 
   const [bio, setBio] = useState(profile.bio ?? '')
   const [location, setLocation] = useState(profile.location ?? '')
@@ -273,6 +278,74 @@ export default function SettingsForm({ profile }: Props) {
           </button>
         </div>
       </div>
+    </div>
+
+    {/* ── Phone Verification ──────────────────────────────────── */}
+    <div className="mt-10 pt-8 border-t border-zinc-800">
+      <h2 className="text-sm font-semibold text-zinc-300 uppercase tracking-wide mb-1">Phone Verification</h2>
+      <p className="text-zinc-500 text-xs mb-5">Verify your phone number to get a verified badge on your profile.</p>
+
+      {phoneVerified && !showPhoneForm ? (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <div>
+                <p className="text-sm text-white font-medium">Phone verified</p>
+                {profile.phone_number && (
+                  <p className="text-zinc-500 text-xs mt-0.5">
+                    ***-***-{profile.phone_number.slice(-4)}
+                  </p>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={removingPhone}
+              onClick={async () => {
+                setRemovingPhone(true)
+                try {
+                  await removePhoneVerification()
+                  setPhoneVerified(false)
+                  router.refresh()
+                } finally {
+                  setRemovingPhone(false)
+                }
+              }}
+              className="text-xs text-zinc-500 hover:text-red-400 transition-colors"
+            >
+              {removingPhone ? 'Removing...' : 'Remove verification'}
+            </button>
+          </div>
+        </div>
+      ) : showPhoneForm ? (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <PhoneVerifyForm
+            onVerified={() => {
+              setPhoneVerified(true)
+              setShowPhoneForm(false)
+              router.refresh()
+            }}
+            onCancel={() => setShowPhoneForm(false)}
+          />
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowPhoneForm(true)}
+          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-4 flex items-center justify-between hover:border-zinc-700 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+            </svg>
+            <span className="text-sm text-zinc-300">Verify your phone number</span>
+          </div>
+          <span className="text-xs text-orange-400 font-medium">Get verified</span>
+        </button>
+      )}
     </div>
 
     {/* ── Danger Zone ────────────────────────────────────────────── */}

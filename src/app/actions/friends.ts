@@ -28,34 +28,17 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
   // Silently pretend it worked if blocked — don't reveal block status
   if (blockedIds.has(addresseeId)) return
 
-  // Gate 2: Block friend requests from high-risk unreviewed accounts
-  // (female, under 40, account < 30 days, profile photo not yet approved)
   const { data: senderProfile } = await admin
     .from('profiles')
-    .select('created_at, gender, date_of_birth, avatar_reviewed_at, status')
+    .select('created_at, status')
     .eq('id', user.id)
     .single()
 
   // Silently block if sender is banned/suspended (shadow ban)
   if (senderProfile?.status && senderProfile.status !== 'active') return
 
+  // Daily friend request cap — 30/day for all accounts, 5/day for new (<7 days)
   const accountAgeDays = (Date.now() - new Date(senderProfile!.created_at).getTime()) / 86_400_000
-  if (
-    accountAgeDays < 30
-    && senderProfile!.gender === 'female'
-    && senderProfile!.date_of_birth
-    && !senderProfile!.avatar_reviewed_at
-  ) {
-    const age = Math.floor(
-      (Date.now() - new Date(senderProfile!.date_of_birth).getTime()) / (365.25 * 86_400_000)
-    )
-    if (age < 40) {
-      // Silently pretend it worked — don't reveal anti-scam gate
-      return
-    }
-  }
-
-  // Gate 3: Daily friend request cap — 30/day for all accounts, 5/day for new (<7 days)
   const dailyLimit = accountAgeDays < 7 ? 5 : 30
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)

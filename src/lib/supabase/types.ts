@@ -38,6 +38,9 @@ export interface Profile {
   email_mentions: boolean
   show_real_name: boolean
   show_birthday: boolean
+  phone_number: string | null
+  phone_verified_at: string | null
+  phone_verification_required: boolean
 }
 
 export interface UserBike {

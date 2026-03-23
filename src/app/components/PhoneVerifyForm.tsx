@@ -65,7 +65,7 @@ export default function PhoneVerifyForm({ onVerified, onCancel }: Props) {
       const result = await checkPhoneVerification(code)
       if (result.verified) {
         setStep('success')
-        setTimeout(onVerified, 1000)
+        setTimeout(onVerified, 3000)
       } else {
         setError(result.message)
       }

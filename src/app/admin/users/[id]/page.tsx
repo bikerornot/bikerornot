@@ -145,6 +145,25 @@ export default async function UserDetailPage({
                 </div>
               )}
               <div>
+                <dt className="text-zinc-600 text-xs uppercase tracking-wider mb-0.5">Phone</dt>
+                <dd className="text-zinc-300 flex items-center gap-2">
+                  {user.phone_verified_at ? (
+                    <>
+                      <span className="font-mono text-xs">{user.phone_number}</span>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">
+                        Verified {formatDate(user.phone_verified_at)}
+                      </span>
+                    </>
+                  ) : user.phone_verification_required ? (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">
+                      Pending — required
+                    </span>
+                  ) : (
+                    <span className="text-zinc-600 text-xs">Not verified</span>
+                  )}
+                </dd>
+              </div>
+              <div>
                 <dt className="text-zinc-600 text-xs uppercase tracking-wider mb-0.5">Joined</dt>
                 <dd className="text-zinc-300">{formatDate(user.created_at)}</dd>
               </div>

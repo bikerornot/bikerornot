@@ -341,6 +341,9 @@ export interface AdminUserDetail {
   suspension_reason: string | null
   suspended_until: string | null
   ban_reason: string | null
+  phone_number: string | null
+  phone_verified_at: string | null
+  phone_verification_required: boolean
   post_count: number
   message_count: number
   comment_count: number
@@ -592,6 +595,9 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     suspension_reason: profile.suspension_reason ?? null,
     suspended_until: profile.suspended_until ?? null,
     ban_reason: profile.ban_reason ?? null,
+    phone_number: profile.phone_number ?? null,
+    phone_verified_at: profile.phone_verified_at ?? null,
+    phone_verification_required: profile.phone_verification_required ?? false,
     post_count: (posts ?? []).length,
     message_count: totalMessages ?? 0,
     comment_count: totalComments ?? 0,

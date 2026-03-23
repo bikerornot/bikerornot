@@ -70,7 +70,7 @@ export async function moderateImage(
     nuditySexual > 0.15 ||
     nudityExplicit > 0.2 ||
     gore > 0.3 ||
-    weapon > 0.6
+    weapon > 0.85
   ) {
     return 'pending'
   }

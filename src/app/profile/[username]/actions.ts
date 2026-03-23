@@ -39,21 +39,8 @@ export async function uploadProfilePhoto(formData: FormData): Promise<{ error: s
 
   if (uploadError) throw new Error(uploadError.message)
 
-  // Female profiles under 40 always require manual admin avatar review (anti-scam gate)
-  let reviewedAt: string | null = null
-  if (moderation === 'approved') {
-    const { data: profile } = await admin
-      .from('profiles')
-      .select('gender, date_of_birth')
-      .eq('id', user.id)
-      .single()
-    let requiresManualReview = false
-    if (profile?.gender === 'female' && profile?.date_of_birth) {
-      const age = Math.floor((Date.now() - new Date(profile.date_of_birth).getTime()) / (365.25 * 86_400_000))
-      if (age < 40) requiresManualReview = true
-    }
-    if (!requiresManualReview) reviewedAt = new Date().toISOString()
-  }
+  // Auto-approve if SightEngine approved; leave null for borderline (admin review for pornography)
+  const reviewedAt = moderation === 'approved' ? new Date().toISOString() : null
 
   const { error: updateError } = await admin
     .from('profiles')

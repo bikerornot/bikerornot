@@ -5,12 +5,17 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { updateGroup } from '@/app/actions/groups'
 import { compressImage } from '@/lib/compress'
+import { GROUP_CATEGORIES, US_STATES, type GroupCategory } from '@/lib/supabase/types'
 
 interface Props {
   groupId: string
   currentDescription: string | null
   currentPrivacy: 'public' | 'private'
   currentCoverUrl: string | null
+  currentCategory: GroupCategory | null
+  currentCity: string | null
+  currentState: string | null
+  currentZipCode: string | null
 }
 
 export default function EditGroupPanel({
@@ -18,11 +23,19 @@ export default function EditGroupPanel({
   currentDescription,
   currentPrivacy,
   currentCoverUrl,
+  currentCategory,
+  currentCity,
+  currentState,
+  currentZipCode,
 }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [description, setDescription] = useState(currentDescription ?? '')
   const [privacy, setPrivacy] = useState<'public' | 'private'>(currentPrivacy)
+  const [category, setCategory] = useState<GroupCategory | ''>(currentCategory ?? '')
+  const [city, setCity] = useState(currentCity ?? '')
+  const [state, setState] = useState(currentState ?? '')
+  const [zipCode, setZipCode] = useState(currentZipCode ?? '')
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -58,6 +71,10 @@ export default function EditGroupPanel({
     setOpen(false)
     setDescription(currentDescription ?? '')
     setPrivacy(currentPrivacy)
+    setCategory(currentCategory ?? '')
+    setCity(currentCity ?? '')
+    setState(currentState ?? '')
+    setZipCode(currentZipCode ?? '')
     removeCoverPreview()
     setError(null)
   }
@@ -70,6 +87,10 @@ export default function EditGroupPanel({
           description: description.trim() || null,
           coverFile,
           privacy: privacy === 'private' ? 'private' : undefined,
+          category: category || null,
+          city: city.trim() || null,
+          state: state || null,
+          zipCode: zipCode.trim() || null,
         })
         setOpen(false)
         removeCoverPreview()
@@ -141,6 +162,21 @@ export default function EditGroupPanel({
             />
           </div>
 
+          {/* Category */}
+          <div>
+            <label className="block text-xs font-medium text-zinc-400 mb-2">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value as GroupCategory | '')}
+              className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+            >
+              <option value="">No category</option>
+              {GROUP_CATEGORIES.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Description */}
           <div>
             <label className="block text-xs font-medium text-zinc-400 mb-2">Description</label>
@@ -152,6 +188,42 @@ export default function EditGroupPanel({
               maxLength={500}
               className="w-full bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500 transition-colors resize-none"
             />
+          </div>
+
+          {/* Location */}
+          <div>
+            <label className="block text-xs font-medium text-zinc-400 mb-2">Location</label>
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="City"
+                maxLength={100}
+                className="w-full bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+              />
+              <div className="flex gap-2">
+                <select
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  className="flex-1 bg-zinc-900 border border-zinc-800 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                >
+                  <option value="">State...</option>
+                  {US_STATES.map((s) => (
+                    <option key={s.abbr} value={s.abbr}>{s.name}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={zipCode}
+                  onChange={(e) => setZipCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                  placeholder="Zip"
+                  inputMode="numeric"
+                  maxLength={5}
+                  className="w-24 bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Privacy — one-way toggle, only shown if currently public */}
@@ -176,7 +248,7 @@ export default function EditGroupPanel({
               </div>
               {privacy === 'private' && (
                 <p className="text-amber-400/80 text-xs mt-1.5">
-                  ⚠️ This is permanent — private groups cannot be made public again.
+                  Warning: This is permanent — private groups cannot be made public again.
                 </p>
               )}
             </div>
@@ -190,7 +262,7 @@ export default function EditGroupPanel({
               disabled={saving}
               className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
             >
-              {saving ? 'Saving…' : 'Save Changes'}
+              {saving ? 'Saving...' : 'Save Changes'}
             </button>
             <button
               onClick={handleCancel}

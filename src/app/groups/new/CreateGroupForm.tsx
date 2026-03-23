@@ -5,12 +5,17 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createGroup } from '@/app/actions/groups'
 import { compressImage } from '@/lib/compress'
+import { GROUP_CATEGORIES, US_STATES, type GroupCategory } from '@/lib/supabase/types'
 
 export default function CreateGroupForm() {
   const router = useRouter()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [privacy, setPrivacy] = useState<'public' | 'private'>('public')
+  const [category, setCategory] = useState<GroupCategory | ''>('')
+  const [city, setCity] = useState('')
+  const [state, setState] = useState('')
+  const [zipCode, setZipCode] = useState('')
   const [coverFile, setCoverFile] = useState<File | null>(null)
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -49,7 +54,12 @@ export default function CreateGroupForm() {
     setSubmitting(true)
     setError(null)
     try {
-      const group = await createGroup(name.trim(), description.trim() || null, privacy, coverFile)
+      const group = await createGroup(name.trim(), description.trim() || null, privacy, coverFile, {
+        category: category || null,
+        city: city.trim() || null,
+        state: state || null,
+        zipCode: zipCode.trim() || null,
+      })
       router.push(`/groups/${group.slug}?invite=1`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create group')
@@ -135,6 +145,24 @@ export default function CreateGroupForm() {
         </p>
       </div>
 
+      {/* Category */}
+      <div>
+        <label className="block text-sm font-medium text-zinc-300 mb-1.5" htmlFor="category">
+          Category (optional)
+        </label>
+        <select
+          id="category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as GroupCategory | '')}
+          className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+        >
+          <option value="">Select a category...</option>
+          {GROUP_CATEGORIES.map((c) => (
+            <option key={c.value} value={c.value}>{c.label}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Description */}
       <div>
         <label className="block text-sm font-medium text-zinc-300 mb-1.5" htmlFor="desc">
@@ -151,6 +179,42 @@ export default function CreateGroupForm() {
         />
       </div>
 
+      {/* Location */}
+      <div>
+        <label className="block text-sm font-medium text-zinc-300 mb-1.5">Location (optional)</label>
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="City"
+            maxLength={100}
+            className="w-full bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+          />
+          <div className="flex gap-2">
+            <select
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              className="flex-1 bg-zinc-900 border border-zinc-800 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+            >
+              <option value="">State...</option>
+              {US_STATES.map((s) => (
+                <option key={s.abbr} value={s.abbr}>{s.name}</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              value={zipCode}
+              onChange={(e) => setZipCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
+              placeholder="Zip Code"
+              inputMode="numeric"
+              maxLength={5}
+              className="w-28 bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+            />
+          </div>
+        </div>
+      </div>
+
       {error && <p className="text-red-400 text-sm">{error}</p>}
 
       <button
@@ -158,7 +222,7 @@ export default function CreateGroupForm() {
         disabled={!name.trim() || submitting}
         className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-xl transition-colors"
       >
-        {submitting ? 'Creating…' : 'Create Group'}
+        {submitting ? 'Creating...' : 'Create Group'}
       </button>
     </form>
   )

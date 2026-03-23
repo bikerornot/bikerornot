@@ -27,7 +27,7 @@ export default async function GroupsPage() {
 
   if (!profile?.onboarding_complete) redirect('/onboarding')
 
-  const groups = await getGroups(user.id)
+  const { groups, userLat, userLng } = await getGroups(user.id)
 
   const avatarUrl = profile.profile_photo_url
     ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
@@ -60,7 +60,7 @@ export default async function GroupsPage() {
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-6">
-        <GroupsClient initialGroups={groups} currentUserId={user.id} />
+        <GroupsClient initialGroups={groups} currentUserId={user.id} userLat={userLat} userLng={userLng} />
       </div>
       <BottomNav />
     </div>

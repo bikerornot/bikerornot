@@ -1,27 +1,78 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Group } from '@/lib/supabase/types'
+import { Group, GROUP_CATEGORIES, type GroupCategory } from '@/lib/supabase/types'
 import { joinGroup, leaveGroup } from '@/app/actions/groups'
 import { getImageUrl } from '@/lib/supabase/image'
+import { haversine } from '@/lib/geo'
+
+type SortBy = 'newest' | 'most_members' | 'near_me'
 
 interface Props {
   initialGroups: Group[]
   currentUserId: string
+  userLat: number | null
+  userLng: number | null
 }
 
-export default function GroupsClient({ initialGroups, currentUserId }: Props) {
+export default function GroupsClient({ initialGroups, currentUserId, userLat, userLng }: Props) {
   const [groups, setGroups] = useState<Group[]>(initialGroups)
   const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState<'all' | 'my'>('all')
+  const [categoryFilter, setCategoryFilter] = useState<GroupCategory | null>(null)
+  const [sortBy, setSortBy] = useState<SortBy>('newest')
   const [pending, setPending] = useState<Set<string>>(new Set())
 
-  const filtered = groups.filter(
-    (g) =>
-      g.name.toLowerCase().includes(search.toLowerCase()) ||
-      (g.description ?? '').toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = useMemo(() => {
+    let result = groups
+
+    // Text search
+    if (search) {
+      const q = search.toLowerCase()
+      result = result.filter(
+        (g) =>
+          g.name.toLowerCase().includes(q) ||
+          (g.description ?? '').toLowerCase().includes(q)
+      )
+    }
+
+    // My Groups filter
+    if (filter === 'my') {
+      result = result.filter((g) => g.is_member)
+    }
+
+    // Category filter
+    if (categoryFilter) {
+      result = result.filter((g) => g.category === categoryFilter)
+    }
+
+    // Sort
+    result = [...result]
+    if (sortBy === 'most_members') {
+      result.sort((a, b) => (b.member_count ?? 0) - (a.member_count ?? 0))
+    } else if (sortBy === 'near_me' && userLat != null && userLng != null) {
+      result.sort((a, b) => {
+        const distA = a.latitude != null && a.longitude != null
+          ? haversine(userLat, userLng, a.latitude, a.longitude)
+          : Infinity
+        const distB = b.latitude != null && b.longitude != null
+          ? haversine(userLat, userLng, b.latitude, b.longitude)
+          : Infinity
+        return distA - distB
+      })
+    }
+    // 'newest' is the default order from server
+
+    return result
+  }, [groups, search, filter, categoryFilter, sortBy, userLat, userLng])
+
+  function getDistance(group: Group): number | null {
+    if (sortBy !== 'near_me' || userLat == null || userLng == null) return null
+    if (group.latitude == null || group.longitude == null) return null
+    return Math.round(haversine(userLat, userLng, group.latitude, group.longitude))
+  }
 
   async function handleJoin(groupId: string, privacy: 'public' | 'private') {
     if (pending.has(groupId)) return
@@ -81,9 +132,15 @@ export default function GroupsClient({ initialGroups, currentUserId }: Props) {
     }
   }
 
+  function isRecentlyActive(lastPostAt: string | null): boolean {
+    if (!lastPostAt) return false
+    return Date.now() - new Date(lastPostAt).getTime() < 24 * 60 * 60 * 1000
+  }
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold text-white">Groups</h1>
           <p className="text-zinc-500 text-sm mt-0.5">Find and join rider groups</p>
@@ -96,25 +153,81 @@ export default function GroupsClient({ initialGroups, currentUserId }: Props) {
         </Link>
       </div>
 
-      <div className="mb-5">
-        <input
-          type="text"
-          placeholder="Search groups…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500 transition-colors"
-        />
+      {/* My Groups / All Groups toggle */}
+      <div className="flex gap-1 mb-4 bg-zinc-900 rounded-xl p-1 w-fit">
+        {(['all', 'my'] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              filter === f
+                ? 'bg-orange-500 text-white'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            {f === 'all' ? 'All Groups' : 'My Groups'}
+          </button>
+        ))}
       </div>
 
+      {/* Category pills */}
+      <div className="flex gap-2 mb-4 overflow-x-auto scrollbar-hide pb-1">
+        <button
+          onClick={() => setCategoryFilter(null)}
+          className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+            categoryFilter === null
+              ? 'bg-orange-500 text-white'
+              : 'bg-zinc-800 text-zinc-400 hover:text-white'
+          }`}
+        >
+          All
+        </button>
+        {GROUP_CATEGORIES.map((c) => (
+          <button
+            key={c.value}
+            onClick={() => setCategoryFilter(categoryFilter === c.value ? null : c.value)}
+            className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+              categoryFilter === c.value
+                ? 'bg-orange-500 text-white'
+                : 'bg-zinc-800 text-zinc-400 hover:text-white'
+            }`}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search + Sort row */}
+      <div className="flex gap-2 mb-5">
+        <input
+          type="text"
+          placeholder="Search groups..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+        />
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortBy)}
+          className="bg-zinc-900 border border-zinc-800 text-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+        >
+          <option value="newest">Newest</option>
+          <option value="most_members">Most Members</option>
+          {userLat != null && <option value="near_me">Near Me</option>}
+        </select>
+      </div>
+
+      {/* Empty state */}
       {filtered.length === 0 && (
         <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-10 text-center">
           <p className="text-zinc-400 text-sm">No groups found.</p>
-          {search && (
-            <p className="text-zinc-600 text-xs mt-1">Try a different search term.</p>
+          {(search || categoryFilter || filter === 'my') && (
+            <p className="text-zinc-600 text-xs mt-1">Try adjusting your filters.</p>
           )}
         </div>
       )}
 
+      {/* Group cards */}
       <div className="space-y-3">
         {filtered.map((group) => {
           const coverUrl = group.cover_photo_url
@@ -124,6 +237,11 @@ export default function GroupsClient({ initialGroups, currentUserId }: Props) {
           const isAdmin = group.member_role === 'admin'
           const isActiveMember = group.member_status === 'active'
           const isPending = group.member_status === 'pending'
+          const distance = getDistance(group)
+          const categoryLabel = group.category
+            ? GROUP_CATEGORIES.find((c) => c.value === group.category)?.label
+            : null
+          const locationStr = [group.city, group.state].filter(Boolean).join(', ')
 
           return (
             <div
@@ -145,10 +263,15 @@ export default function GroupsClient({ initialGroups, currentUserId }: Props) {
               </Link>
 
               <div className="p-4">
-                <Link href={`/groups/${group.slug}`} className="hover:text-orange-400 transition-colors">
-                  <h3 className="text-white font-semibold">{group.name}</h3>
-                </Link>
-                <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex items-start justify-between gap-2">
+                  <Link href={`/groups/${group.slug}`} className="hover:text-orange-400 transition-colors">
+                    <h3 className="text-white font-semibold">{group.name}</h3>
+                  </Link>
+                  {isRecentlyActive(group.last_post_at) && (
+                    <span className="shrink-0 w-2 h-2 rounded-full bg-green-500 mt-2" title="Active in last 24h" />
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 mt-0.5">
                   <span className="text-xs text-zinc-500">
                     {group.privacy === 'private' ? '🔒 Private' : '🌐 Public'}
                   </span>
@@ -160,7 +283,28 @@ export default function GroupsClient({ initialGroups, currentUserId }: Props) {
                       </span>
                     </>
                   )}
+                  {categoryLabel && (
+                    <>
+                      <span className="text-zinc-700">·</span>
+                      <span className="text-xs bg-orange-500/15 text-orange-400 px-1.5 py-0.5 rounded-full">
+                        {categoryLabel}
+                      </span>
+                    </>
+                  )}
                 </div>
+                {(locationStr || distance != null) && (
+                  <div className="flex items-center gap-2 mt-1">
+                    {locationStr && (
+                      <span className="text-xs text-zinc-500">{locationStr}</span>
+                    )}
+                    {distance != null && (
+                      <>
+                        {locationStr && <span className="text-zinc-700">·</span>}
+                        <span className="text-xs text-zinc-400">{distance} mi</span>
+                      </>
+                    )}
+                  </div>
+                )}
                 {group.description && (
                   <p className="text-zinc-400 text-sm mt-1.5 line-clamp-2">{group.description}</p>
                 )}

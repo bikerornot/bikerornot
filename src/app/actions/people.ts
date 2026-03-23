@@ -6,22 +6,13 @@ import { geocodeZip, geocodeCity } from '@/lib/geocode'
 import type { Profile } from '@/lib/supabase/types'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { getBlockedIds } from '@/app/actions/blocks'
+import { haversine } from '@/lib/geo'
 
 function getServiceClient() {
   return createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
-}
-
-function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 3959 // miles
-  const dLat = ((lat2 - lat1) * Math.PI) / 180
-  const dLon = ((lon2 - lon1) * Math.PI) / 180
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2
-  return R * 2 * Math.asin(Math.sqrt(a))
 }
 
 export interface NearbyUser {

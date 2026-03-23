@@ -2,10 +2,11 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import type { Group, GroupMember, Post, Profile } from '@/lib/supabase/types'
+import type { Group, GroupMember, GroupCategory, Post, Profile } from '@/lib/supabase/types'
 import { validateImageFile } from '@/lib/rate-limit'
 import { moderateImage } from '@/lib/sightengine'
 import { notifyIfActive } from '@/lib/notify'
+import { geocodeZip } from '@/lib/geocode'
 
 function getServiceClient() {
   return createServiceClient(
@@ -32,7 +33,13 @@ export async function createGroup(
   name: string,
   description: string | null,
   privacy: 'public' | 'private',
-  coverFile?: File | null
+  coverFile?: File | null,
+  options?: {
+    category?: GroupCategory | null
+    city?: string | null
+    state?: string | null
+    zipCode?: string | null
+  }
 ): Promise<Group> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -68,10 +75,31 @@ export async function createGroup(
     cover_photo_url = path
   }
 
+  // Geocode zip if provided
+  let latitude: number | null = null
+  let longitude: number | null = null
+  let city = options?.city?.trim() || null
+  let state = options?.state?.trim() || null
+  const zip_code = options?.zipCode?.trim() || null
+
+  if (zip_code) {
+    const geo = await geocodeZip(zip_code)
+    if (geo) {
+      latitude = geo.lat
+      longitude = geo.lng
+      if (!city) city = geo.city
+      if (!state) state = geo.state
+    }
+  }
+
   // Insert group
   const { data: group, error: groupErr } = await admin
     .from('groups')
-    .insert({ name, slug, description, privacy, creator_id: user.id, cover_photo_url })
+    .insert({
+      name, slug, description, privacy, creator_id: user.id, cover_photo_url,
+      category: options?.category || null,
+      city, state, zip_code, latitude, longitude,
+    })
     .select()
     .single()
 
@@ -87,7 +115,11 @@ export async function createGroup(
   return { ...group, member_count: 1, is_member: true, member_role: 'admin', member_status: 'active' }
 }
 
-export async function getGroups(currentUserId?: string): Promise<Group[]> {
+export async function getGroups(currentUserId?: string): Promise<{
+  groups: Group[]
+  userLat: number | null
+  userLng: number | null
+}> {
   const admin = getServiceClient()
 
   const { data: groups, error } = await admin
@@ -97,7 +129,7 @@ export async function getGroups(currentUserId?: string): Promise<Group[]> {
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(error.message)
-  if (!groups) return []
+  if (!groups) return { groups: [], userLat: null, userLng: null }
 
   const groupIds = groups.map((g) => g.id)
 
@@ -116,27 +148,44 @@ export async function getGroups(currentUserId?: string): Promise<Group[]> {
     }
   }
 
-  // Get current user's memberships
+  // Get current user's memberships + lat/lng
   let myMembershipMap: Record<string, { role: string; status: string }> = {}
+  let userLat: number | null = null
+  let userLng: number | null = null
+
   if (currentUserId) {
-    const { data: myMemberships } = await admin
-      .from('group_members')
-      .select('group_id, role, status')
-      .eq('user_id', currentUserId)
-      .in('group_id', groupIds)
+    const [{ data: myMemberships }, { data: profile }] = await Promise.all([
+      admin
+        .from('group_members')
+        .select('group_id, role, status')
+        .eq('user_id', currentUserId)
+        .in('group_id', groupIds),
+      admin
+        .from('profiles')
+        .select('latitude, longitude')
+        .eq('id', currentUserId)
+        .single(),
+    ])
 
     for (const m of myMemberships ?? []) {
       myMembershipMap[m.group_id] = { role: m.role, status: m.status }
     }
+
+    userLat = profile?.latitude ?? null
+    userLng = profile?.longitude ?? null
   }
 
-  return groups.map((g) => ({
-    ...g,
-    member_count: countMap[g.id] ?? 0,
-    is_member: !!myMembershipMap[g.id],
-    member_role: (myMembershipMap[g.id]?.role as 'admin' | 'member') ?? null,
-    member_status: (myMembershipMap[g.id]?.status as 'active' | 'pending') ?? null,
-  }))
+  return {
+    groups: groups.map((g) => ({
+      ...g,
+      member_count: countMap[g.id] ?? 0,
+      is_member: !!myMembershipMap[g.id],
+      member_role: (myMembershipMap[g.id]?.role as 'admin' | 'member') ?? null,
+      member_status: (myMembershipMap[g.id]?.status as 'active' | 'pending') ?? null,
+    })),
+    userLat,
+    userLng,
+  }
 }
 
 export async function getGroup(slug: string, currentUserId?: string): Promise<Group | null> {
@@ -520,6 +569,10 @@ export async function updateGroup(
     description?: string | null
     coverFile?: File | null
     privacy?: 'private'
+    category?: GroupCategory | null
+    city?: string | null
+    state?: string | null
+    zipCode?: string | null
   }
 ): Promise<void> {
   const supabase = await createClient()
@@ -538,8 +591,8 @@ export async function updateGroup(
 
   if (membership?.role !== 'admin') throw new Error('Not authorized')
 
-  // Fetch current group for slug + privacy guard
-  const { data: group } = await admin.from('groups').select('privacy, slug').eq('id', groupId).single()
+  // Fetch current group for slug + privacy guard + zip comparison
+  const { data: group } = await admin.from('groups').select('*').eq('id', groupId).single()
   if (!group) throw new Error('Group not found')
 
   const patch: Record<string, unknown> = {}
@@ -551,6 +604,31 @@ export async function updateGroup(
   // Privacy: public → private only
   if (updates.privacy === 'private' && group.privacy === 'public') {
     patch.privacy = 'private'
+  }
+
+  // Category
+  if ('category' in updates) {
+    patch.category = updates.category || null
+  }
+
+  // Location
+  if ('city' in updates) patch.city = updates.city?.trim() || null
+  if ('state' in updates) patch.state = updates.state?.trim() || null
+  if ('zipCode' in updates) {
+    const newZip = updates.zipCode?.trim() || null
+    patch.zip_code = newZip
+    if (newZip && newZip !== group.zip_code) {
+      const geo = await geocodeZip(newZip)
+      if (geo) {
+        patch.latitude = geo.lat
+        patch.longitude = geo.lng
+        if (!('city' in updates) || !updates.city?.trim()) patch.city = geo.city
+        if (!('state' in updates) || !updates.state?.trim()) patch.state = geo.state
+      }
+    } else if (!newZip) {
+      patch.latitude = null
+      patch.longitude = null
+    }
   }
 
   // Cover photo upload

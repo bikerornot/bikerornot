@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { haversine } from '@/lib/geo'
 
 function getServiceClient() {
   return createServiceClient(
@@ -29,18 +30,7 @@ export interface MutualFriend {
   profile_photo_url: string | null
 }
 
-function haversinemiles(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 3959
-  const dLat = ((lat2 - lat1) * Math.PI) / 180
-  const dLon = ((lon2 - lon1) * Math.PI) / 180
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2)
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
+
 
 export async function getMutualFriends(profileUserId: string): Promise<MutualFriend[]> {
   const supabase = await createClient()
@@ -169,7 +159,7 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
     sorted = sorted
       .map((p) => ({
         ...p,
-        _dist: p.latitude && p.longitude ? haversinemiles(myLat, myLon, p.latitude, p.longitude) : 9999,
+        _dist: p.latitude && p.longitude ? haversine(myLat, myLon, p.latitude, p.longitude) : 9999,
       }))
       .sort((a, b) => a._dist - b._dist)
   }

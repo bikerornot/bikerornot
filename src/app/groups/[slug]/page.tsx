@@ -3,6 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { getImageUrl } from '@/lib/supabase/image'
+import { GROUP_CATEGORIES } from '@/lib/supabase/types'
 import Logo from '@/app/components/Logo'
 import { getGroup, getGroupPosts, getGroupMembers, getPendingRequests } from '@/app/actions/groups'
 import UserMenu from '@/app/components/UserMenu'
@@ -128,7 +129,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
         {/* Group header */}
         <div className="py-4">
           <h1 className="text-2xl font-bold text-white">{group.name}</h1>
-          <div className="flex items-center gap-2 mt-0.5">
+          <div className="flex flex-wrap items-center gap-2 mt-0.5">
             <span className="text-sm text-zinc-400">
               {group.privacy === 'private' ? '🔒 Private' : '🌐 Public'}
             </span>
@@ -136,6 +137,22 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
             <span className="text-sm text-zinc-400">
               {group.member_count ?? 0} member{group.member_count !== 1 ? 's' : ''}
             </span>
+            {group.category && (
+              <>
+                <span className="text-zinc-700">·</span>
+                <span className="text-xs bg-orange-500/15 text-orange-400 px-2 py-0.5 rounded-full">
+                  {GROUP_CATEGORIES.find((c) => c.value === group.category)?.label ?? group.category}
+                </span>
+              </>
+            )}
+            {(group.city || group.state) && (
+              <>
+                <span className="text-zinc-700">·</span>
+                <span className="text-sm text-zinc-400">
+                  {[group.city, group.state].filter(Boolean).join(', ')}
+                </span>
+              </>
+            )}
           </div>
           {group.description && (
             <p className="text-zinc-300 text-sm mt-2">{group.description}</p>
@@ -163,6 +180,10 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
                   currentDescription={group.description}
                   currentPrivacy={group.privacy}
                   currentCoverUrl={coverUrl}
+                  currentCategory={group.category}
+                  currentCity={group.city}
+                  currentState={group.state}
+                  currentZipCode={group.zip_code}
                 />
               )}
             </div>

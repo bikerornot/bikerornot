@@ -112,6 +112,14 @@ export async function acceptFriendRequest(requesterId: string): Promise<void> {
 
   if (error) throw new Error(error.message)
 
+  // Clean up the friend_request notification so it doesn't linger
+  await admin
+    .from('notifications')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('actor_id', requesterId)
+    .eq('type', 'friend_request')
+
   // Only notify if we actually transitioned a pending request — prevents
   // duplicate notifications if the request was already accepted.
   if (!updated || updated.length === 0) return
@@ -152,6 +160,14 @@ export async function declineFriendRequest(requesterId: string): Promise<void> {
     .eq('status', 'pending')
 
   if (error) throw new Error(error.message)
+
+  // Clean up the friend_request notification
+  await admin
+    .from('notifications')
+    .delete()
+    .eq('user_id', user.id)
+    .eq('actor_id', requesterId)
+    .eq('type', 'friend_request')
 }
 
 export interface FriendRequestCard {

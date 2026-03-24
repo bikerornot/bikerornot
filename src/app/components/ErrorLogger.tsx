@@ -20,12 +20,17 @@ export default function ErrorLogger() {
       'ChunkLoadError',
       'Load failed',
       'WebKit.MessageHandlers',
+      'webkit.messageHandlers',
+      'messageHandlers',
       'Java object is gone',
       'Navigator LockManager',
+      'invalid origin',
+      'DuckDuckGo',
+      'The request was denied',
     ]
 
     // Bare rejection with no real info — Safari often swallows the details
-    const IGNORE_EXACT = ['Unhandled promise rejection', 'undefined']
+    const IGNORE_EXACT = ['Unhandled promise rejection', 'undefined', '[object Object]', '{}']
 
     function shouldIgnore(msg: string | undefined) {
       if (!msg) return false
@@ -75,8 +80,9 @@ export default function ErrorLogger() {
 
       // Skip bare rejections with no useful info
       if (IGNORE_EXACT.includes(message) && !stack) return
-      // Also check metadata.reason for ignored patterns (e.g. wrapped Failed to fetch)
+      // Skip rejections where the reason is an empty object (in-app browser noise)
       const reasonStr = typeof metadata.reason === 'string' ? metadata.reason : ''
+      if (reasonStr === '{}' && !stack) return
       if (shouldIgnore(message) || shouldIgnore(reasonStr)) return
 
       logError({

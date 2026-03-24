@@ -27,6 +27,17 @@ function formatMileage(mileage: number | null): string {
   return mileage.toLocaleString('en-US') + ' mi'
 }
 
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length === 11 && digits[0] === '1') {
+    return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`
+  }
+  if (digits.length === 10) {
+    return `+1 (${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`
+  }
+  return raw
+}
+
 function timeAgo(dateStr: string): string {
   const now = Date.now()
   const then = new Date(dateStr).getTime()
@@ -220,6 +231,15 @@ export default function ListingDetailClient({ listing, currentUserId }: Props) {
         <p className="text-sm text-zinc-400 mt-1">
           {listing.year} {listing.make} {listing.model}{listing.trim ? ` ${listing.trim}` : ''}
         </p>
+        {(listing.city || listing.state) && (
+          <div className="flex items-center gap-1.5 text-sm text-zinc-500 mt-1">
+            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span>{[listing.city, listing.state].filter(Boolean).join(', ')}</span>
+          </div>
+        )}
       </div>
 
       {/* Action bar */}
@@ -303,19 +323,6 @@ export default function ListingDetailClient({ listing, currentUserId }: Props) {
         </div>
       )}
 
-      {/* Location */}
-      {(listing.city || listing.state) && (
-        <div className="flex items-center gap-2 text-sm text-zinc-400 mb-6">
-          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <span>
-            {[listing.city, listing.state].filter(Boolean).join(', ')}
-          </span>
-        </div>
-      )}
-
       {/* Listing meta */}
       <div className="flex items-center gap-4 text-xs text-zinc-500 mb-6">
         {listing.published_at && (
@@ -377,7 +384,7 @@ export default function ListingDetailClient({ listing, currentUserId }: Props) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
             </svg>
             <a href={`tel:${listing.seller_phone}`} className="hover:text-orange-400 transition-colors">
-              {listing.seller_phone}
+              {formatPhone(listing.seller_phone)}
             </a>
           </div>
         )}

@@ -181,12 +181,12 @@ export default function MyListingsClient({ initialListings }: Props) {
   return (
     <div>
       {/* Tab pills */}
-      <div className="flex gap-1 mb-6 bg-zinc-900 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 mb-6 bg-zinc-900 rounded-xl p-1 overflow-x-auto scrollbar-hide">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 sm:px-4 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
               tab === t.key
                 ? 'bg-orange-500 text-white'
                 : 'text-zinc-400 hover:text-white'

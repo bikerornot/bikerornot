@@ -52,6 +52,13 @@ export default function BikeSelector({ value, onChange }: Props) {
       .then((data) => {
         const names: string[] = data.Results.map((r: { Model_Name: string }) => r.Model_Name).sort()
         setModels(names)
+        // If the current model matches one in the list (case-insensitive), align the casing
+        if (value.model) {
+          const match = names.find(n => n.toLowerCase() === value.model.toLowerCase())
+          if (match && match !== value.model) {
+            onChange({ ...value, model: match })
+          }
+        }
       })
       .catch(() => setModels([]))
       .finally(() => setLoadingModels(false))
@@ -124,12 +131,16 @@ export default function BikeSelector({ value, onChange }: Props) {
       {/* Model */}
       {models.length > 0 ? (
         <select
-          value={value.model}
-          onChange={(e) => setModel(e.target.value)}
+          value={models.includes(value.model) ? value.model : '__custom__'}
+          onChange={(e) => setModel(e.target.value === '__custom__' ? value.model : e.target.value)}
           disabled={loadingModels}
           className={selectClass}
         >
-          <option value="">Model</option>
+          {value.model && !models.includes(value.model) ? (
+            <option value="__custom__">{value.model}</option>
+          ) : (
+            <option value="">Model</option>
+          )}
           {models.map((m) => (
             <option key={m} value={m}>{m}</option>
           ))}

@@ -292,3 +292,158 @@ export const RELATIONSHIP_OPTIONS = [
   { value: 'married',            label: '💍 Married' },
   { value: 'its_complicated',   label: "🤷 It's Complicated" },
 ] as const
+
+// =============================================================
+// CLASSIFIEDS
+// =============================================================
+
+export type ListingStatus = 'draft' | 'active' | 'inactive' | 'sold' | 'expired' | 'removed'
+
+export type ListingCategory =
+  | 'cruiser'
+  | 'touring_bagger'
+  | 'trike'
+  | 'sport_naked'
+  | 'dirt_offroad'
+  | 'dual_sport_adventure'
+  | 'custom_chopper'
+  | 'vintage_classic'
+  | 'scooter_moped'
+  | 'other'
+
+export type ListingCondition = 'excellent' | 'good' | 'fair' | 'project'
+export type PriceType = 'fixed' | 'obo' | 'offer'
+
+export const LISTING_CATEGORIES: Record<ListingCategory, string> = {
+  cruiser:                'Cruiser',
+  touring_bagger:         'Touring / Bagger',
+  trike:                  'Trike / Three-Wheeler',
+  sport_naked:            'Sport / Naked',
+  dirt_offroad:           'Dirt / Off-Road',
+  dual_sport_adventure:   'Dual-Sport / Adventure',
+  custom_chopper:         'Custom / Chopper',
+  vintage_classic:        'Vintage / Classic',
+  scooter_moped:          'Scooter / Moped',
+  other:                  'Other',
+}
+
+export const LISTING_CONDITIONS: Record<ListingCondition, { label: string; description: string }> = {
+  excellent: { label: 'Excellent',    description: 'Like new. No mechanical issues, minimal cosmetic wear.' },
+  good:      { label: 'Good',         description: 'Well maintained. Minor cosmetic wear, fully functional.' },
+  fair:      { label: 'Fair',         description: 'Rideable with some wear or minor issues needing attention.' },
+  project:   { label: 'Project Bike', description: 'Needs work. Good for restoration or parts.' },
+}
+
+export const MAX_LISTING_IMAGES = 24
+export const MAX_LISTINGS_PER_USER = 3
+export const LISTING_DURATION_DAYS = 90
+
+export interface Listing {
+  id: string
+  seller_id: string
+  user_bike_id: string | null
+  status: ListingStatus
+  category: ListingCategory
+  year: number
+  make: string
+  model: string
+  trim: string | null
+  color: string | null
+  vin: string | null
+  mileage: number | null
+  condition: ListingCondition
+  modifications: string | null
+  title: string
+  description: string | null
+  price: number | null
+  price_type: PriceType
+  trade_considered: boolean
+  zip_code: string
+  city: string | null
+  state: string | null
+  latitude: number | null
+  longitude: number | null
+  show_phone: boolean
+  view_count: number
+  save_count: number
+  published_at: string | null
+  expires_at: string | null
+  sold_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ListingImage {
+  id: string
+  listing_id: string
+  storage_path: string
+  order_index: number
+  created_at: string
+}
+
+export interface ListingSearchResult {
+  id: string
+  seller_id: string
+  seller_username: string
+  seller_photo: string | null
+  seller_verified: boolean
+  seller_member_since: string
+  category: ListingCategory
+  year: number
+  make: string
+  model: string
+  trim: string | null
+  color: string | null
+  mileage: number | null
+  condition: ListingCondition
+  title: string
+  price: number | null
+  price_type: PriceType
+  trade_considered: boolean
+  city: string | null
+  state: string | null
+  distance_miles: number | null
+  cover_image_path: string | null
+  view_count: number
+  save_count: number
+  is_saved: boolean
+  published_at: string | null
+  expires_at: string | null
+  created_at: string
+}
+
+export interface ListingDetail extends Listing {
+  seller_username: string
+  seller_first_name: string
+  seller_last_name: string
+  seller_photo: string | null
+  seller_verified: boolean
+  seller_member_since: string
+  seller_listings_sold: number
+  is_saved: boolean
+  is_own_listing: boolean
+  mutual_friend_count: number
+  images: ListingImage[]
+  seller_phone: string | null
+}
+
+export interface MyListing extends Listing {
+  images: ListingImage[]
+  message_count: number
+}
+
+export interface ClassifiedsSearchFilters {
+  category?: ListingCategory
+  make?: string
+  model?: string
+  year_min?: number
+  year_max?: number
+  price_min?: number
+  price_max?: number
+  mileage_max?: number
+  condition?: ListingCondition[]
+  trade_only?: boolean
+  radius_miles?: number
+  search_term?: string
+  sort: 'newest' | 'price_asc' | 'price_desc' | 'mileage_asc' | 'nearest'
+}

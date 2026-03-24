@@ -7,7 +7,7 @@ import { REPORT_REASONS } from '@/lib/supabase/types'
 
 interface Props {
   /** For the report action */
-  reportType: 'post' | 'comment' | 'profile'
+  reportType: 'post' | 'comment' | 'profile' | 'listing'
   reportTargetId: string
   /** The user to block (author of the post/comment, or the profile being viewed) */
   blockUserId: string
@@ -152,7 +152,7 @@ export default function ContentMenu({ reportType, reportTargetId, blockUserId, b
             {view === 'report' && (
               <>
                 <h2 className="text-white font-semibold text-base mb-1">
-                  {reportType === 'post' ? 'Report post' : reportType === 'comment' ? 'Report comment' : 'Report profile'}
+                  {reportType === 'post' ? 'Report post' : reportType === 'comment' ? 'Report comment' : reportType === 'listing' ? 'Report listing' : 'Report profile'}
                 </h2>
                 <p className="text-zinc-400 text-sm mb-4">Why are you reporting this?</p>
 

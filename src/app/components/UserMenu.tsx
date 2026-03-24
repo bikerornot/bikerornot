@@ -78,6 +78,13 @@ export default function UserMenu({ username, displayName, avatarUrl, firstInitia
             My Garage
           </Link>
           <Link
+            href="/classifieds"
+            onClick={() => setOpen(false)}
+            className="block px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+          >
+            Buy / Sell
+          </Link>
+          <Link
             href="/settings"
             onClick={() => setOpen(false)}
             className="block px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"

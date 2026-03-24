@@ -34,7 +34,7 @@ export default function EditListingClient({ listing }: Props) {
   // Form state
   const [category, setCategory] = useState<ListingCategory>(listing.category)
   const [bikeData, setBikeData] = useState({ year: String(listing.year), make: listing.make, model: listing.model })
-  const [trim, setTrim] = useState(listing.trim ?? '')
+  const [bikeTrim, setBikeTrim] = useState(listing.trim ?? '')
   const [color, setColor] = useState(listing.color ?? '')
   const [condition, setCondition] = useState<ListingCondition>(listing.condition)
   const [mileage, setMileage] = useState(listing.mileage != null ? String(listing.mileage) : '')
@@ -60,7 +60,7 @@ export default function EditListingClient({ listing }: Props) {
         year: Number(bikeData.year),
         make: bikeData.make,
         model: bikeData.model,
-        trim: trim || null,
+        trim: bikeTrim || null,
         color: color || null,
         condition,
         mileage: mileage ? Number(mileage) : null,
@@ -171,7 +171,7 @@ export default function EditListingClient({ listing }: Props) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-zinc-400 text-xs font-medium block mb-1.5">Trim</label>
-                <input type="text" value={trim} onChange={e => setTrim(e.target.value)} placeholder="e.g. Special, Classic" className={inputClass} />
+                <input type="text" value={bikeTrim} onChange={e => setBikeTrim(e.target.value)} placeholder="e.g. Special, Classic" className={inputClass} />
               </div>
               <div>
                 <label className="text-zinc-400 text-xs font-medium block mb-1.5">Color</label>

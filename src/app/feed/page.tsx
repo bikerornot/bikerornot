@@ -14,6 +14,8 @@ import MessagesLink from '@/app/components/MessagesLink'
 import BottomNav from '@/app/components/BottomNav'
 import RidersWidget from '@/app/components/RidersWidget'
 import DmcaBanner from '@/app/components/DmcaBanner'
+import SiteBanner from '@/app/components/SiteBanner'
+import { getActiveBanners } from '@/app/actions/banners'
 import { getNearbyRiders } from '@/app/actions/suggestions'
 import { getBlockedIds } from '@/app/actions/blocks'
 import { getFriendBirthdays } from '@/app/actions/friends'
@@ -68,13 +70,14 @@ export default async function FeedPage() {
   // Fetch rider suggestions (only used when friendCount < 15)
   const { riders: nearbyRiders, friendCount } = await getNearbyRiders()
 
-  // Fetch blocked user IDs for feed filtering + friend birthdays
-  const [blockedIds, friendBirthdays] = await Promise.all([
+  // Fetch blocked user IDs, friend birthdays, and site banners
+  const [blockedIds, friendBirthdays, activeBanners] = await Promise.all([
     getBlockedIds(user.id, createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )),
     getFriendBirthdays(),
+    getActiveBanners(),
   ])
 
   const avatarUrl = profile.profile_photo_url
@@ -113,6 +116,8 @@ export default async function FeedPage() {
           </div>
         </div>
       </header>
+
+      <SiteBanner banners={activeBanners} />
 
       <div className="max-w-2xl mx-auto sm:px-4 py-6">
         <DmcaBanner

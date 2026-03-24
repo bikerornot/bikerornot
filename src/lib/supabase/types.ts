@@ -412,6 +412,24 @@ export interface ListingSearchResult {
   created_at: string
 }
 
+export type BannerAudience = 'all' | 'unverified' | 'verified'
+
+export interface SiteBanner {
+  id: string
+  text: string
+  link_url: string | null
+  link_text: string | null
+  bg_color: string
+  active: boolean
+  priority: number
+  dismissible: boolean
+  audience: BannerAudience
+  starts_at: string | null
+  expires_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface ListingDetail extends Listing {
   seller_username: string
   seller_first_name: string

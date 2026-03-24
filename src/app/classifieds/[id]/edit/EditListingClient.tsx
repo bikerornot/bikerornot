@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -29,6 +29,7 @@ export default function EditListingClient({ listing }: Props) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const errorRef = useRef<HTMLDivElement>(null)
 
   // Form state
   const [category, setCategory] = useState<ListingCategory>(listing.category)
@@ -100,6 +101,7 @@ export default function EditListingClient({ listing }: Props) {
       router.refresh()
     } catch (err: any) {
       setError(err.message || 'Failed to save')
+      setTimeout(() => errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100)
     } finally {
       setSaving(false)
     }
@@ -135,7 +137,7 @@ export default function EditListingClient({ listing }: Props) {
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-xl mb-4">
+        <div ref={errorRef} className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm px-4 py-3 rounded-xl mb-4">
           {error}
         </div>
       )}

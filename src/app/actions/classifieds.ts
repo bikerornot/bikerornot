@@ -195,7 +195,7 @@ export async function updateListing(listingId: string, data: {
     if (data.title.trim().length > 100) throw new Error('Title must be under 100 characters')
   }
   if (data.description && data.description.length > 5000) throw new Error('Description must be under 5000 characters')
-  if (data.vin !== undefined && data.vin !== null && data.vin.length !== 17) throw new Error('VIN must be exactly 17 characters')
+  if (data.vin !== undefined && data.vin !== null && data.vin.length > 0 && data.vin.length !== 17) throw new Error('VIN must be exactly 17 characters')
 
   const updates: Record<string, unknown> = {}
   if (data.category !== undefined) updates.category = data.category

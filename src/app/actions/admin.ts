@@ -313,6 +313,7 @@ export interface AdminUserRow {
   message_count: number
   comment_count: number
   friend_requests_sent: number
+  phone_verified_at: string | null
   risk_flags: string[]
 }
 
@@ -399,7 +400,7 @@ export async function getUsers({
 
   let query = admin
     .from('profiles')
-    .select('id, username, first_name, last_name, created_at, status, role, city, state, profile_photo_url, signup_country, signup_region, signup_city, signup_ref_url, date_of_birth, gender', { count: 'exact' })
+    .select('id, username, first_name, last_name, created_at, status, role, city, state, profile_photo_url, signup_country, signup_region, signup_city, signup_ref_url, date_of_birth, gender, phone_verified_at', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1)
 
@@ -820,6 +821,7 @@ export interface OnlineUser {
   state: string | null
   gender: string | null
   date_of_birth: string | null
+  phone_verified_at: string | null
   created_at: string
   last_seen_at: string
 }
@@ -829,7 +831,7 @@ export async function getOnlineUsers(): Promise<OnlineUser[]> {
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
   const { data } = await admin
     .from('profiles')
-    .select('id, username, first_name, last_name, profile_photo_url, status, role, city, state, gender, date_of_birth, created_at, last_seen_at')
+    .select('id, username, first_name, last_name, profile_photo_url, status, role, city, state, gender, date_of_birth, phone_verified_at, created_at, last_seen_at')
     .eq('status', 'active')
     .gte('last_seen_at', fiveMinutesAgo)
     .order('last_seen_at', { ascending: false })

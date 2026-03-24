@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { AdminUserRow } from '@/app/actions/admin'
 import { getImageUrl } from '@/lib/supabase/image'
+import VerifiedBadge from '@/app/components/VerifiedBadge'
 
 const STATUS_FILTERS = [
   { value: '', label: 'All' },
@@ -230,7 +231,10 @@ export default function UsersClient({
                             )}
                           </div>
                           <div>
-                            <p className="text-zinc-200 font-medium">{u.first_name} {u.last_name}</p>
+                            <div className="flex items-center gap-1">
+                              <p className="text-zinc-200 font-medium">{u.first_name} {u.last_name}</p>
+                              {u.phone_verified_at && <VerifiedBadge className="w-3.5 h-3.5" />}
+                            </div>
                             <p className="text-zinc-500 text-xs">@{u.username ?? 'no username'}</p>
                           </div>
                         </div>

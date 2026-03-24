@@ -301,36 +301,28 @@ export async function getAdStats(startDate?: string, endDate?: string): Promise<
 
   const adIds = ads.map((a) => a.id)
 
-  // Build impression/click/dismissal queries with optional date range
-  let impressionQuery = admin.from('ad_impressions').select('ad_id').in('ad_id', adIds)
-  let clickQuery = admin.from('ad_clicks').select('ad_id').in('ad_id', adIds)
-  let dismissalQuery = admin.from('ad_dismissals').select('ad_id').in('ad_id', adIds)
+  // Adjust endDate to include the full day (end of day rather than midnight)
+  const adjustedEnd = endDate ? `${endDate}T23:59:59.999Z` : undefined
 
-  if (startDate) {
-    impressionQuery = impressionQuery.gte('created_at', startDate)
-    clickQuery = clickQuery.gte('created_at', startDate)
-    dismissalQuery = dismissalQuery.gte('created_at', startDate)
-  }
-  if (endDate) {
-    impressionQuery = impressionQuery.lte('created_at', endDate)
-    clickQuery = clickQuery.lte('created_at', endDate)
-    dismissalQuery = dismissalQuery.lte('created_at', endDate)
+  // Count impressions/clicks/dismissals per ad using individual queries per ad
+  // to avoid Supabase's default 1000-row limit on select()
+  async function countPerAd(table: string): Promise<Record<string, number>> {
+    const counts: Record<string, number> = {}
+    await Promise.all(adIds.map(async (adId) => {
+      let query = admin.from(table).select('*', { count: 'exact', head: true }).eq('ad_id', adId)
+      if (startDate) query = query.gte('created_at', startDate)
+      if (adjustedEnd) query = query.lte('created_at', adjustedEnd)
+      const { count } = await query
+      counts[adId] = count ?? 0
+    }))
+    return counts
   }
 
-  const [{ data: impressions }, { data: clicks }, { data: dismissals }] = await Promise.all([
-    impressionQuery,
-    clickQuery,
-    dismissalQuery,
+  const [impressionMap, clickMap, dismissalMap] = await Promise.all([
+    countPerAd('ad_impressions'),
+    countPerAd('ad_clicks'),
+    countPerAd('ad_dismissals'),
   ])
-
-  const countBy = (rows: any[] | null) => (rows ?? []).reduce<Record<string, number>>((acc, r) => {
-    acc[r.ad_id] = (acc[r.ad_id] ?? 0) + 1
-    return acc
-  }, {})
-
-  const impressionMap = countBy(impressions)
-  const clickMap = countBy(clicks)
-  const dismissalMap = countBy(dismissals)
 
   return ads.map((ad: any) => {
     const imp = impressionMap[ad.id] ?? 0

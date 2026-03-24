@@ -6,6 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { OnlineUser } from '@/app/actions/admin'
 import { getImageUrl } from '@/lib/supabase/image'
+import VerifiedBadge from '@/app/components/VerifiedBadge'
 
 function timeAgo(dateStr: string): string {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
@@ -104,7 +105,10 @@ export default function OnlineClient({ initialUsers }: Props) {
                           <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-zinc-900" />
                         </div>
                         <div>
-                          <p className="text-zinc-200 font-medium">{u.first_name} {u.last_name}</p>
+                          <p className="text-zinc-200 font-medium flex items-center gap-1">
+                            {u.first_name} {u.last_name}
+                            {u.phone_verified_at && <VerifiedBadge className="w-3.5 h-3.5" />}
+                          </p>
                           <p className="text-zinc-500 text-xs">@{u.username ?? 'no username'}</p>
                         </div>
                       </div>

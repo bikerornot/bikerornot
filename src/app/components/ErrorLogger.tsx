@@ -22,6 +22,7 @@ export default function ErrorLogger() {
       'WebKit.MessageHandlers',
       'webkit.messageHandlers',
       'messageHandlers',
+      'unexpected response was received from the server',
       'Java object is gone',
       'Navigator LockManager',
       'invalid origin',

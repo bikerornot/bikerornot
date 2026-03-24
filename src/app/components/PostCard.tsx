@@ -40,6 +40,26 @@ function renderGaragePost(text: string, authorUsername?: string | null) {
   )
 }
 
+const LISTING_REGEX = /^Listed my (.+) for sale(.*)\n\nhttps:\/\/bikerornot\.com\/classifieds\/(.+)$/
+
+function renderListingPost(text: string) {
+  const match = text.match(LISTING_REGEX)
+  if (!match) return null
+  const bikeName = match[1]
+  const priceNote = match[2] // e.g. " — $5,000"
+  return (
+    <>
+      Listed my {bikeName} for sale{priceNote} —{' '}
+      <Link
+        href={`/classifieds/${match[3]}`}
+        className="text-orange-400 hover:text-orange-300 font-semibold"
+        onClick={(e) => e.stopPropagation()}
+      >
+        View Listing
+      </Link>
+    </>
+  )
+}
 
 const YT_ICON = (
   <svg className="w-3.5 h-3.5 text-red-500 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
@@ -279,12 +299,14 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
       {/* Text content */}
       {(post.content || post.shared_post_id) && (() => {
         const garageContent = post.content ? renderGaragePost(post.content, post.author?.username) : null
-        const ytVideo = !garageContent && post.content ? extractYouTubeId(post.content) : null
+        const listingContent = !garageContent && post.content ? renderListingPost(post.content) : null
+        const specialContent = garageContent ?? listingContent
+        const ytVideo = !specialContent && post.content ? extractYouTubeId(post.content) : null
         return (
           <div className="px-4 pb-3 space-y-2">
             {post.content && (
               <p className="text-zinc-200 text-lg leading-relaxed whitespace-pre-wrap">
-                {garageContent ?? renderContent(post.content, ytVideo?.fullUrl)}
+                {specialContent ?? renderContent(post.content, ytVideo?.fullUrl)}
               </p>
             )}
             {ytVideo && <YouTubeEmbed videoId={ytVideo.id} />}

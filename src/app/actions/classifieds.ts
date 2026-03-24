@@ -281,7 +281,7 @@ export async function publishListing(listingId: string): Promise<void> {
   }).eq('id', listingId)
   if (error) throw new Error('Failed to publish listing')
 
-  // Create feed story
+  // Create feed story with the first listing image
   const bikeName = `${listing.year} ${listing.make} ${listing.model}`
   const priceStr = listing.price_type === 'offer'
     ? 'Make an Offer'
@@ -289,10 +289,42 @@ export async function publishListing(listingId: string): Promise<void> {
       ? `$${listing.price.toLocaleString()}`
       : ''
   const priceNote = priceStr ? ` — ${priceStr}` : ''
-  await admin.from('posts').insert({
+
+  const { data: post } = await admin.from('posts').insert({
     author_id: user.id,
     content: `Listed my ${bikeName} for sale${priceNote}\n\nhttps://bikerornot.com/classifieds/${listingId}`,
-  })
+  }).select('id').single()
+
+  // Attach the first listing image to the feed post
+  if (post) {
+    const { data: firstImage } = await admin.from('listing_images')
+      .select('storage_path')
+      .eq('listing_id', listingId)
+      .order('order_index', { ascending: true })
+      .limit(1)
+      .single()
+
+    if (firstImage) {
+      // Copy from classifieds bucket to posts bucket
+      const { data: fileData } = await admin.storage
+        .from('classifieds')
+        .download(firstImage.storage_path)
+
+      if (fileData) {
+        const ext = firstImage.storage_path.split('.').pop() ?? 'jpg'
+        const postImagePath = `${user.id}/${post.id}/0.${ext}`
+        await admin.storage
+          .from('posts')
+          .upload(postImagePath, fileData, { contentType: `image/${ext}`, upsert: true })
+
+        await admin.from('post_images').insert({
+          post_id: post.id,
+          storage_path: postImagePath,
+          order_index: 0,
+        })
+      }
+    }
+  }
 }
 
 // -----------------------------------------------------------------

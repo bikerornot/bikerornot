@@ -18,7 +18,6 @@ function formatPrice(price: number | null, priceType: string): string {
   if (price === null) return 'Contact for Price'
   const formatted = price.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
   if (priceType === 'obo') return `${formatted} OBO`
-  if (priceType === 'offer') return 'Make an Offer'
   return formatted
 }
 

@@ -312,7 +312,7 @@ export type ListingCategory =
   | 'other'
 
 export type ListingCondition = 'excellent' | 'good' | 'fair' | 'project'
-export type PriceType = 'fixed' | 'obo' | 'offer'
+export type PriceType = 'fixed' | 'obo'
 
 export const LISTING_CATEGORIES: Record<ListingCategory, string> = {
   cruiser:                'Cruiser',

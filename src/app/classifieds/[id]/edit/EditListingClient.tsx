@@ -68,7 +68,7 @@ export default function EditListingClient({ listing }: Props) {
         title,
         description: description || null,
         price_type: priceType,
-        price: priceType === 'offer' ? null : (price ? Number(price) : null),
+        price: price ? Number(price) : null,
         trade_considered: tradeConsidered,
         zip_code: zipCode,
         show_phone: showPhone,
@@ -233,7 +233,7 @@ export default function EditListingClient({ listing }: Props) {
             <div>
               <label className="text-zinc-400 text-xs font-medium block mb-1.5">Price Type</label>
               <div className="flex gap-2">
-                {(['fixed', 'obo', 'offer'] as PriceType[]).map(pt => (
+                {(['fixed', 'obo'] as PriceType[]).map(pt => (
                   <button
                     key={pt}
                     type="button"
@@ -242,12 +242,12 @@ export default function EditListingClient({ listing }: Props) {
                       priceType === pt ? 'bg-orange-500 text-white' : 'bg-zinc-800 text-zinc-400 hover:text-white'
                     }`}
                   >
-                    {pt === 'fixed' ? 'Fixed' : pt === 'obo' ? 'OBO' : 'Make Offer'}
+                    {pt === 'fixed' ? 'Fixed Price' : 'OBO'}
                   </button>
                 ))}
               </div>
             </div>
-            {priceType !== 'offer' && (
+            {(
               <div>
                 <label className="text-zinc-400 text-xs font-medium block mb-1.5">Price ($)</label>
                 <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0" className={inputClass} />

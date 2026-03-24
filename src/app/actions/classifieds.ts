@@ -283,11 +283,11 @@ export async function publishListing(listingId: string): Promise<void> {
 
   // Create feed story with the first listing image
   const bikeName = `${listing.year} ${listing.make} ${listing.model}`
-  const priceStr = listing.price_type === 'offer'
-    ? 'Make an Offer'
-    : listing.price != null
-      ? `$${listing.price.toLocaleString()}`
-      : ''
+  const priceStr = listing.price != null
+    ? listing.price_type === 'obo'
+      ? `$${listing.price.toLocaleString()} OBO`
+      : `$${listing.price.toLocaleString()}`
+    : ''
   const priceNote = priceStr ? ` — ${priceStr}` : ''
 
   const { data: post } = await admin.from('posts').insert({

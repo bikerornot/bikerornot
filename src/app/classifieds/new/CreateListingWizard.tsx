@@ -205,7 +205,7 @@ export default function CreateListingWizard({ eligibility, garageBikes, userZipC
         return !!form.condition
       case 3:
         return form.title.trim().length >= 5 && form.title.trim().length <= 100 &&
-          (form.priceType === 'offer' || (!!form.price && Number(form.price) > 0))
+          !!form.price && Number(form.price) > 0
       case 4:
         // If garage bike has a photo, it'll be copied server-side — no upload needed
         return form.photos.length >= 1 || garageHasPhoto
@@ -266,7 +266,7 @@ export default function CreateListingWizard({ eligibility, garageBikes, userZipC
         modifications: form.modifications.trim() || undefined,
         title: form.title.trim(),
         description: form.description.trim() || undefined,
-        price: form.priceType === 'offer' ? null : Number(form.price),
+        price: Number(form.price),
         price_type: form.priceType,
         trade_considered: form.tradeConsidered,
         zip_code: form.zipCode.trim(),
@@ -345,12 +345,9 @@ export default function CreateListingWizard({ eligibility, garageBikes, userZipC
   if (step === 6) {
     const categoryLabel = form.category ? LISTING_CATEGORIES[form.category] : ''
     const conditionInfo = form.condition ? LISTING_CONDITIONS[form.condition] : null
-    const priceLabel =
-      form.priceType === 'offer'
-        ? 'Make an Offer'
-        : form.priceType === 'obo'
-          ? `$${Number(form.price).toLocaleString()} OBO`
-          : `$${Number(form.price).toLocaleString()}`
+    const priceLabel = form.priceType === 'obo'
+      ? `$${Number(form.price).toLocaleString()} OBO`
+      : `$${Number(form.price).toLocaleString()}`
 
     return (
       <div>
@@ -842,7 +839,6 @@ function StepDescription({
           {([
             { key: 'fixed' as PriceType, label: 'Fixed Price' },
             { key: 'obo' as PriceType, label: 'OBO' },
-            { key: 'offer' as PriceType, label: 'Make Offer' },
           ]).map(({ key, label }) => (
             <button
               key={key}
@@ -860,7 +856,7 @@ function StepDescription({
       </div>
 
       {/* Price input */}
-      {form.priceType !== 'offer' && (
+      {(
         <div className="mb-4">
           <label className="block text-sm font-medium text-zinc-400 mb-1.5">
             Asking Price ($)

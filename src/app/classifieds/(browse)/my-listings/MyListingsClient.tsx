@@ -14,7 +14,7 @@ interface Props {
 }
 
 function formatPrice(dollars: number | null, priceType: string): string {
-  if (dollars === null || priceType === 'offer') return 'Make Offer'
+  if (dollars === null) return 'Contact for Price'
   const formatted = dollars.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
   if (priceType === 'obo') return `${formatted} OBO`
   return formatted

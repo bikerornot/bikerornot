@@ -334,7 +334,8 @@ function ListingRow({
   const subtitle = [listing.year, listing.make, listing.model].filter(Boolean).join(' ')
 
   return (
-    <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-3 flex gap-3 items-start">
+    <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-3">
+      <div className="flex gap-3 items-start">
       {/* Thumbnail */}
       <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-zinc-800">
         {coverUrl ? (
@@ -394,8 +395,11 @@ function ListingRow({
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-2 mt-2">
+      </div>
+      </div>
+
+      {/* Action buttons — full width */}
+      <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-zinc-800">
           {listing.status === 'active' && (
             <>
               <Link
@@ -492,7 +496,6 @@ function ListingRow({
               Sold {listing.sold_at ? new Date(listing.sold_at).toLocaleDateString() : ''}
             </span>
           )}
-        </div>
       </div>
     </div>
   )

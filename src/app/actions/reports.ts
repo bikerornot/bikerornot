@@ -20,7 +20,7 @@ async function requireAdminOrMod() {
 }
 
 export async function submitReport(
-  reportedType: 'post' | 'comment' | 'profile',
+  reportedType: 'post' | 'comment' | 'profile' | 'listing',
   reportedId: string,
   reason: string,
   details?: string
@@ -47,7 +47,7 @@ export async function submitReport(
 
 export interface ReportRow {
   id: string
-  reported_type: 'post' | 'comment' | 'profile'
+  reported_type: 'post' | 'comment' | 'profile' | 'listing'
   reported_id: string
   reason: string
   details: string | null

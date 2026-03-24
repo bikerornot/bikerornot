@@ -35,7 +35,7 @@ export default function SiteBanner({ banners: initialBanners }: Props) {
         return (
           <div key={banner.id} className={`${colors.bg} ${colors.text}`}>
             <div className="max-w-2xl mx-auto px-4 py-2 flex items-center justify-between gap-3">
-              <p className="text-sm flex-1">
+              <p className="text-base flex-1">
                 {banner.text}
                 {banner.link_url && banner.link_text && (
                   <>

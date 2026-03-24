@@ -184,7 +184,7 @@ export default function BannersClient() {
           <div className="space-y-4">
             {/* Text */}
             <div>
-              <label className="text-zinc-400 text-xs font-medium block mb-1.5">Banner Text *</label>
+              <label className="text-zinc-200 text-xs font-medium block mb-1.5">Banner Text *</label>
               <input
                 type="text"
                 value={text}
@@ -197,7 +197,7 @@ export default function BannersClient() {
             {/* Link URL + Link Text */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-zinc-400 text-xs font-medium block mb-1.5">Link URL</label>
+                <label className="text-zinc-200 text-xs font-medium block mb-1.5">Link URL</label>
                 <input
                   type="text"
                   value={linkUrl}
@@ -207,7 +207,7 @@ export default function BannersClient() {
                 />
               </div>
               <div>
-                <label className="text-zinc-400 text-xs font-medium block mb-1.5">Link Text</label>
+                <label className="text-zinc-200 text-xs font-medium block mb-1.5">Link Text</label>
                 <input
                   type="text"
                   value={linkText}
@@ -220,7 +220,7 @@ export default function BannersClient() {
 
             {/* Color */}
             <div>
-              <label className="text-zinc-400 text-xs font-medium block mb-1.5">Color</label>
+              <label className="text-zinc-200 text-xs font-medium block mb-1.5">Color</label>
               <div className="flex gap-2">
                 {COLORS.map(c => (
                   <button
@@ -239,7 +239,7 @@ export default function BannersClient() {
             {/* Audience + Priority */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-zinc-400 text-xs font-medium block mb-1.5">Audience</label>
+                <label className="text-zinc-200 text-xs font-medium block mb-1.5">Audience</label>
                 <select
                   value={audience}
                   onChange={e => setAudience(e.target.value as BannerAudience)}
@@ -251,7 +251,7 @@ export default function BannersClient() {
                 </select>
               </div>
               <div>
-                <label className="text-zinc-400 text-xs font-medium block mb-1.5">Priority (higher = shown first)</label>
+                <label className="text-zinc-200 text-xs font-medium block mb-1.5">Priority (higher = shown first)</label>
                 <input
                   type="number"
                   value={priority}
@@ -264,7 +264,7 @@ export default function BannersClient() {
             {/* Scheduling */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-zinc-400 text-xs font-medium block mb-1.5">Starts At (optional)</label>
+                <label className="text-zinc-200 text-xs font-medium block mb-1.5">Starts At (optional)</label>
                 <input
                   type="datetime-local"
                   value={startsAt}
@@ -273,7 +273,7 @@ export default function BannersClient() {
                 />
               </div>
               <div>
-                <label className="text-zinc-400 text-xs font-medium block mb-1.5">Expires At (optional)</label>
+                <label className="text-zinc-200 text-xs font-medium block mb-1.5">Expires At (optional)</label>
                 <input
                   type="datetime-local"
                   value={expiresAt}
@@ -297,7 +297,7 @@ export default function BannersClient() {
 
             {/* Preview */}
             <div>
-              <label className="text-zinc-400 text-xs font-medium block mb-1.5">Preview</label>
+              <label className="text-zinc-200 text-xs font-medium block mb-1.5">Preview</label>
               <div className={`${colorPreview} rounded-lg px-4 py-2 text-sm ${bgColor === 'yellow' ? 'text-black' : 'text-white'}`}>
                 {text || 'Banner text preview...'}
                 {linkUrl && linkText && (
@@ -352,7 +352,7 @@ export default function BannersClient() {
                 </div>
 
                 <div className="px-4 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-xs text-zinc-500">
+                  <div className="flex items-center gap-3 text-xs text-zinc-300">
                     <span className={`px-2 py-0.5 rounded-full font-bold uppercase text-[10px] ${
                       banner.active && !isExpired ? 'bg-green-500/20 text-green-400' : 'bg-zinc-700/50 text-zinc-400'
                     }`}>
@@ -361,7 +361,7 @@ export default function BannersClient() {
                     <span>Priority: {banner.priority}</span>
                     <span>{audienceLabel}</span>
                     {banner.dismissible && <span>Dismissible</span>}
-                    {banner.link_url && <span className="text-zinc-600">{banner.link_url}</span>}
+                    {banner.link_url && <span className="text-zinc-400">{banner.link_url}</span>}
                   </div>
 
                   <div className="flex items-center gap-2">

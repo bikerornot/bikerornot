@@ -20,19 +20,21 @@ export async function getActiveBanners(): Promise<SiteBanner[]> {
   if (!user) return []
 
   const admin = getServiceClient()
-  const now = new Date().toISOString()
+  const now = new Date()
 
-  // Fetch active banners that haven't expired and have started
-  let query = admin
+  // Fetch all active banners, filter scheduling in JS to avoid PostgREST .or() quirks
+  const { data: allBanners } = await admin
     .from('site_banners')
     .select('*')
     .eq('active', true)
-    .or(`starts_at.is.null,starts_at.lte.${now}`)
-    .or(`expires_at.is.null,expires_at.gte.${now}`)
     .order('priority', { ascending: false })
 
-  const { data: banners } = await query
-  if (!banners || banners.length === 0) return []
+  const banners = (allBanners ?? []).filter(b => {
+    if (b.starts_at && new Date(b.starts_at) > now) return false
+    if (b.expires_at && new Date(b.expires_at) < now) return false
+    return true
+  })
+  if (banners.length === 0) return []
 
   // Fetch user's dismissals
   const { data: dismissals } = await admin

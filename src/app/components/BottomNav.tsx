@@ -39,10 +39,8 @@ const TABS = [
     label: 'Bikes',
     match: (p: string) => p.startsWith('/bikes'),
     icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <circle cx="5.5" cy="17.5" r="3.5" />
-        <circle cx="18.5" cy="17.5" r="3.5" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5.5 17.5l4-9.5h5l2.5 4.5 1.5 5M9.5 8l3 9.5M15 12.5l3.5 5M7 7h4" />
+      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.8-2.2-5-5-5-1.09 0-2.09.35-2.91.93L14.4 9.03h5.04zM5 17c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3zm14 0c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z" />
       </svg>
     ),
   },

@@ -10,6 +10,13 @@ import {
 } from '@/app/actions/banners'
 import type { SiteBanner, BannerAudience } from '@/lib/supabase/types'
 
+function toLocalDatetime(utc: string): string {
+  const d = new Date(utc)
+  const offset = d.getTimezoneOffset()
+  const local = new Date(d.getTime() - offset * 60000)
+  return local.toISOString().slice(0, 16)
+}
+
 const COLORS = [
   { value: 'orange', label: 'Orange', preview: 'bg-orange-500' },
   { value: 'blue', label: 'Blue', preview: 'bg-blue-600' },
@@ -87,8 +94,8 @@ export default function BannersClient() {
     setPriority(banner.priority)
     setDismissible(banner.dismissible)
     setAudience(banner.audience)
-    setStartsAt(banner.starts_at ? banner.starts_at.slice(0, 16) : '')
-    setExpiresAt(banner.expires_at ? banner.expires_at.slice(0, 16) : '')
+    setStartsAt(banner.starts_at ? toLocalDatetime(banner.starts_at) : '')
+    setExpiresAt(banner.expires_at ? toLocalDatetime(banner.expires_at) : '')
     setError('')
     setShowForm(true)
   }

@@ -98,7 +98,6 @@ export default function EditListingClient({ listing }: Props) {
       }
 
       router.push('/classifieds/my-listings')
-      router.refresh()
     } catch (err: any) {
       setError(err.message || 'Failed to save')
       setTimeout(() => errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100)

@@ -52,6 +52,10 @@ Reply ONLY with valid JSON: {"score": 0.0, "reason": "brief explanation under 10
 
 async function autoBanIfNeeded(admin: ReturnType<typeof getAdmin>, senderId: string, score: number, reason: string | null, context: string) {
   if (score >= 0.85) {
+    // Never auto-ban admin or super_admin accounts
+    const { data: profile } = await admin.from('profiles').select('role').eq('id', senderId).single()
+    if (profile && ['admin', 'super_admin'].includes(profile.role)) return
+
     await admin
       .from('profiles')
       .update({

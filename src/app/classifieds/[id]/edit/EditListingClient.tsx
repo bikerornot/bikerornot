@@ -96,7 +96,7 @@ export default function EditListingClient({ listing }: Props) {
         }
       }
 
-      router.push(`/classifieds/${listing.id}`)
+      router.push('/classifieds/my-listings')
       router.refresh()
     } catch (err: any) {
       setError(err.message || 'Failed to save')

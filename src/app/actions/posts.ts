@@ -129,7 +129,6 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
       admin.from('profiles').select('first_name, username, email_wall_posts').eq('id', wallOwnerId).single(),
     ])
     const ownerEmail = ownerAuth.user?.email
-    console.log('[wall-post-email]', { ownerEmail, authorUsername: authorProfile?.username, emailPref: ownerProfile?.email_wall_posts })
     if (ownerEmail && authorProfile?.username && ownerProfile?.email_wall_posts !== false) {
       sendWallPostEmail({
         toEmail: ownerEmail,
@@ -137,7 +136,7 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
         fromUsername: authorProfile.username,
         postSnippet: content?.trim() ?? '',
         profileUrl: `https://www.bikerornot.com/profile/${ownerProfile?.username}`,
-      }).catch((err) => { console.error('[wall-post-email] FAILED:', err) })
+      }).catch(() => {})
     }
   }
 

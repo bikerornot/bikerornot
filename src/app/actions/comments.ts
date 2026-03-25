@@ -17,7 +17,6 @@ function getServiceClient() {
 }
 
 export async function createComment(postId: string, content: string, parentCommentId?: string) {
-  console.log('[create-comment] START', { postId, parentCommentId: parentCommentId ?? 'NONE', contentLen: content.length })
   const supabase = await createClient()
   const {
     data: { user },
@@ -132,21 +131,33 @@ export async function createComment(postId: string, content: string, parentComme
       })
 
       // Send comment email (fire and forget)
-      const [{ data: commenterProfile }, { data: postAuthorAuth }, { data: postAuthorProfile }] = await Promise.all([
-        admin.from('profiles').select('username').eq('id', user.id).single(),
-        admin.auth.admin.getUserById(postData.author_id),
-        admin.from('profiles').select('first_name, email_comments').eq('id', postData.author_id).single(),
-      ])
-      const authorEmail = postAuthorAuth.user?.email
-      console.log('[comment-email]', { authorEmail, commenter: commenterProfile?.username, emailPref: postAuthorProfile?.email_comments, postAuthorId: postData.author_id })
-      if (authorEmail && commenterProfile?.username && postAuthorProfile?.email_comments !== false) {
-        sendCommentEmail({
-          toEmail: authorEmail,
-          toName: postAuthorProfile?.first_name ?? 'there',
-          fromUsername: commenterProfile.username,
-          commentSnippet: content.trim(),
-          postUrl,
-          isReply: false,
+      try {
+        const [{ data: commenterProfile }, { data: postAuthorAuth }, { data: postAuthorProfile }] = await Promise.all([
+          admin.from('profiles').select('username').eq('id', user.id).single(),
+          admin.auth.admin.getUserById(postData.author_id),
+          admin.from('profiles').select('first_name, email_comments').eq('id', postData.author_id).single(),
+        ])
+        const authorEmail = postAuthorAuth.user?.email
+        await admin.from('error_logs').insert({
+          message: `comment-email-debug: authorEmail=${authorEmail}, username=${commenterProfile?.username}, emailPref=${postAuthorProfile?.email_comments}`,
+          source: 'server-action',
+          url: '/actions/comments',
+        })
+        if (authorEmail && commenterProfile?.username && postAuthorProfile?.email_comments !== false) {
+          sendCommentEmail({
+            toEmail: authorEmail,
+            toName: postAuthorProfile?.first_name ?? 'there',
+            fromUsername: commenterProfile.username,
+            commentSnippet: content.trim(),
+            postUrl,
+            isReply: false,
+          }).catch(() => {})
+        }
+      } catch (emailErr) {
+        await admin.from('error_logs').insert({
+          message: `comment-email-error: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}`,
+          source: 'server-action',
+          url: '/actions/comments',
         }).catch(() => {})
       }
     }

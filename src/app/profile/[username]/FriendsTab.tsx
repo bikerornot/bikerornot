@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/lib/supabase/types'
 import { getImageUrl } from '@/lib/supabase/image'
-import { acceptFriendRequest, declineFriendRequest } from '@/app/actions/friends'
+import { acceptFriendRequest, declineFriendRequest, sendFriendRequest } from '@/app/actions/friends'
 import VerifiedBadge from '@/app/components/VerifiedBadge'
 
 interface PendingRequest {
@@ -38,10 +38,12 @@ function calcAge(dob: string): number {
   return age
 }
 
-function ProfileCard({ profile, isMutual, mutualCount, actions }: {
+function ProfileCard({ profile, isMutual, mutualCount, showAddFriend, onAddFriend, actions }: {
   profile: Profile
   isMutual?: boolean
   mutualCount?: number
+  showAddFriend?: boolean
+  onAddFriend?: (id: string) => void
   actions?: React.ReactNode
 }) {
   const avatarUrl = profile.profile_photo_url
@@ -101,6 +103,15 @@ function ProfileCard({ profile, isMutual, mutualCount, actions }: {
           <p className="text-xs text-zinc-500 mt-1.5">
             {mutualCount} mutual friend{mutualCount !== 1 ? 's' : ''} with you
           </p>
+        )}
+
+        {showAddFriend && onAddFriend && (
+          <button
+            onClick={() => onAddFriend(profile.id)}
+            className="mt-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors border border-zinc-700"
+          >
+            + Add Friend
+          </button>
         )}
 
         {actions && <div className="mt-3">{actions}</div>}
@@ -251,6 +262,17 @@ export default function FriendsTab({ profileId, isOwnProfile, currentUserId }: P
     [friends, mutualFriendIds]
   )
 
+  const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set())
+
+  async function handleAddFriend(friendId: string) {
+    setRequestedIds(prev => new Set(prev).add(friendId))
+    try {
+      await sendFriendRequest(friendId)
+    } catch {
+      // Duplicate or rate-limited — keep "Requested" state, no error shown
+    }
+  }
+
   async function handleAccept(requesterId: string) {
     await acceptFriendRequest(requesterId)
     const accepted = pending.find((p) => p.requesterId === requesterId)
@@ -354,12 +376,21 @@ export default function FriendsTab({ profileId, isOwnProfile, currentUserId }: P
       <div className="space-y-3">
         {displayFriends.map((friend) => {
           const count = showMutualTab ? getMutualCount(friend.id) : undefined
+          const isMutual = mutualFriendIds.has(friend.id)
+          const isRequested = requestedIds.has(friend.id)
+          // Show Add Friend on non-mutual friends in All view (not own profile, not self)
+          const canAdd = subTab === 'all' && !isOwnProfile && !isMutual && friend.id !== currentUserId
           return (
             <ProfileCard
               key={friend.id}
               profile={friend}
-              isMutual={subTab === 'all' && mutualFriendIds.has(friend.id)}
+              isMutual={subTab === 'all' && isMutual}
               mutualCount={count}
+              showAddFriend={canAdd && !isRequested}
+              onAddFriend={handleAddFriend}
+              actions={isRequested && canAdd ? (
+                <span className="text-xs text-zinc-500 font-medium">Requested</span>
+              ) : undefined}
             />
           )
         })}

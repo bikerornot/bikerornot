@@ -206,36 +206,34 @@ export default function FriendsTab({ profileId, isOwnProfile, currentUserId }: P
     return mutualIds
   }, [friends, viewerFriendIds, isOwnProfile, currentUserId])
 
-  // Fetch mutual friend counts for each mutual friend (how many friends they share with viewer)
+  // Fetch friendships for all profile friends to compute mutual counts with viewer
   useEffect(() => {
-    if (mutualFriendIds.size === 0 || !currentUserId) return
+    if (friends.length === 0 || !currentUserId || isOwnProfile) return
 
     const supabase = createClient()
-    const ids = Array.from(mutualFriendIds)
+    const ids = friends.map(f => f.id)
 
-    // Fetch all friendships where either side is a mutual friend
-    supabase
-      .from('friendships')
-      .select('requester_id, addressee_id')
-      .or(
-        ids.map(id => `requester_id.eq.${id},addressee_id.eq.${id}`).join(',')
-      )
-      .eq('status', 'accepted')
-      .then(({ data }) => {
-        // Build friend sets for each mutual friend
-        const friendSets = new Map<string, Set<string>>()
-        for (const id of ids) friendSets.set(id, new Set())
+    // Fetch all friendships where either side is one of the profile's friends
+    Promise.resolve(
+      supabase
+        .from('friendships')
+        .select('requester_id, addressee_id')
+        .or(`requester_id.in.(${ids.join(',')}),addressee_id.in.(${ids.join(',')})`)
+        .eq('status', 'accepted')
+    ).then(({ data }) => {
+      const friendSets = new Map<string, Set<string>>()
+      for (const id of ids) friendSets.set(id, new Set())
 
-        for (const row of (data ?? []) as any[]) {
-          const rid = row.requester_id as string
-          const aid = row.addressee_id as string
-          if (friendSets.has(rid)) friendSets.get(rid)!.add(aid)
-          if (friendSets.has(aid)) friendSets.get(aid)!.add(rid)
-        }
+      for (const row of (data ?? []) as any[]) {
+        const rid = row.requester_id as string
+        const aid = row.addressee_id as string
+        if (friendSets.has(rid)) friendSets.get(rid)!.add(aid)
+        if (friendSets.has(aid)) friendSets.get(aid)!.add(rid)
+      }
 
-        setMutualFriendships(friendSets)
-      })
-  }, [mutualFriendIds, currentUserId])
+      setMutualFriendships(friendSets)
+    })
+  }, [friends, currentUserId, isOwnProfile])
 
   // Compute mutual count for a given mutual friend (how many of their friends are also viewer's friends)
   function getMutualCount(friendId: string): number {
@@ -354,14 +352,17 @@ export default function FriendsTab({ profileId, isOwnProfile, currentUserId }: P
       )}
 
       <div className="space-y-3">
-        {displayFriends.map((friend) => (
-          <ProfileCard
-            key={friend.id}
-            profile={friend}
-            isMutual={subTab === 'all' && mutualFriendIds.has(friend.id)}
-            mutualCount={subTab === 'mutual' ? getMutualCount(friend.id) : undefined}
-          />
-        ))}
+        {displayFriends.map((friend) => {
+          const count = showMutualTab ? getMutualCount(friend.id) : undefined
+          return (
+            <ProfileCard
+              key={friend.id}
+              profile={friend}
+              isMutual={subTab === 'all' && mutualFriendIds.has(friend.id)}
+              mutualCount={count}
+            />
+          )
+        })}
       </div>
     </div>
   )

@@ -18,6 +18,7 @@ function getServiceClient() {
 }
 
 export async function createComment(postId: string, content: string, parentCommentId?: string) {
+  await logError({ source: 'server_action', message: `comment-TOP: postId=${postId}, parentCommentId=${parentCommentId ?? 'none'}`, url: '/actions/comments' })
   const supabase = await createClient()
   const {
     data: { user },
@@ -123,6 +124,7 @@ export async function createComment(postId: string, content: string, parentComme
       .eq('id', postId)
       .single()
     if (postData && postData.author_id !== user.id) {
+      await logError({ source: 'server_action', message: `comment-pre-notify: postAuthor=${postData.author_id}, commenter=${user.id}`, url: '/actions/comments' })
       await notifyIfActive(user.id, {
         user_id: postData.author_id,
         type: 'post_comment',

@@ -137,6 +137,7 @@ export async function createComment(postId: string, content: string, parentComme
         admin.from('profiles').select('first_name, email_comments').eq('id', postData.author_id).single(),
       ])
       const authorEmail = postAuthorAuth.user?.email
+      console.log('[comment-email]', { authorEmail, commenter: commenterProfile?.username, emailPref: postAuthorProfile?.email_comments, postAuthorId: postData.author_id })
       if (authorEmail && commenterProfile?.username && postAuthorProfile?.email_comments !== false) {
         sendCommentEmail({
           toEmail: authorEmail,

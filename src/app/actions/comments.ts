@@ -8,7 +8,6 @@ import { scanCommentForScam } from '@/app/actions/scam-scan'
 import { notifyIfActive } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
 import { sendCommentEmail } from '@/lib/email'
-import { logError } from '@/app/actions/errors'
 
 function getServiceClient() {
   return createServiceClient(
@@ -18,7 +17,6 @@ function getServiceClient() {
 }
 
 export async function createComment(postId: string, content: string, parentCommentId?: string) {
-  await logError({ source: 'server_action', message: `comment-TOP: postId=${postId}, parentCommentId=${parentCommentId ?? 'none'}`, url: '/actions/comments' })
   const supabase = await createClient()
   const {
     data: { user },
@@ -99,23 +97,25 @@ export async function createComment(postId: string, content: string, parentComme
         comment_id: comment.id,
       })
 
-      // Send reply email (fire and forget)
-      const [{ data: commenterProfile }, { data: parentAuth }, { data: parentProfile }] = await Promise.all([
-        admin.from('profiles').select('username').eq('id', user.id).single(),
-        admin.auth.admin.getUserById(parent.author_id),
-        admin.from('profiles').select('first_name, email_comments').eq('id', parent.author_id).single(),
-      ])
-      const parentEmail = parentAuth.user?.email
-      if (parentEmail && commenterProfile?.username && parentProfile?.email_comments !== false) {
-        sendCommentEmail({
-          toEmail: parentEmail,
-          toName: parentProfile?.first_name ?? 'there',
-          fromUsername: commenterProfile.username,
-          commentSnippet: content.trim(),
-          postUrl,
-          isReply: true,
-        }).catch(() => {})
-      }
+      // Send reply email
+      try {
+        const [{ data: commenterProfile }, { data: parentAuth }, { data: parentProfile }] = await Promise.all([
+          admin.from('profiles').select('username').eq('id', user.id).single(),
+          admin.auth.admin.getUserById(parent.author_id),
+          admin.from('profiles').select('first_name, email_comments').eq('id', parent.author_id).single(),
+        ])
+        const parentEmail = parentAuth.user?.email
+        if (parentEmail && commenterProfile?.username && parentProfile?.email_comments !== false) {
+          await sendCommentEmail({
+            toEmail: parentEmail,
+            toName: parentProfile?.first_name ?? 'there',
+            fromUsername: commenterProfile.username,
+            commentSnippet: content.trim(),
+            postUrl,
+            isReply: true,
+          })
+        }
+      } catch { /* best-effort */ }
     }
   } else {
     const { data: postData } = await admin
@@ -124,7 +124,6 @@ export async function createComment(postId: string, content: string, parentComme
       .eq('id', postId)
       .single()
     if (postData && postData.author_id !== user.id) {
-      await logError({ source: 'server_action', message: `comment-pre-notify: postAuthor=${postData.author_id}, commenter=${user.id}`, url: '/actions/comments' })
       await notifyIfActive(user.id, {
         user_id: postData.author_id,
         type: 'post_comment',
@@ -133,8 +132,7 @@ export async function createComment(postId: string, content: string, parentComme
         comment_id: comment.id,
       })
 
-      // Send comment email — debug logging via logError (shows in admin)
-      await logError({ source: 'server_action', message: `comment-email-step1: reached email section for post ${postId}`, url: '/actions/comments' })
+      // Send comment email
       try {
         const [{ data: commenterProfile }, { data: postAuthorAuth }, { data: postAuthorProfile }] = await Promise.all([
           admin.from('profiles').select('username').eq('id', user.id).single(),
@@ -142,25 +140,17 @@ export async function createComment(postId: string, content: string, parentComme
           admin.from('profiles').select('first_name, email_comments').eq('id', postData.author_id).single(),
         ])
         const authorEmail = postAuthorAuth.user?.email
-        await logError({ source: 'server_action', message: `comment-email-step2: authorEmail=${authorEmail}, username=${commenterProfile?.username}, emailPref=${postAuthorProfile?.email_comments}`, url: '/actions/comments' })
         if (authorEmail && commenterProfile?.username && postAuthorProfile?.email_comments !== false) {
-          try {
-            await sendCommentEmail({
-              toEmail: authorEmail,
-              toName: postAuthorProfile?.first_name ?? 'there',
-              fromUsername: commenterProfile.username,
-              commentSnippet: content.trim(),
-              postUrl,
-              isReply: false,
-            })
-            await logError({ source: 'server_action', message: `comment-email-sent: to=${authorEmail}`, url: '/actions/comments' })
-          } catch (sendErr) {
-            await logError({ source: 'server_action', message: `comment-email-send-failed: ${sendErr instanceof Error ? sendErr.message : String(sendErr)}`, url: '/actions/comments' })
-          }
+          await sendCommentEmail({
+            toEmail: authorEmail,
+            toName: postAuthorProfile?.first_name ?? 'there',
+            fromUsername: commenterProfile.username,
+            commentSnippet: content.trim(),
+            postUrl,
+            isReply: false,
+          })
         }
-      } catch (emailErr) {
-        await logError({ source: 'server_action', message: `comment-email-error: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}`, url: '/actions/comments' })
-      }
+      } catch { /* best-effort */ }
     }
   }
 

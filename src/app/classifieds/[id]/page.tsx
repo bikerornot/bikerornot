@@ -9,7 +9,8 @@ import NotificationBell from '@/app/components/NotificationBell'
 import LastSeenTracker from '@/app/components/LastSeenTracker'
 import MessagesLink from '@/app/components/MessagesLink'
 import BottomNav from '@/app/components/BottomNav'
-import { getListingDetail, recordView } from '@/app/actions/classifieds'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { getListingDetail } from '@/app/actions/classifieds'
 import ListingDetailClient from './ListingDetailClient'
 
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -20,7 +21,17 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const listing = await getListingDetail(id)
   if (!listing) notFound()
 
-  after(async () => { await recordView(id) })
+  const viewerId = user?.id ?? null
+  after(async () => {
+    const admin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    await admin.rpc('increment_listing_view', {
+      p_listing_id: id,
+      p_viewer_id: viewerId,
+    })
+  })
 
   let profile = null
   let avatarUrl = null

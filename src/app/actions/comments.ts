@@ -154,11 +154,11 @@ export async function createComment(postId: string, content: string, parentComme
           }).catch(() => {})
         }
       } catch (emailErr) {
-        await admin.from('error_logs').insert({
+        Promise.resolve(admin.from('error_logs').insert({
           message: `comment-email-error: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}`,
           source: 'server-action',
           url: '/actions/comments',
-        }).catch(() => {})
+        })).catch(() => {})
       }
     }
   }

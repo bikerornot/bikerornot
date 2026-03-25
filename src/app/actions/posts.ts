@@ -6,7 +6,7 @@ import { moderateImage, type ModerationResult } from '@/lib/sightengine'
 import { checkRateLimit, validateImageFile } from '@/lib/rate-limit'
 import { notifyIfActive } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
-import { sendWallPostEmail, sendPostLikeEmail } from '@/lib/email'
+import { sendWallPostEmail } from '@/lib/email'
 
 function getServiceClient() {
   return createServiceClient(
@@ -283,26 +283,6 @@ export async function likePost(postId: string): Promise<void> {
       actor_id: user.id,
       post_id: postId,
     })
-
-    // Send post like email
-    try {
-      const [{ data: likerProfile }, { data: postAuthorAuth }, { data: postAuthorProfile }, { data: postContent }] = await Promise.all([
-        admin.from('profiles').select('username').eq('id', user.id).single(),
-        admin.auth.admin.getUserById(post.author_id),
-        admin.from('profiles').select('first_name, email_post_likes').eq('id', post.author_id).single(),
-        admin.from('posts').select('content').eq('id', postId).single(),
-      ])
-      const authorEmail = postAuthorAuth.user?.email
-      if (authorEmail && likerProfile?.username && postAuthorProfile?.email_post_likes !== false) {
-        await sendPostLikeEmail({
-          toEmail: authorEmail,
-          toName: postAuthorProfile?.first_name ?? 'there',
-          fromUsername: likerProfile.username,
-          postSnippet: postContent?.content ?? null,
-          postUrl: `https://www.bikerornot.com/post/${postId}`,
-        })
-      }
-    } catch { /* best-effort */ }
   }
 }
 

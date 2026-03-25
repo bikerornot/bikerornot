@@ -208,7 +208,7 @@ export default function ChatWindow({ conversationId, initialMessages, currentUse
 
                 <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[75%]`}>
                   <div
-                    className={`px-3 py-2 rounded-2xl text-base leading-relaxed break-words ${
+                    className={`px-3 py-2 rounded-2xl text-base leading-relaxed break-words whitespace-pre-wrap ${
                       isMe
                         ? 'bg-orange-600 text-white rounded-br-sm'
                         : 'bg-zinc-800 text-zinc-100 rounded-bl-sm'

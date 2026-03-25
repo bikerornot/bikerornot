@@ -292,52 +292,6 @@ export async function sendCommentEmail({
   })
 }
 
-export async function sendPostLikeEmail({
-  toEmail,
-  toName,
-  fromUsername,
-  postSnippet,
-  postUrl,
-}: {
-  toEmail: string
-  toName: string
-  fromUsername: string
-  postSnippet: string | null
-  postUrl: string
-}) {
-  const snippet = postSnippet && postSnippet.length > 200 ? postSnippet.slice(0, 200) + '...' : postSnippet
-
-  await resend.emails.send({
-    from: FROM,
-    to: toEmail,
-    subject: `${fromUsername} liked your post on BikerOrNot`,
-    html: layout(`
-      <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">
-        Someone liked your post
-      </h1>
-      <p style="margin:0 0 20px;font-size:15px;color:#a1a1aa;line-height:1.6;">
-        Hey ${toName}, <strong style="color:#ffffff;">@${fromUsername}</strong> liked your post.
-      </p>
-      ${snippet ? `
-      <div style="background:#09090b;border:1px solid #27272a;border-radius:12px;padding:16px;margin-bottom:24px;">
-        <p style="margin:0;font-size:14px;color:#d4d4d8;line-height:1.5;">
-          "${snippet}"
-        </p>
-      </div>
-      ` : ''}
-      <table cellpadding="0" cellspacing="0">
-        <tr>
-          <td>
-            <a href="${postUrl}" style="display:inline-block;background:#f97316;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:10px;">
-              View Post
-            </a>
-          </td>
-        </tr>
-      </table>
-    `),
-  })
-}
-
 export async function sendMentionEmail({
   toEmail,
   toName,

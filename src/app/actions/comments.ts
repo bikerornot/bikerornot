@@ -7,6 +7,7 @@ import { checkRateLimit } from '@/lib/rate-limit'
 import { scanCommentForScam } from '@/app/actions/scam-scan'
 import { notifyIfActive } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
+import { sendCommentEmail } from '@/lib/email'
 
 function getServiceClient() {
   return createServiceClient(
@@ -79,6 +80,8 @@ export async function createComment(postId: string, content: string, parentComme
   })
 
   // Send notification (skipped for banned/suspended users via notifyIfActive)
+  const postUrl = `https://www.bikerornot.com/post/${postId}`
+
   if (parentCommentId) {
     const { data: parent } = await admin
       .from('comments')
@@ -93,21 +96,57 @@ export async function createComment(postId: string, content: string, parentComme
         post_id: postId,
         comment_id: comment.id,
       })
+
+      // Send reply email (fire and forget)
+      const [{ data: commenterProfile }, { data: parentAuth }, { data: parentProfile }] = await Promise.all([
+        admin.from('profiles').select('username').eq('id', user.id).single(),
+        admin.auth.admin.getUserById(parent.author_id),
+        admin.from('profiles').select('first_name, email_comments').eq('id', parent.author_id).single(),
+      ])
+      const parentEmail = parentAuth.user?.email
+      if (parentEmail && commenterProfile?.username && parentProfile?.email_comments !== false) {
+        sendCommentEmail({
+          toEmail: parentEmail,
+          toName: parentProfile?.first_name ?? 'there',
+          fromUsername: commenterProfile.username,
+          commentSnippet: content.trim(),
+          postUrl,
+          isReply: true,
+        }).catch(() => {})
+      }
     }
   } else {
-    const { data: post } = await admin
+    const { data: postData } = await admin
       .from('posts')
       .select('author_id')
       .eq('id', postId)
       .single()
-    if (post && post.author_id !== user.id) {
+    if (postData && postData.author_id !== user.id) {
       await notifyIfActive(user.id, {
-        user_id: post.author_id,
+        user_id: postData.author_id,
         type: 'post_comment',
         actor_id: user.id,
         post_id: postId,
         comment_id: comment.id,
       })
+
+      // Send comment email (fire and forget)
+      const [{ data: commenterProfile }, { data: postAuthorAuth }, { data: postAuthorProfile }] = await Promise.all([
+        admin.from('profiles').select('username').eq('id', user.id).single(),
+        admin.auth.admin.getUserById(postData.author_id),
+        admin.from('profiles').select('first_name, email_comments').eq('id', postData.author_id).single(),
+      ])
+      const authorEmail = postAuthorAuth.user?.email
+      if (authorEmail && commenterProfile?.username && postAuthorProfile?.email_comments !== false) {
+        sendCommentEmail({
+          toEmail: authorEmail,
+          toName: postAuthorProfile?.first_name ?? 'there',
+          fromUsername: commenterProfile.username,
+          commentSnippet: content.trim(),
+          postUrl,
+          isReply: false,
+        }).catch(() => {})
+      }
     }
   }
 

@@ -37,6 +37,7 @@ export interface Profile {
   email_friend_accepted: boolean
   email_mentions: boolean
   email_wall_posts: boolean
+  email_comments: boolean
   show_real_name: boolean
   show_birthday: boolean
   phone_number: string | null

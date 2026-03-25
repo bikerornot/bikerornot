@@ -242,6 +242,56 @@ export async function sendWallPostEmail({
   })
 }
 
+export async function sendCommentEmail({
+  toEmail,
+  toName,
+  fromUsername,
+  commentSnippet,
+  postUrl,
+  isReply,
+}: {
+  toEmail: string
+  toName: string
+  fromUsername: string
+  commentSnippet: string
+  postUrl: string
+  isReply: boolean
+}) {
+  const snippet = commentSnippet.length > 200 ? commentSnippet.slice(0, 200) + '...' : commentSnippet
+  const subject = isReply
+    ? `${fromUsername} replied to your comment on BikerOrNot`
+    : `${fromUsername} commented on your post on BikerOrNot`
+  const heading = isReply ? 'New reply to your comment' : 'New comment on your post'
+
+  await resend.emails.send({
+    from: FROM,
+    to: toEmail,
+    subject,
+    html: layout(`
+      <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">
+        ${heading}
+      </h1>
+      <p style="margin:0 0 20px;font-size:15px;color:#a1a1aa;line-height:1.6;">
+        Hey ${toName}, <strong style="color:#ffffff;">@${fromUsername}</strong> ${isReply ? 'replied to your comment' : 'commented on your post'}.
+      </p>
+      <div style="background:#09090b;border:1px solid #27272a;border-radius:12px;padding:16px;margin-bottom:24px;">
+        <p style="margin:0;font-size:14px;color:#d4d4d8;line-height:1.5;">
+          "${snippet}"
+        </p>
+      </div>
+      <table cellpadding="0" cellspacing="0">
+        <tr>
+          <td>
+            <a href="${postUrl}" style="display:inline-block;background:#f97316;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:10px;">
+              View Comment
+            </a>
+          </td>
+        </tr>
+      </table>
+    `),
+  })
+}
+
 export async function sendMentionEmail({
   toEmail,
   toName,

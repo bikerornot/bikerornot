@@ -144,14 +144,19 @@ export async function createComment(postId: string, content: string, parentComme
         const authorEmail = postAuthorAuth.user?.email
         await logError({ source: 'server_action', message: `comment-email-step2: authorEmail=${authorEmail}, username=${commenterProfile?.username}, emailPref=${postAuthorProfile?.email_comments}`, url: '/actions/comments' })
         if (authorEmail && commenterProfile?.username && postAuthorProfile?.email_comments !== false) {
-          sendCommentEmail({
-            toEmail: authorEmail,
-            toName: postAuthorProfile?.first_name ?? 'there',
-            fromUsername: commenterProfile.username,
-            commentSnippet: content.trim(),
-            postUrl,
-            isReply: false,
-          }).catch(() => {})
+          try {
+            await sendCommentEmail({
+              toEmail: authorEmail,
+              toName: postAuthorProfile?.first_name ?? 'there',
+              fromUsername: commenterProfile.username,
+              commentSnippet: content.trim(),
+              postUrl,
+              isReply: false,
+            })
+            await logError({ source: 'server_action', message: `comment-email-sent: to=${authorEmail}`, url: '/actions/comments' })
+          } catch (sendErr) {
+            await logError({ source: 'server_action', message: `comment-email-send-failed: ${sendErr instanceof Error ? sendErr.message : String(sendErr)}`, url: '/actions/comments' })
+          }
         }
       } catch (emailErr) {
         await logError({ source: 'server_action', message: `comment-email-error: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}`, url: '/actions/comments' })

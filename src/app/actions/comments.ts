@@ -8,6 +8,7 @@ import { scanCommentForScam } from '@/app/actions/scam-scan'
 import { notifyIfActive } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
 import { sendCommentEmail } from '@/lib/email'
+import { logError } from '@/app/actions/errors'
 
 function getServiceClient() {
   return createServiceClient(
@@ -130,12 +131,8 @@ export async function createComment(postId: string, content: string, parentComme
         comment_id: comment.id,
       })
 
-      // Send comment email — debug logging to error_logs
-      await admin.from('error_logs').insert({
-        message: `comment-email-step1: reached email section for post ${postId}`,
-        source: 'server_action',
-        url: '/actions/comments',
-      })
+      // Send comment email — debug logging via logError (shows in admin)
+      await logError({ source: 'server_action', message: `comment-email-step1: reached email section for post ${postId}`, url: '/actions/comments' })
       try {
         const [{ data: commenterProfile }, { data: postAuthorAuth }, { data: postAuthorProfile }] = await Promise.all([
           admin.from('profiles').select('username').eq('id', user.id).single(),
@@ -143,11 +140,7 @@ export async function createComment(postId: string, content: string, parentComme
           admin.from('profiles').select('first_name, email_comments').eq('id', postData.author_id).single(),
         ])
         const authorEmail = postAuthorAuth.user?.email
-        await admin.from('error_logs').insert({
-          message: `comment-email-step2: authorEmail=${authorEmail}, username=${commenterProfile?.username}, emailPref=${postAuthorProfile?.email_comments}`,
-          source: 'server_action',
-          url: '/actions/comments',
-        })
+        await logError({ source: 'server_action', message: `comment-email-step2: authorEmail=${authorEmail}, username=${commenterProfile?.username}, emailPref=${postAuthorProfile?.email_comments}`, url: '/actions/comments' })
         if (authorEmail && commenterProfile?.username && postAuthorProfile?.email_comments !== false) {
           sendCommentEmail({
             toEmail: authorEmail,
@@ -159,11 +152,7 @@ export async function createComment(postId: string, content: string, parentComme
           }).catch(() => {})
         }
       } catch (emailErr) {
-        await admin.from('error_logs').insert({
-          message: `comment-email-error: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}`,
-          source: 'server_action',
-          url: '/actions/comments',
-        })
+        await logError({ source: 'server_action', message: `comment-email-error: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}`, url: '/actions/comments' })
       }
     }
   }

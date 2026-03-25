@@ -31,6 +31,7 @@ export default function SettingsForm({ profile }: Props) {
   const [emailMentions, setEmailMentions] = useState(profile.email_mentions ?? true)
   const [emailWallPosts, setEmailWallPosts] = useState(profile.email_wall_posts ?? true)
   const [emailComments, setEmailComments] = useState(profile.email_comments ?? true)
+  const [emailPostLikes, setEmailPostLikes] = useState(profile.email_post_likes ?? true)
   const [showRealName, setShowRealName] = useState(profile.show_real_name ?? false)
   const [showBirthday, setShowBirthday] = useState(profile.show_birthday ?? false)
   const [phoneVerified, setPhoneVerified] = useState(!!profile.phone_verified_at)
@@ -213,6 +214,7 @@ export default function SettingsForm({ profile }: Props) {
           { key: 'email_mentions' as const, label: 'Mentioned in a post', value: emailMentions, set: setEmailMentions },
           { key: 'email_wall_posts' as const, label: 'Someone posts on your wall', value: emailWallPosts, set: setEmailWallPosts },
           { key: 'email_comments' as const, label: 'Comment on your post or reply to your comment', value: emailComments, set: setEmailComments },
+          { key: 'email_post_likes' as const, label: 'Someone liked your post', value: emailPostLikes, set: setEmailPostLikes },
         ]).map(({ key, label, value, set }) => (
           <div key={key} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
             <span className="text-sm text-zinc-300">{label}</span>
@@ -229,6 +231,7 @@ export default function SettingsForm({ profile }: Props) {
                   email_mentions: key === 'email_mentions' ? next : emailMentions,
                   email_wall_posts: key === 'email_wall_posts' ? next : emailWallPosts,
                   email_comments: key === 'email_comments' ? next : emailComments,
+                  email_post_likes: key === 'email_post_likes' ? next : emailPostLikes,
                 })
               }}
               className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none ${value ? 'bg-orange-500' : 'bg-zinc-700'}`}

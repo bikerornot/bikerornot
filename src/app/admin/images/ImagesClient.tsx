@@ -342,6 +342,11 @@ function ImageCard({
           {image.author_status === 'suspended' && (
             <span className="flex-shrink-0 bg-yellow-500/20 text-yellow-400 text-[10px] font-bold px-1.5 py-0.5 rounded leading-none">SUSPENDED</span>
           )}
+          {image.webSuspicious && (
+            <span className="flex-shrink-0 bg-purple-500/20 text-purple-400 text-[10px] font-bold px-1.5 py-0.5 rounded leading-none" title={`Found on ${image.webMatchCount} page(s)`}>
+              WEB MATCH
+            </span>
+          )}
         </div>
 
         <div className="flex gap-1.5">

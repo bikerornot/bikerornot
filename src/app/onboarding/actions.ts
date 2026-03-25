@@ -6,6 +6,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { geocodeZip } from '@/lib/geocode'
 import { validateImageFile } from '@/lib/rate-limit'
 import { moderateImage } from '@/lib/sightengine'
+import { detectWebPresence } from '@/lib/google-vision'
 import { normalizeMake } from '@/lib/normalize-make'
 import { validateUsername } from '@/lib/username-rules'
 
@@ -87,6 +88,16 @@ export async function uploadAvatar(formData: FormData): Promise<string> {
       avatar_reviewed_at: new Date().toISOString(),
     }).eq('id', user.id)
   }
+
+  // Run Google Vision web detection in background (fire-and-forget)
+  detectWebPresence(arrayBuffer, file.type)
+    .then(async (result) => {
+      if (!result) return
+      const update: Record<string, unknown> = { avatar_web_detection: result }
+      if (result.isSuspicious) update.avatar_reviewed_at = null
+      await admin.from('profiles').update(update).eq('id', user.id)
+    })
+    .catch(() => {})
 
   return path
 }

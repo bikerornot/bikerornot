@@ -30,6 +30,10 @@ export interface AdminImage {
   author_name: string | null
   author_status: string | null
   created_at: string
+  /** True if Google Vision found this avatar on other websites */
+  webSuspicious: boolean
+  /** Number of web pages where this image was found */
+  webMatchCount: number
 }
 
 const IMAGES_PAGE_SIZE = 40
@@ -100,6 +104,8 @@ export async function getPostImages(page = 1): Promise<{ images: AdminImage[]; h
       author_name: [author?.first_name, author?.last_name].filter(Boolean).join(' ') || null,
       author_status: author?.status ?? null,
       created_at: post?.created_at ?? '',
+      webSuspicious: false,
+      webMatchCount: 0,
     }
   })
 
@@ -121,7 +127,7 @@ export async function getAvatarImages(page = 1): Promise<{ images: AdminImage[];
   // Fetch one extra to detect hasMore
   const { data } = await admin
     .from('profiles')
-    .select('id, username, first_name, last_name, status, profile_photo_url, updated_at')
+    .select('id, username, first_name, last_name, status, profile_photo_url, updated_at, avatar_web_detection')
     .not('profile_photo_url', 'is', null)
     .is('avatar_reviewed_at', null)
     .order('updated_at', { ascending: false })
@@ -138,6 +144,8 @@ export async function getAvatarImages(page = 1): Promise<{ images: AdminImage[];
     author_name: [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
     author_status: p.status ?? null,
     created_at: p.updated_at,
+    webSuspicious: p.avatar_web_detection?.isSuspicious ?? false,
+    webMatchCount: p.avatar_web_detection?.matchCount ?? 0,
   }))
 
   return { images, hasMore, queueTotal: queueTotal ?? 0 }

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { moderateImage } from '@/lib/sightengine'
 import { validateImageFile } from '@/lib/rate-limit'
+import { detectWebPresence } from '@/lib/google-vision'
 
 function getServiceClient() {
   return createServiceClient(
@@ -52,6 +53,19 @@ export async function uploadProfilePhoto(formData: FormData): Promise<{ error: s
     .eq('id', user.id)
 
   if (updateError) throw new Error(updateError.message)
+
+  // Run Google Vision web detection in background (fire-and-forget)
+  // If the image appears on other sites, force into review queue
+  detectWebPresence(arrayBuffer, file.type)
+    .then(async (result) => {
+      if (!result) return
+      const update: Record<string, unknown> = { avatar_web_detection: result }
+      // If image found on other sites, force admin review regardless of SightEngine result
+      if (result.isSuspicious) update.avatar_reviewed_at = null
+      await admin.from('profiles').update(update).eq('id', user.id)
+    })
+    .catch(() => {})
+
   return null
 }
 

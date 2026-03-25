@@ -194,6 +194,57 @@ export default async function UserDetailPage({
             </dl>
           </div>
 
+          {/* Web Detection (reverse image search) */}
+          {user.avatar_web_detection && (
+            <div className={`bg-zinc-900 border rounded-xl p-5 ${
+              user.avatar_web_detection.isSuspicious ? 'border-red-500/40' : 'border-zinc-800'
+            }`}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-zinc-400 text-xs font-semibold uppercase tracking-wider">Reverse Image Search</h3>
+                {user.avatar_web_detection.isSuspicious ? (
+                  <span className="text-[10px] font-bold text-red-400 bg-red-500/15 px-1.5 py-0.5 rounded">SUSPICIOUS</span>
+                ) : (
+                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-1.5 py-0.5 rounded">CLEAN</span>
+                )}
+              </div>
+              <dl className="space-y-2 text-sm">
+                <div>
+                  <dt className="text-zinc-600 text-xs mb-0.5">Matches Found</dt>
+                  <dd className={`text-sm font-medium ${user.avatar_web_detection.matchCount >= 2 ? 'text-red-400' : 'text-zinc-300'}`}>
+                    {user.avatar_web_detection.matchCount} page{user.avatar_web_detection.matchCount !== 1 ? 's' : ''}
+                  </dd>
+                </div>
+                {user.avatar_web_detection.bestGuess && (
+                  <div>
+                    <dt className="text-zinc-600 text-xs mb-0.5">Best Guess</dt>
+                    <dd className="text-zinc-300 text-sm">{user.avatar_web_detection.bestGuess}</dd>
+                  </div>
+                )}
+                <div>
+                  <dt className="text-zinc-600 text-xs mb-0.5">Checked</dt>
+                  <dd className="text-zinc-500 text-xs">{formatDate(user.avatar_web_detection.checkedAt)}</dd>
+                </div>
+              </dl>
+              {user.avatar_web_detection.topMatches.length > 0 && (
+                <div className="mt-3 space-y-1.5">
+                  <p className="text-zinc-600 text-xs font-medium">Found on:</p>
+                  {user.avatar_web_detection.topMatches.map((match, i) => (
+                    <a
+                      key={i}
+                      href={match.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block text-xs text-blue-400 hover:text-blue-300 truncate"
+                      title={match.url}
+                    >
+                      {match.pageTitle || new URL(match.url).hostname}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* IP / Signup location */}
           <div className={`bg-zinc-900 border rounded-xl p-5 ${riskFlags.length > 0 ? 'border-red-500/40' : 'border-zinc-800'}`}>
             <h3 className="text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-3">Signup Info</h3>

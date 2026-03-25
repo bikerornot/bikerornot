@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation'
-import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getImageUrl } from '@/lib/supabase/image'
 import Logo from '@/app/components/Logo'
@@ -21,17 +20,17 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const listing = await getListingDetail(id)
   if (!listing) notFound()
 
-  const viewerId = user?.id ?? null
-  after(async () => {
-    const admin = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-    await admin.rpc('increment_listing_view', {
+  // Record view inline (not in after() — Vercel serverless may not execute after() reliably)
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+  Promise.resolve(
+    admin.rpc('increment_listing_view', {
       p_listing_id: id,
-      p_viewer_id: viewerId,
+      p_viewer_id: user?.id ?? null,
     })
-  })
+  ).catch(() => {})
 
   let profile = null
   let avatarUrl = null

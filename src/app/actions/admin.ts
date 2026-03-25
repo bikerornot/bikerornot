@@ -345,6 +345,13 @@ export interface AdminUserDetail {
   phone_number: string | null
   phone_verified_at: string | null
   phone_verification_required: boolean
+  avatar_web_detection: {
+    matchCount: number
+    topMatches: Array<{ url: string; pageTitle: string | null; score: number | null }>
+    bestGuess: string | null
+    isSuspicious: boolean
+    checkedAt: string
+  } | null
   post_count: number
   message_count: number
   comment_count: number
@@ -602,6 +609,7 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     phone_number: profile.phone_number ?? null,
     phone_verified_at: profile.phone_verified_at ?? null,
     phone_verification_required: profile.phone_verification_required ?? false,
+    avatar_web_detection: profile.avatar_web_detection ?? null,
     post_count: (posts ?? []).length,
     message_count: totalMessages ?? 0,
     comment_count: totalComments ?? 0,
@@ -1320,6 +1328,7 @@ async function getBannedUserIds(admin: ReturnType<typeof getServiceClient>): Pro
 export interface DailyMemberCount {
   date: string    // YYYY-MM-DD
   total: number   // cumulative total at end of day
+  verifiedTotal: number // cumulative verified users at end of day
   newSignups: number // signups that day
   organicSignups: number // signups excluding banned users
   floridaSignups: number // signups from Florida
@@ -1335,10 +1344,17 @@ export async function getDailyMemberCounts(
   const bannedIds = await getBannedUserIds(admin)
 
   // Get total users before startDate (the baseline)
-  const { count: baseline } = await admin
-    .from('profiles')
-    .select('*', { count: 'exact', head: true })
-    .lt('created_at', `${startDate}T00:00:00Z`)
+  const [{ count: baseline }, { count: verifiedBaseline }] = await Promise.all([
+    admin
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .lt('created_at', `${startDate}T00:00:00Z`),
+    admin
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .not('phone_verified_at', 'is', null)
+      .lt('phone_verified_at', `${startDate}T00:00:00Z`),
+  ])
 
   // Get daily signup counts using Supabase RPC or paginated fetch
   // Default select limit is 1000 rows, so we paginate to get all signups
@@ -1373,9 +1389,34 @@ export async function getDailyMemberCounts(
     offset += PAGE_SIZE
   }
 
+  // Get daily verified counts (by phone_verified_at date)
+  const verifiedMap: Record<string, number> = {}
+  let vOffset = 0
+  while (true) {
+    const { data: vPage } = await admin
+      .from('profiles')
+      .select('phone_verified_at')
+      .not('phone_verified_at', 'is', null)
+      .gte('phone_verified_at', `${startDate}T00:00:00Z`)
+      .lte('phone_verified_at', `${endDate}T23:59:59Z`)
+      .order('phone_verified_at')
+      .range(vOffset, vOffset + PAGE_SIZE - 1)
+
+    if (!vPage || vPage.length === 0) break
+
+    for (const row of vPage) {
+      const day = row.phone_verified_at!.slice(0, 10)
+      verifiedMap[day] = (verifiedMap[day] ?? 0) + 1
+    }
+
+    if (vPage.length < PAGE_SIZE) break
+    vOffset += PAGE_SIZE
+  }
+
   // Build cumulative array for every day in range
   const result: DailyMemberCount[] = []
   let running = baseline ?? 0
+  let runningVerified = verifiedBaseline ?? 0
   const current = new Date(startDate + 'T00:00:00Z')
   const end = new Date(endDate + 'T00:00:00Z')
 
@@ -1384,8 +1425,10 @@ export async function getDailyMemberCounts(
     const newSignups = dailyMap[day] ?? 0
     const organicSignups = organicMap[day] ?? 0
     const floridaSignups = floridaMap[day] ?? 0
+    const newVerified = verifiedMap[day] ?? 0
     running += newSignups
-    result.push({ date: day, total: running, newSignups, organicSignups, floridaSignups })
+    runningVerified += newVerified
+    result.push({ date: day, total: running, verifiedTotal: runningVerified, newSignups, organicSignups, floridaSignups })
     current.setUTCDate(current.getUTCDate() + 1)
   }
 

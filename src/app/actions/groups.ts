@@ -254,6 +254,15 @@ export async function joinGroup(groupId: string): Promise<void> {
     .insert({ group_id: groupId, user_id: user.id, role: 'member', status })
 
   if (error && error.code !== '23505') throw new Error(error.message)
+
+  // Create a "joined" activity post in the group feed (public groups only)
+  if (status === 'active') {
+    Promise.resolve(admin.from('posts').insert({
+      author_id: user.id,
+      group_id: groupId,
+      content: 'Joined the group! 👋',
+    })).catch(() => {})
+  }
 }
 
 export async function leaveGroup(groupId: string): Promise<void> {
@@ -369,6 +378,13 @@ export async function approveRequest(groupId: string, userId: string): Promise<v
     .eq('user_id', userId)
 
   if (error) throw new Error(error.message)
+
+  // Create a "joined" activity post in the group feed
+  Promise.resolve(admin.from('posts').insert({
+    author_id: userId,
+    group_id: groupId,
+    content: 'Joined the group! 👋',
+  })).catch(() => {})
 }
 
 export async function removeMember(groupId: string, userId: string): Promise<void> {
@@ -859,6 +875,15 @@ export async function respondToGroupInvite(
       .insert({ group_id: groupId, user_id: user.id, role: 'member', status: memberStatus })
 
     if (memberErr && memberErr.code !== '23505') throw new Error(memberErr.message)
+
+    // Create a "joined" activity post in the group feed
+    if (memberStatus === 'active') {
+      Promise.resolve(admin.from('posts').insert({
+        author_id: user.id,
+        group_id: groupId,
+        content: 'Joined the group! 👋',
+      })).catch(() => {})
+    }
   }
 
   // Clean up the notification

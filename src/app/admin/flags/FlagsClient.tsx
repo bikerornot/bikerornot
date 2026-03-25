@@ -201,7 +201,7 @@ export default function FlagsClient({ initialFlags }: { initialFlags: ContentFla
               )}
 
               {/* Message content */}
-              <div className="bg-zinc-800 rounded-lg px-4 py-3 text-sm text-zinc-300 break-words mb-4">
+              <div className="bg-zinc-800 rounded-lg px-4 py-3 text-sm text-white break-words mb-4">
                 {flag.content}
               </div>
 

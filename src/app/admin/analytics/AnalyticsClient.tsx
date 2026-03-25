@@ -102,6 +102,7 @@ export default function AnalyticsClient() {
 
   const totalNew = data?.reduce((sum, d) => sum + d.newSignups, 0) ?? 0
   const latestTotal = data && data.length > 0 ? data[data.length - 1].total : 0
+  const latestVerified = data && data.length > 0 ? data[data.length - 1].verifiedTotal : 0
 
   return (
     <div className="space-y-4">
@@ -153,14 +154,18 @@ export default function AnalyticsClient() {
 
       {/* Stats summary */}
       {data && data.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
             <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-1">Current Total</p>
-            <p className="text-2xl font-bold text-emerald-400">{latestTotal.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-orange-400">{latestTotal.toLocaleString()}</p>
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+            <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-1">Verified</p>
+            <p className="text-2xl font-bold text-emerald-400">{latestVerified.toLocaleString()}</p>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
             <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-1">New in Range</p>
-            <p className="text-2xl font-bold text-orange-400">{totalNew.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-white">{totalNew.toLocaleString()}</p>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
             <p className="text-zinc-500 text-xs font-medium uppercase tracking-wider mb-1">Avg / Day</p>
@@ -186,6 +191,10 @@ export default function AnalyticsClient() {
                   <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
                   <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
                 </linearGradient>
+                <linearGradient id="verifiedGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
               <XAxis dataKey="date" tickFormatter={formatDateLabel} {...axisProps} interval="preserveStartEnd" />
@@ -195,10 +204,12 @@ export default function AnalyticsClient() {
                 labelFormatter={(label: any) => formatDateLabel(String(label))}
                 formatter={(value: any, name: any) => [
                   Number(value).toLocaleString(),
-                  name === 'total' ? 'Total Members' : 'New Signups',
+                  name === 'total' ? 'Total Members' : name === 'verifiedTotal' ? 'Verified Users' : 'New Signups',
                 ]}
               />
+              <Legend formatter={(value) => (value === 'total' ? 'Total Members' : 'Verified Users')} />
               <Area type="monotone" dataKey="total" stroke="#f97316" strokeWidth={2} fill="url(#totalGradient)" />
+              <Area type="monotone" dataKey="verifiedTotal" stroke="#10b981" strokeWidth={2} fill="url(#verifiedGradient)" />
             </AreaChart>
           </ResponsiveContainer>
         )}

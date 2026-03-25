@@ -51,71 +51,91 @@ function ProfileCard({ profile, isMutual, mutualCount, showAddFriend, onAddFrien
     : null
   const initials = (profile.first_name?.[0] ?? '?').toUpperCase()
 
+  const addFriendBtn = showAddFriend && onAddFriend ? (
+    <button
+      onClick={() => onAddFriend(profile.id)}
+      className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors border border-zinc-700 whitespace-nowrap"
+    >
+      + Add Friend
+    </button>
+  ) : null
+
+  const requestedLabel = actions ? (
+    <div className="whitespace-nowrap">{actions}</div>
+  ) : null
+
+  const rightAction = addFriendBtn || requestedLabel
+
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex gap-4 items-start">
-      <Link href={`/profile/${profile.username}`} className="flex-shrink-0">
-        <div className="w-16 h-16 rounded-full bg-zinc-700 overflow-hidden">
-          {avatarUrl ? (
-            <Image src={avatarUrl} alt={profile.username ?? ''} width={64} height={64} className="object-cover w-full h-full" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-zinc-300 text-xl font-bold">
-              {initials}
-            </div>
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+      <div className="flex gap-4 items-start">
+        <Link href={`/profile/${profile.username}`} className="flex-shrink-0">
+          <div className="w-16 h-16 rounded-full bg-zinc-700 overflow-hidden">
+            {avatarUrl ? (
+              <Image src={avatarUrl} alt={profile.username ?? ''} width={64} height={64} className="object-cover w-full h-full" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-zinc-300 text-xl font-bold">
+                {initials}
+              </div>
+            )}
+          </div>
+        </Link>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link
+              href={`/profile/${profile.username}`}
+              className="font-semibold text-white hover:text-orange-400 transition-colors truncate inline-flex items-center gap-1"
+            >
+              @{profile.username}
+              {profile.phone_verified_at && <VerifiedBadge className="w-3.5 h-3.5" />}
+            </Link>
+            {isMutual && (
+              <span className="text-[11px] font-medium text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">
+                Mutual
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-sm text-zinc-400">
+            {(profile.city || profile.state) && (
+              <span>📍 {[profile.city, profile.state].filter(Boolean).join(', ')}</span>
+            )}
+            {profile.gender && (
+              <span>
+                {profile.gender === 'male' ? 'Male' : 'Female'}
+                {profile.date_of_birth ? `, ${calcAge(profile.date_of_birth)}` : ''}
+              </span>
+            )}
+            {!profile.gender && profile.date_of_birth && (
+              <span>{calcAge(profile.date_of_birth)}</span>
+            )}
+            {profile.relationship_status && (
+              <span>{RELATIONSHIP_LABEL[profile.relationship_status] ?? profile.relationship_status}</span>
+            )}
+          </div>
+
+          {mutualCount !== undefined && mutualCount > 0 && (
+            <p className="text-xs text-zinc-500 mt-1.5">
+              {mutualCount} mutual friend{mutualCount !== 1 ? 's' : ''} with you
+            </p>
           )}
         </div>
-      </Link>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <Link
-            href={`/profile/${profile.username}`}
-            className="font-semibold text-white hover:text-orange-400 transition-colors truncate inline-flex items-center gap-1"
-          >
-            @{profile.username}
-            {profile.phone_verified_at && <VerifiedBadge className="w-3.5 h-3.5" />}
-          </Link>
-          {isMutual && (
-            <span className="text-[11px] font-medium text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">
-              Mutual
-            </span>
-          )}
-        </div>
-
-        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-sm text-zinc-400">
-          {(profile.city || profile.state) && (
-            <span>📍 {[profile.city, profile.state].filter(Boolean).join(', ')}</span>
-          )}
-          {profile.gender && (
-            <span>
-              {profile.gender === 'male' ? 'Male' : 'Female'}
-              {profile.date_of_birth ? `, ${calcAge(profile.date_of_birth)}` : ''}
-            </span>
-          )}
-          {!profile.gender && profile.date_of_birth && (
-            <span>{calcAge(profile.date_of_birth)}</span>
-          )}
-          {profile.relationship_status && (
-            <span>{RELATIONSHIP_LABEL[profile.relationship_status] ?? profile.relationship_status}</span>
-          )}
-        </div>
-
-        {mutualCount !== undefined && mutualCount > 0 && (
-          <p className="text-xs text-zinc-500 mt-1.5">
-            {mutualCount} mutual friend{mutualCount !== 1 ? 's' : ''} with you
-          </p>
+        {/* Desktop: button aligned right */}
+        {rightAction && (
+          <div className="hidden sm:flex flex-shrink-0 items-center">
+            {rightAction}
+          </div>
         )}
-
-        {showAddFriend && onAddFriend && (
-          <button
-            onClick={() => onAddFriend(profile.id)}
-            className="mt-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors border border-zinc-700"
-          >
-            + Add Friend
-          </button>
-        )}
-
-        {actions && <div className="mt-3">{actions}</div>}
       </div>
+
+      {/* Mobile: button below card content */}
+      {rightAction && (
+        <div className="sm:hidden mt-3 pl-20">
+          {rightAction}
+        </div>
+      )}
     </div>
   )
 }

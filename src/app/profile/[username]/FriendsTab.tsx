@@ -186,9 +186,20 @@ export default function FriendsTab({ profileId, isOwnProfile, currentUserId }: P
               .eq('status', 'accepted')
           )
         : Promise.resolve({ data: [] }),
+
+      // 4. Viewer's outbound pending requests (to show "Requested" on load)
+      !isOwnProfile && currentUserId
+        ? Promise.resolve(
+            supabase
+              .from('friendships')
+              .select('addressee_id')
+              .eq('requester_id', currentUserId)
+              .eq('status', 'pending')
+          )
+        : Promise.resolve({ data: [] }),
     ]
 
-    Promise.all(queries).then(([friendsRes, pendingRes, viewerFriendsRes]) => {
+    Promise.all(queries).then(([friendsRes, pendingRes, viewerFriendsRes, viewerPendingRes]) => {
       // Parse profile owner's friends
       const rawFriends = ((friendsRes.data ?? []) as any[]).map((f: any) =>
         f.requester_id === profileId ? f.addressee : f.requester
@@ -221,6 +232,13 @@ export default function FriendsTab({ profileId, isOwnProfile, currentUserId }: P
           vIds.add(friendId)
         }
         setViewerFriendIds(vIds)
+
+        // Seed pending outbound requests so "Requested" shows on load
+        const pendingOutbound = new Set<string>()
+        for (const f of (viewerPendingRes.data ?? []) as any[]) {
+          pendingOutbound.add(f.addressee_id)
+        }
+        setRequestedIds(pendingOutbound)
       }
 
       setLoading(false)

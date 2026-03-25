@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Profile } from '@/lib/supabase/types'
 import { getImageUrl } from '@/lib/supabase/image'
 import { acceptFriendRequest, declineFriendRequest } from '@/app/actions/friends'
+import VerifiedBadge from '@/app/components/VerifiedBadge'
 
 interface PendingRequest {
   requesterId: string
@@ -16,6 +17,7 @@ interface PendingRequest {
 interface Props {
   profileId: string
   isOwnProfile: boolean
+  currentUserId?: string
 }
 
 const RELATIONSHIP_LABEL: Record<string, string> = {
@@ -36,7 +38,12 @@ function calcAge(dob: string): number {
   return age
 }
 
-function ProfileCard({ profile, actions }: { profile: Profile; actions?: React.ReactNode }) {
+function ProfileCard({ profile, isMutual, mutualCount, actions }: {
+  profile: Profile
+  isMutual?: boolean
+  mutualCount?: number
+  actions?: React.ReactNode
+}) {
   const avatarUrl = profile.profile_photo_url
     ? getImageUrl('avatars', profile.profile_photo_url)
     : null
@@ -57,12 +64,20 @@ function ProfileCard({ profile, actions }: { profile: Profile; actions?: React.R
       </Link>
 
       <div className="flex-1 min-w-0">
-        <Link
-          href={`/profile/${profile.username}`}
-          className="font-semibold text-white hover:text-orange-400 transition-colors truncate block"
-        >
-          @{profile.username}
-        </Link>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            href={`/profile/${profile.username}`}
+            className="font-semibold text-white hover:text-orange-400 transition-colors truncate inline-flex items-center gap-1"
+          >
+            @{profile.username}
+            {profile.phone_verified_at && <VerifiedBadge className="w-3.5 h-3.5" />}
+          </Link>
+          {isMutual && (
+            <span className="text-[11px] font-medium text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">
+              Mutual
+            </span>
+          )}
+        </div>
 
         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-sm text-zinc-400">
           {(profile.city || profile.state) && (
@@ -82,40 +97,72 @@ function ProfileCard({ profile, actions }: { profile: Profile; actions?: React.R
           )}
         </div>
 
+        {mutualCount !== undefined && mutualCount > 0 && (
+          <p className="text-xs text-zinc-500 mt-1.5">
+            {mutualCount} mutual friend{mutualCount !== 1 ? 's' : ''} with you
+          </p>
+        )}
+
         {actions && <div className="mt-3">{actions}</div>}
       </div>
     </div>
   )
 }
 
-export default function FriendsTab({ profileId, isOwnProfile }: Props) {
+type SubTab = 'all' | 'mutual'
+
+export default function FriendsTab({ profileId, isOwnProfile, currentUserId }: Props) {
   const [friends, setFriends] = useState<Profile[]>([])
   const [pending, setPending] = useState<PendingRequest[]>([])
+  const [viewerFriendIds, setViewerFriendIds] = useState<Set<string>>(new Set())
+  const [mutualFriendships, setMutualFriendships] = useState<Map<string, Set<string>>>(new Map())
   const [loading, setLoading] = useState(true)
+  const [subTab, setSubTab] = useState<SubTab>('all')
+
+  const showMutualTab = !isOwnProfile && currentUserId
 
   useEffect(() => {
     const supabase = createClient()
 
-    Promise.all([
-      supabase
-        .from('friendships')
-        .select('requester_id, addressee_id, requester:profiles!requester_id(*), addressee:profiles!addressee_id(*)')
-        .or(`requester_id.eq.${profileId},addressee_id.eq.${profileId}`)
-        .eq('status', 'accepted'),
+    const queries: Promise<any>[] = [
+      // 1. Profile owner's friends
+      Promise.resolve(
+        supabase
+          .from('friendships')
+          .select('requester_id, addressee_id, requester:profiles!requester_id(*), addressee:profiles!addressee_id(*)')
+          .or(`requester_id.eq.${profileId},addressee_id.eq.${profileId}`)
+          .eq('status', 'accepted')
+      ),
 
+      // 2. Pending requests (own profile only)
       isOwnProfile
-        ? supabase
-            .from('friendships')
-            .select('requester_id, requester:profiles!requester_id(*)')
-            .eq('addressee_id', profileId)
-            .eq('status', 'pending')
+        ? Promise.resolve(
+            supabase
+              .from('friendships')
+              .select('requester_id, requester:profiles!requester_id(*)')
+              .eq('addressee_id', profileId)
+              .eq('status', 'pending')
+          )
         : Promise.resolve({ data: [] }),
-    ]).then(([friendsRes, pendingRes]) => {
-      const rawFriends = ((friendsRes.data ?? []) as any[]).map((f) =>
+
+      // 3. Viewer's friend IDs (for mutual computation, only on others' profiles)
+      !isOwnProfile && currentUserId
+        ? Promise.resolve(
+            supabase
+              .from('friendships')
+              .select('requester_id, addressee_id')
+              .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`)
+              .eq('status', 'accepted')
+          )
+        : Promise.resolve({ data: [] }),
+    ]
+
+    Promise.all(queries).then(([friendsRes, pendingRes, viewerFriendsRes]) => {
+      // Parse profile owner's friends
+      const rawFriends = ((friendsRes.data ?? []) as any[]).map((f: any) =>
         f.requester_id === profileId ? f.addressee : f.requester
       ) as Profile[]
 
-      // Deduplicate and hide deactivated/banned/suspended accounts
       const seen = new Set<string>()
       const friendProfiles = rawFriends.filter((p) => {
         if (seen.has(p.id)) return false
@@ -126,16 +173,85 @@ export default function FriendsTab({ profileId, isOwnProfile }: Props) {
       })
       setFriends(friendProfiles)
 
+      // Parse pending requests
       const pendingRequests = ((pendingRes.data ?? []) as any[])
-        .filter((f) => (f.requester as Profile)?.status === 'active' && !(f.requester as Profile)?.deactivated_at)
-        .map((f) => ({
+        .filter((f: any) => (f.requester as Profile)?.status === 'active' && !(f.requester as Profile)?.deactivated_at)
+        .map((f: any) => ({
           requesterId: f.requester_id,
           profile: f.requester as Profile,
         }))
       setPending(pendingRequests)
+
+      // Parse viewer's friend IDs for mutual computation
+      if (!isOwnProfile && currentUserId) {
+        const vIds = new Set<string>()
+        for (const f of (viewerFriendsRes.data ?? []) as any[]) {
+          const friendId = f.requester_id === currentUserId ? f.addressee_id : f.requester_id
+          vIds.add(friendId)
+        }
+        setViewerFriendIds(vIds)
+      }
+
       setLoading(false)
     })
-  }, [profileId, isOwnProfile])
+  }, [profileId, isOwnProfile, currentUserId])
+
+  // Compute mutual friend IDs (intersection of profile owner's friends and viewer's friends)
+  const mutualFriendIds = useMemo(() => {
+    if (isOwnProfile || !currentUserId) return new Set<string>()
+    const mutualIds = new Set<string>()
+    for (const f of friends) {
+      if (viewerFriendIds.has(f.id)) mutualIds.add(f.id)
+    }
+    return mutualIds
+  }, [friends, viewerFriendIds, isOwnProfile, currentUserId])
+
+  // Fetch mutual friend counts for each mutual friend (how many friends they share with viewer)
+  useEffect(() => {
+    if (mutualFriendIds.size === 0 || !currentUserId) return
+
+    const supabase = createClient()
+    const ids = Array.from(mutualFriendIds)
+
+    // Fetch all friendships where either side is a mutual friend
+    supabase
+      .from('friendships')
+      .select('requester_id, addressee_id')
+      .or(
+        ids.map(id => `requester_id.eq.${id},addressee_id.eq.${id}`).join(',')
+      )
+      .eq('status', 'accepted')
+      .then(({ data }) => {
+        // Build friend sets for each mutual friend
+        const friendSets = new Map<string, Set<string>>()
+        for (const id of ids) friendSets.set(id, new Set())
+
+        for (const row of (data ?? []) as any[]) {
+          const rid = row.requester_id as string
+          const aid = row.addressee_id as string
+          if (friendSets.has(rid)) friendSets.get(rid)!.add(aid)
+          if (friendSets.has(aid)) friendSets.get(aid)!.add(rid)
+        }
+
+        setMutualFriendships(friendSets)
+      })
+  }, [mutualFriendIds, currentUserId])
+
+  // Compute mutual count for a given mutual friend (how many of their friends are also viewer's friends)
+  function getMutualCount(friendId: string): number {
+    const theirFriends = mutualFriendships.get(friendId)
+    if (!theirFriends) return 0
+    let count = 0
+    for (const id of theirFriends) {
+      if (viewerFriendIds.has(id)) count++
+    }
+    return count
+  }
+
+  const mutualFriends = useMemo(
+    () => friends.filter(f => mutualFriendIds.has(f.id)),
+    [friends, mutualFriendIds]
+  )
 
   async function handleAccept(requesterId: string) {
     await acceptFriendRequest(requesterId)
@@ -159,8 +275,36 @@ export default function FriendsTab({ profileId, isOwnProfile }: Props) {
     )
   }
 
+  const displayFriends = subTab === 'mutual' ? mutualFriends : friends
+
   return (
     <div className="space-y-4">
+      {/* Sub-tab pills — only on other people's profiles */}
+      {showMutualTab && (
+        <div className="flex gap-2 px-4 sm:px-0">
+          <button
+            onClick={() => setSubTab('all')}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              subTab === 'all'
+                ? 'bg-orange-500 text-white'
+                : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            All Friends ({friends.length})
+          </button>
+          <button
+            onClick={() => setSubTab('mutual')}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              subTab === 'mutual'
+                ? 'bg-orange-500 text-white'
+                : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            Mutual ({mutualFriends.length})
+          </button>
+        </div>
+      )}
+
       {/* Pending requests — own profile only */}
       {isOwnProfile && pending.length > 0 && (
         <div>
@@ -201,15 +345,22 @@ export default function FriendsTab({ profileId, isOwnProfile }: Props) {
       )}
 
       {/* Friends list */}
-      {friends.length === 0 && pending.length === 0 && (
+      {displayFriends.length === 0 && pending.length === 0 && (
         <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-8 text-center">
-          <p className="text-zinc-400 text-sm">No friends yet.</p>
+          <p className="text-zinc-400 text-sm">
+            {subTab === 'mutual' ? 'No mutual friends.' : 'No friends yet.'}
+          </p>
         </div>
       )}
 
       <div className="space-y-3">
-        {friends.map((friend) => (
-          <ProfileCard key={friend.id} profile={friend} />
+        {displayFriends.map((friend) => (
+          <ProfileCard
+            key={friend.id}
+            profile={friend}
+            isMutual={subTab === 'all' && mutualFriendIds.has(friend.id)}
+            mutualCount={subTab === 'mutual' ? getMutualCount(friend.id) : undefined}
+          />
         ))}
       </div>
     </div>

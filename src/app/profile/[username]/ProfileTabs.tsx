@@ -79,7 +79,7 @@ export default function ProfileTabs({
       )}
 
       {active === 'Friends' && (
-        <FriendsTab profileId={profileId} isOwnProfile={isOwnProfile} />
+        <FriendsTab profileId={profileId} isOwnProfile={isOwnProfile} currentUserId={currentUserId} />
       )}
 
       {active === 'Garage' && (

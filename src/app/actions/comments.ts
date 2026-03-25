@@ -130,7 +130,12 @@ export async function createComment(postId: string, content: string, parentComme
         comment_id: comment.id,
       })
 
-      // Send comment email (fire and forget)
+      // Send comment email — debug logging to error_logs
+      await admin.from('error_logs').insert({
+        message: `comment-email-step1: reached email section for post ${postId}`,
+        source: 'server_action',
+        url: '/actions/comments',
+      })
       try {
         const [{ data: commenterProfile }, { data: postAuthorAuth }, { data: postAuthorProfile }] = await Promise.all([
           admin.from('profiles').select('username').eq('id', user.id).single(),
@@ -139,8 +144,8 @@ export async function createComment(postId: string, content: string, parentComme
         ])
         const authorEmail = postAuthorAuth.user?.email
         await admin.from('error_logs').insert({
-          message: `comment-email-debug: authorEmail=${authorEmail}, username=${commenterProfile?.username}, emailPref=${postAuthorProfile?.email_comments}`,
-          source: 'server-action',
+          message: `comment-email-step2: authorEmail=${authorEmail}, username=${commenterProfile?.username}, emailPref=${postAuthorProfile?.email_comments}`,
+          source: 'server_action',
           url: '/actions/comments',
         })
         if (authorEmail && commenterProfile?.username && postAuthorProfile?.email_comments !== false) {
@@ -154,11 +159,11 @@ export async function createComment(postId: string, content: string, parentComme
           }).catch(() => {})
         }
       } catch (emailErr) {
-        Promise.resolve(admin.from('error_logs').insert({
+        await admin.from('error_logs').insert({
           message: `comment-email-error: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}`,
-          source: 'server-action',
+          source: 'server_action',
           url: '/actions/comments',
-        })).catch(() => {})
+        })
       }
     }
   }

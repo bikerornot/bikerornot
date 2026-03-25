@@ -348,6 +348,7 @@ export interface AdminUserDetail {
   post_count: number
   message_count: number
   comment_count: number
+  friend_count: number
   friend_requests_sent: number
   friend_requests_received: number
   report_count: number
@@ -529,7 +530,7 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
   }
 
   // Report / message / comment / friend request counts
-  const [{ count: profileReports }, { count: postReports }, { count: totalMessages }, { count: totalComments }, { count: frSent }, { count: frReceived }] = await Promise.all([
+  const [{ count: profileReports }, { count: postReports }, { count: totalMessages }, { count: totalComments }, { count: frSent }, { count: frReceived }, { count: friendsAsReq }, { count: friendsAsAddr }] = await Promise.all([
     admin.from('reports').select('*', { count: 'exact', head: true }).eq('reported_type', 'profile').eq('reported_id', userId),
     postIds.length > 0
       ? admin.from('reports').select('*', { count: 'exact', head: true }).eq('reported_type', 'post').in('reported_id', postIds)
@@ -538,6 +539,8 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     admin.from('comments').select('*', { count: 'exact', head: true }).eq('author_id', userId).is('deleted_at', null),
     admin.from('friendships').select('*', { count: 'exact', head: true }).eq('requester_id', userId),
     admin.from('friendships').select('*', { count: 'exact', head: true }).eq('addressee_id', userId),
+    admin.from('friendships').select('*', { count: 'exact', head: true }).eq('requester_id', userId).eq('status', 'accepted'),
+    admin.from('friendships').select('*', { count: 'exact', head: true }).eq('addressee_id', userId).eq('status', 'accepted'),
   ])
 
   // Recent comments by this user
@@ -602,6 +605,7 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     post_count: (posts ?? []).length,
     message_count: totalMessages ?? 0,
     comment_count: totalComments ?? 0,
+    friend_count: (friendsAsReq ?? 0) + (friendsAsAddr ?? 0),
     friend_requests_sent: frSent ?? 0,
     friend_requests_received: frReceived ?? 0,
     report_count: (profileReports ?? 0) + (postReports ?? 0),

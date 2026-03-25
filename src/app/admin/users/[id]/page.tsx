@@ -284,6 +284,10 @@ export default async function UserDetailPage({
                 <p className="text-zinc-500 text-xs mt-0.5">Comments</p>
               </div>
               <div className="text-center">
+                <p className="text-2xl font-bold text-white">{user.friend_count}</p>
+                <p className="text-zinc-500 text-xs mt-0.5">Friends</p>
+              </div>
+              <div className="text-center">
                 <p className="text-2xl font-bold text-white">{user.friend_requests_sent}</p>
                 <p className="text-zinc-500 text-xs mt-0.5">FR Sent</p>
               </div>

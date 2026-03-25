@@ -17,6 +17,7 @@ function getServiceClient() {
 }
 
 export async function createComment(postId: string, content: string, parentCommentId?: string) {
+  console.log('[create-comment] START', { postId, parentCommentId: parentCommentId ?? 'NONE', contentLen: content.length })
   const supabase = await createClient()
   const {
     data: { user },

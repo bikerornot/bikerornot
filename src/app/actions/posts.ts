@@ -6,6 +6,7 @@ import { moderateImage, type ModerationResult } from '@/lib/sightengine'
 import { checkRateLimit, validateImageFile } from '@/lib/rate-limit'
 import { notifyIfActive } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
+import { sendWallPostEmail } from '@/lib/email'
 
 function getServiceClient() {
   return createServiceClient(
@@ -120,6 +121,23 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
       actor_id: user.id,
       post_id: post.id,
     })
+
+    // Send wall post email (fire and forget)
+    const [{ data: authorProfile }, { data: ownerAuth }, { data: ownerProfile }] = await Promise.all([
+      admin.from('profiles').select('username').eq('id', user.id).single(),
+      admin.auth.admin.getUserById(wallOwnerId),
+      admin.from('profiles').select('first_name, username, email_wall_posts').eq('id', wallOwnerId).single(),
+    ])
+    const ownerEmail = ownerAuth.user?.email
+    if (ownerEmail && authorProfile?.username && ownerProfile?.email_wall_posts !== false) {
+      sendWallPostEmail({
+        toEmail: ownerEmail,
+        toName: ownerProfile?.first_name ?? 'there',
+        fromUsername: authorProfile.username,
+        postSnippet: content?.trim() ?? '',
+        profileUrl: `https://www.bikerornot.com/profile/${ownerProfile?.username}`,
+      }).catch(() => {})
+    }
   }
 
   let firstImagePath: string | null = null

@@ -29,6 +29,7 @@ export default function SettingsForm({ profile }: Props) {
   const [emailFriendRequests, setEmailFriendRequests] = useState(profile.email_friend_requests ?? true)
   const [emailFriendAccepted, setEmailFriendAccepted] = useState(profile.email_friend_accepted ?? true)
   const [emailMentions, setEmailMentions] = useState(profile.email_mentions ?? true)
+  const [emailWallPosts, setEmailWallPosts] = useState(profile.email_wall_posts ?? true)
   const [showRealName, setShowRealName] = useState(profile.show_real_name ?? false)
   const [showBirthday, setShowBirthday] = useState(profile.show_birthday ?? false)
   const [phoneVerified, setPhoneVerified] = useState(!!profile.phone_verified_at)
@@ -209,6 +210,7 @@ export default function SettingsForm({ profile }: Props) {
           { key: 'email_friend_requests' as const, label: 'Friend request received', value: emailFriendRequests, set: setEmailFriendRequests },
           { key: 'email_friend_accepted' as const, label: 'Friend request accepted', value: emailFriendAccepted, set: setEmailFriendAccepted },
           { key: 'email_mentions' as const, label: 'Mentioned in a post', value: emailMentions, set: setEmailMentions },
+          { key: 'email_wall_posts' as const, label: 'Someone posts on your wall', value: emailWallPosts, set: setEmailWallPosts },
         ]).map(({ key, label, value, set }) => (
           <div key={key} className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
             <span className="text-sm text-zinc-300">{label}</span>
@@ -223,6 +225,7 @@ export default function SettingsForm({ profile }: Props) {
                   email_friend_requests: key === 'email_friend_requests' ? next : emailFriendRequests,
                   email_friend_accepted: key === 'email_friend_accepted' ? next : emailFriendAccepted,
                   email_mentions: key === 'email_mentions' ? next : emailMentions,
+                  email_wall_posts: key === 'email_wall_posts' ? next : emailWallPosts,
                 })
               }}
               className={`relative w-11 h-6 rounded-full transition-colors focus:outline-none ${value ? 'bg-orange-500' : 'bg-zinc-700'}`}

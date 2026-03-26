@@ -304,10 +304,14 @@ export default function FriendsTab({ profileId, isOwnProfile, currentUserId }: P
 
   async function handleAddFriend(friendId: string) {
     setRequestedIds(prev => new Set(prev).add(friendId))
-    try {
-      await sendFriendRequest(friendId)
-    } catch {
-      // Duplicate or rate-limited — keep "Requested" state, no error shown
+    const result = await sendFriendRequest(friendId)
+    if (result?.error) {
+      // Revert on error
+      setRequestedIds(prev => {
+        const next = new Set(prev)
+        next.delete(friendId)
+        return next
+      })
     }
   }
 

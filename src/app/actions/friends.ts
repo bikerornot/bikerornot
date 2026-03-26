@@ -14,19 +14,23 @@ function getServiceClient() {
   )
 }
 
-export async function sendFriendRequest(addresseeId: string): Promise<void> {
+export async function sendFriendRequest(addresseeId: string): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
-  if (user.id === addresseeId) throw new Error('Cannot friend yourself')
+  if (!user) return { error: 'Not authenticated' }
+  if (user.id === addresseeId) return { error: 'Cannot friend yourself' }
 
-  checkRateLimit(`sendFriendRequest:${user.id}`, 20, 60_000)
+  try {
+    checkRateLimit(`sendFriendRequest:${user.id}`, 20, 60_000)
+  } catch {
+    return { error: 'Too many requests. Please wait a moment.' }
+  }
 
   const admin = getServiceClient()
 
   const blockedIds = await getBlockedIds(user.id, admin)
   // Silently pretend it worked if blocked — don't reveal block status
-  if (blockedIds.has(addresseeId)) return
+  if (blockedIds.has(addresseeId)) return {}
 
   const { data: senderProfile } = await admin
     .from('profiles')
@@ -35,10 +39,12 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
     .single()
 
   // Silently block if sender is banned/suspended (shadow ban)
-  if (senderProfile?.status && senderProfile.status !== 'active') return
+  if (senderProfile?.status && senderProfile.status !== 'active') return {}
+
+  if (!senderProfile) return { error: 'Profile not found' }
 
   // Daily friend request cap — 30/day for all accounts, 5/day for new (<7 days)
-  const accountAgeDays = (Date.now() - new Date(senderProfile!.created_at).getTime()) / 86_400_000
+  const accountAgeDays = (Date.now() - new Date(senderProfile.created_at).getTime()) / 86_400_000
   const dailyLimit = accountAgeDays < 7 ? 5 : 30
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
@@ -48,15 +54,15 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
     .eq('requester_id', user.id)
     .gte('created_at', todayStart.toISOString())
   if ((requestsToday ?? 0) >= dailyLimit) {
-    throw new Error(`You can send up to ${dailyLimit} friend requests per day.`)
+    return { error: `You can send up to ${dailyLimit} friend requests per day.` }
   }
 
   const { error } = await admin
     .from('friendships')
     .insert({ requester_id: user.id, addressee_id: addresseeId })
 
-  if (error && error.code !== '23505') throw new Error(error.message)
-  if (error) return // already exists, skip notification
+  if (error && error.code !== '23505') return { error: 'Unable to send friend request. Please try again.' }
+  if (error) return {} // already exists, skip notification
 
   await notifyIfActive(user.id, {
     user_id: addresseeId,
@@ -78,6 +84,8 @@ export async function sendFriendRequest(addresseeId: string): Promise<void> {
       fromUsername: requesterProfile.username,
     }).catch(() => {})
   }
+
+  return {}
 }
 
 export async function cancelFriendRequest(addresseeId: string): Promise<void> {

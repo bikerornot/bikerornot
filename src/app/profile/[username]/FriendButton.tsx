@@ -22,16 +22,21 @@ export default function FriendButton({ profileId, initialStatus }: Props) {
   const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function run(action: () => Promise<void>, nextStatus: FriendshipStatus) {
+  async function run(action: () => Promise<void | { error?: string }>, nextStatus: FriendshipStatus) {
     setLoading(true)
     setError(null)
     const prev = status
     setStatus(nextStatus)
     try {
-      await action()
+      const result = await action()
+      if (result && typeof result === 'object' && 'error' in result && result.error) {
+        setStatus(prev)
+        setError(result.error)
+      }
     } catch (err: unknown) {
       setStatus(prev)
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      setError(msg.includes('Server Components') ? 'Something went wrong. Please try again.' : msg)
     } finally {
       setLoading(false)
       setConfirming(false)

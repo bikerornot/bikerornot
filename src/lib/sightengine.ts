@@ -55,7 +55,7 @@ export async function moderateImage(
   // ── Hard rejections ────────────────────────────────────────────────────────
   if (
     nudityRaw > 0.3 ||
-    nudityPartial > 0.6 ||
+    nudityPartial > 0.75 ||
     nuditySexual > 0.3 ||
     nudityExplicit > 0.4 ||
     gore > 0.6
@@ -66,7 +66,7 @@ export async function moderateImage(
   // ── Flag for human review (borderline) ───────────────────────────────────
   if (
     nudityRaw > 0.15 ||
-    nudityPartial > 0.35 ||
+    nudityPartial > 0.5 ||
     nuditySexual > 0.15 ||
     nudityExplicit > 0.2 ||
     gore > 0.3 ||

@@ -123,6 +123,7 @@ export async function getAvatarImages(page = 1): Promise<{ images: AdminImage[];
     .select('*', { count: 'exact', head: true })
     .not('profile_photo_url', 'is', null)
     .is('avatar_reviewed_at', null)
+    .neq('status', 'banned')
 
   // Fetch one extra to detect hasMore
   const { data } = await admin
@@ -130,6 +131,7 @@ export async function getAvatarImages(page = 1): Promise<{ images: AdminImage[];
     .select('id, username, first_name, last_name, status, profile_photo_url, updated_at, avatar_web_detection')
     .not('profile_photo_url', 'is', null)
     .is('avatar_reviewed_at', null)
+    .neq('status', 'banned')
     .order('updated_at', { ascending: false })
     .range(from, from + IMAGES_PAGE_SIZE)
 

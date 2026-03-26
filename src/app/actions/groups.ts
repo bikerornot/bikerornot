@@ -257,11 +257,11 @@ export async function joinGroup(groupId: string): Promise<void> {
 
   // Create a "joined" activity post in the group feed (public groups only)
   if (status === 'active') {
-    Promise.resolve(admin.from('posts').insert({
+    await admin.from('posts').insert({
       author_id: user.id,
       group_id: groupId,
       content: 'Joined the group! 👋',
-    })).catch(() => {})
+    })
   }
 }
 
@@ -380,11 +380,11 @@ export async function approveRequest(groupId: string, userId: string): Promise<v
   if (error) throw new Error(error.message)
 
   // Create a "joined" activity post in the group feed
-  Promise.resolve(admin.from('posts').insert({
+  await admin.from('posts').insert({
     author_id: userId,
     group_id: groupId,
     content: 'Joined the group! 👋',
-  })).catch(() => {})
+  })
 }
 
 export async function removeMember(groupId: string, userId: string): Promise<void> {
@@ -675,10 +675,10 @@ export async function inviteFriendsToGroup(
   groupId: string,
   userIds: string[],
   isMassInvite?: boolean
-): Promise<{ sent: number; skipped: number }> {
+): Promise<{ sent: number; skipped: number; error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  if (!user) return { sent: 0, skipped: 0, error: 'Not authenticated' }
 
   if (userIds.length === 0) return { sent: 0, skipped: 0 }
 
@@ -692,7 +692,7 @@ export async function inviteFriendsToGroup(
     .eq('user_id', user.id)
     .single()
 
-  if (!membership || membership.status !== 'active') throw new Error('Not a member of this group')
+  if (!membership || membership.status !== 'active') return { sent: 0, skipped: 0, error: 'Not a member of this group' }
 
   // If mass invite, check 30-day cooldown
   if (isMassInvite) {
@@ -709,7 +709,7 @@ export async function inviteFriendsToGroup(
       const cooldownEnd = new Date(lastMass.used_at)
       cooldownEnd.setDate(cooldownEnd.getDate() + 30)
       if (new Date() < cooldownEnd) {
-        throw new Error(`Mass invite on cooldown until ${cooldownEnd.toLocaleDateString()}`)
+        return { sent: 0, skipped: userIds.length, error: `Mass invite on cooldown until ${cooldownEnd.toLocaleDateString()}` }
       }
     }
   }
@@ -723,7 +723,7 @@ export async function inviteFriendsToGroup(
     .gte('created_at', oneDayAgo)
 
   const senderRemaining = SENDER_DAILY_CAP - (senderCount ?? 0)
-  if (senderRemaining <= 0) throw new Error('You have reached your daily invite limit. Try again tomorrow.')
+  if (senderRemaining <= 0) return { sent: 0, skipped: userIds.length, error: 'You have reached your daily invite limit. Try again tomorrow.' }
 
   // Get existing members to avoid double-inviting
   const { data: existingMembers } = await admin
@@ -878,11 +878,11 @@ export async function respondToGroupInvite(
 
     // Create a "joined" activity post in the group feed
     if (memberStatus === 'active') {
-      Promise.resolve(admin.from('posts').insert({
+      await admin.from('posts').insert({
         author_id: user.id,
         group_id: groupId,
         content: 'Joined the group! 👋',
-      })).catch(() => {})
+      })
     }
   }
 

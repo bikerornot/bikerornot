@@ -70,20 +70,22 @@ export async function sendFriendRequest(addresseeId: string): Promise<{ error?: 
     actor_id: user.id,
   })
 
-  // Send email notification (fire and forget)
-  const [{ data: requesterProfile }, { data: addresseeAuth }, { data: addresseeProfile }] = await Promise.all([
-    admin.from('profiles').select('username, first_name').eq('id', user.id).single(),
-    admin.auth.admin.getUserById(addresseeId),
-    admin.from('profiles').select('first_name, email_friend_requests').eq('id', addresseeId).single(),
-  ])
-  const addresseeEmail = addresseeAuth.user?.email
-  if (addresseeEmail && requesterProfile?.username && addresseeProfile?.email_friend_requests !== false) {
-    sendFriendRequestEmail({
-      toEmail: addresseeEmail,
-      toName: addresseeProfile?.first_name ?? 'there',
-      fromUsername: requesterProfile.username,
-    }).catch(() => {})
-  }
+  // Send email notification
+  try {
+    const [{ data: requesterProfile }, { data: addresseeAuth }, { data: addresseeProfile }] = await Promise.all([
+      admin.from('profiles').select('username, first_name').eq('id', user.id).single(),
+      admin.auth.admin.getUserById(addresseeId),
+      admin.from('profiles').select('first_name, email_friend_requests').eq('id', addresseeId).single(),
+    ])
+    const addresseeEmail = addresseeAuth.user?.email
+    if (addresseeEmail && requesterProfile?.username && addresseeProfile?.email_friend_requests !== false) {
+      await sendFriendRequestEmail({
+        toEmail: addresseeEmail,
+        toName: addresseeProfile?.first_name ?? 'there',
+        fromUsername: requesterProfile.username,
+      })
+    }
+  } catch { /* best-effort */ }
 
   return {}
 }
@@ -138,20 +140,22 @@ export async function acceptFriendRequest(requesterId: string): Promise<void> {
     actor_id: user.id,
   })
 
-  // Send email notification (fire and forget)
-  const [{ data: accepterProfile }, { data: requesterAuth }, { data: requesterProfile }] = await Promise.all([
-    admin.from('profiles').select('username, first_name').eq('id', user.id).single(),
-    admin.auth.admin.getUserById(requesterId),
-    admin.from('profiles').select('first_name, email_friend_accepted').eq('id', requesterId).single(),
-  ])
-  const requesterEmail = requesterAuth.user?.email
-  if (requesterEmail && accepterProfile?.username && requesterProfile?.email_friend_accepted !== false) {
-    sendFriendAcceptedEmail({
-      toEmail: requesterEmail,
-      toName: requesterProfile?.first_name ?? 'there',
-      fromUsername: accepterProfile.username,
-    }).catch(() => {})
-  }
+  // Send email notification
+  try {
+    const [{ data: accepterProfile }, { data: requesterAuth }, { data: requesterProfile }] = await Promise.all([
+      admin.from('profiles').select('username, first_name').eq('id', user.id).single(),
+      admin.auth.admin.getUserById(requesterId),
+      admin.from('profiles').select('first_name, email_friend_accepted').eq('id', requesterId).single(),
+    ])
+    const requesterEmail = requesterAuth.user?.email
+    if (requesterEmail && accepterProfile?.username && requesterProfile?.email_friend_accepted !== false) {
+      await sendFriendAcceptedEmail({
+        toEmail: requesterEmail,
+        toName: requesterProfile?.first_name ?? 'there',
+        fromUsername: accepterProfile.username,
+      })
+    }
+  } catch { /* best-effort */ }
 }
 
 export async function declineFriendRequest(requesterId: string): Promise<void> {

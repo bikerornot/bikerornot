@@ -20,7 +20,7 @@ export default function InviteButton({ groupId, autoOpen, onClose }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
-  const [feedback, setFeedback] = useState<{ sent: number; skipped: number } | null>(null)
+  const [feedback, setFeedback] = useState<{ sent: number; skipped: number; error?: string } | null>(null)
   const [massAllowed, setMassAllowed] = useState(false)
   const [massNextDate, setMassNextDate] = useState<Date | null>(null)
 
@@ -189,14 +189,21 @@ export default function InviteButton({ groupId, autoOpen, onClose }: Props) {
 
               {feedback && (
                 <div className={`mx-4 mt-3 text-sm px-4 py-2.5 rounded-xl ${
-                  feedback.sent > 0
+                  feedback.error
+                    ? 'bg-red-500/10 border border-red-500/30 text-red-400'
+                    : feedback.sent > 0
                     ? 'bg-green-500/10 border border-green-500/30 text-green-400'
                     : 'bg-zinc-800 border border-zinc-700 text-zinc-400'
                 }`}>
-                  {feedback.sent > 0 && `Sent ${feedback.sent} invite${feedback.sent !== 1 ? 's' : ''}!`}
-                  {feedback.sent > 0 && feedback.skipped > 0 && ' '}
-                  {feedback.skipped > 0 && `${feedback.skipped} skipped (already invited or daily limit).`}
-                  {feedback.sent === 0 && feedback.skipped === 0 && 'No invites to send.'}
+                  {feedback.error
+                    ? feedback.error
+                    : <>
+                        {feedback.sent > 0 && `Sent ${feedback.sent} invite${feedback.sent !== 1 ? 's' : ''}!`}
+                        {feedback.sent > 0 && feedback.skipped > 0 && ' '}
+                        {feedback.skipped > 0 && `${feedback.skipped} skipped (already invited or daily limit).`}
+                        {feedback.sent === 0 && feedback.skipped === 0 && 'No invites to send.'}
+                      </>
+                  }
                 </div>
               )}
 

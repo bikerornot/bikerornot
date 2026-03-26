@@ -221,7 +221,8 @@ export async function getPendingFlagsCount(): Promise<number> {
   const admin = getAdmin()
   const { count } = await admin
     .from('content_flags')
-    .select('*', { count: 'exact', head: true })
+    .select('*, sender:profiles!sender_id!inner(status)', { count: 'exact', head: true })
     .eq('status', 'pending')
+    .neq('sender.status', 'banned')
   return count ?? 0
 }

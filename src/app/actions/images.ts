@@ -128,7 +128,7 @@ export async function getAvatarImages(page = 1): Promise<{ images: AdminImage[];
   // Fetch one extra to detect hasMore
   const { data } = await admin
     .from('profiles')
-    .select('id, username, first_name, last_name, status, profile_photo_url, updated_at, avatar_web_detection')
+    .select('id, username, first_name, last_name, status, profile_photo_url, updated_at')
     .not('profile_photo_url', 'is', null)
     .is('avatar_reviewed_at', null)
     .neq('status', 'banned')
@@ -146,8 +146,8 @@ export async function getAvatarImages(page = 1): Promise<{ images: AdminImage[];
     author_name: [p.first_name, p.last_name].filter(Boolean).join(' ') || null,
     author_status: p.status ?? null,
     created_at: p.updated_at,
-    webSuspicious: p.avatar_web_detection?.isSuspicious ?? false,
-    webMatchCount: p.avatar_web_detection?.matchCount ?? 0,
+    webSuspicious: false,
+    webMatchCount: 0,
   }))
 
   return { images, hasMore, queueTotal: queueTotal ?? 0 }

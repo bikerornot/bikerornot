@@ -180,6 +180,12 @@ export async function deleteComment(commentId: string): Promise<void> {
     .eq('id', commentId)
 
   if (error) throw new Error(error.message)
+
+  // Clean up notifications that reference this deleted comment
+  await admin
+    .from('notifications')
+    .delete()
+    .eq('comment_id', commentId)
 }
 
 export async function likeComment(commentId: string): Promise<void> {

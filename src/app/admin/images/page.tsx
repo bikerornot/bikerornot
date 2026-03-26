@@ -1,6 +1,7 @@
 import { getPostImages, getAvatarImages } from '@/app/actions/images'
 import ImagesClient from './ImagesClient'
 
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Images — BikerOrNot Admin' }
 
 export default async function AdminImagesPage() {

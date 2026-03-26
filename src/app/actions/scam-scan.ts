@@ -92,7 +92,7 @@ export async function scanMessageForScam(
       flag_type: 'message',
     })
 
-    await autoBanIfNeeded(admin, senderId, score, reason, 'DM')
+    // No auto-ban — all flags go to admin review only
   } catch {
     // Scam scanning is best-effort — never block message delivery
   }

@@ -32,7 +32,8 @@ async function runScamScan(content: string, context: 'message' | 'comment'): Pro
         content: `You are a scam detection system for a motorcycle enthusiast social network. Analyze this ${contextDesc} and rate its scam likelihood from 0.0 (legitimate) to 1.0 (definite scam). Flag these patterns:
 ${SCAM_PATTERNS}
 
-Normal motorcycle conversation (rides, bikes, gear, meetups, routes) scores 0.0.${context === 'comment' ? '\nPublic comments are shorter and more casual — only flag if the scam intent is clear.' : ''}
+Normal motorcycle conversation (rides, bikes, gear, meetups, routes) scores 0.0.
+Sharing links to YouTube, social media, personal websites, businesses, news articles, or organizations is NORMAL social behavior — do NOT flag as suspicious unless the surrounding text contains clear scam tactics (e.g. asking for money, fake urgency, romance manipulation). A link alone is never a scam.${context === 'comment' ? '\nPublic comments are shorter and more casual — only flag if the scam intent is clear and unmistakable.' : ''}
 
 Reply ONLY with valid JSON: {"score": 0.0, "reason": "brief explanation under 100 chars"}`,
       },
@@ -127,7 +128,7 @@ export async function scanCommentForScam(
       flag_type: 'comment',
     })
 
-    await autoBanIfNeeded(admin, senderId, score, reason, 'comment')
+    // Comments are public and lower-risk than DMs — flag for review only, no auto-ban
   } catch {
     // Scam scanning is best-effort — never block comment posting
   }

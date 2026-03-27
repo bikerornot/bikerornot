@@ -34,7 +34,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
       let base = supabase
         .from('posts')
-        .select('*, author:profiles!author_id(*), images:post_images(*), group:groups!group_id(name, slug)')
+        .select('*, author:profiles!author_id(*), images:post_images(*), group:groups!group_id(name, slug), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, status)')
         .is('deleted_at', null)
         .is('wall_owner_id', null)
         .is('bike_id', null)

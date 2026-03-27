@@ -12,6 +12,7 @@ import ContentMenu from './ContentMenu'
 import { extractYouTubeId, fetchYouTubeMeta } from '@/lib/youtube'
 import { renderContent } from '@/lib/render-content'
 import VerifiedBadge from './VerifiedBadge'
+import EventCard from './EventCard'
 
 interface Props {
   post: Post
@@ -317,6 +318,11 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
               post.shared_post
                 ? <SharedPostEmbed post={post.shared_post} />
                 : <div className="border border-zinc-700 rounded-xl px-4 py-3 text-zinc-500 text-sm italic">Original post was deleted.</div>
+            )}
+            {post.event && (
+              <div className="border border-zinc-800 rounded-xl overflow-hidden">
+                <EventCard event={post.event as any} />
+              </div>
             )}
           </div>
         )

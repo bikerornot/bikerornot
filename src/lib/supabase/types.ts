@@ -92,6 +92,7 @@ export interface Post {
   bike_id?: string | null
   group_id?: string | null
   shared_post_id?: string | null
+  event_id?: string | null
   content: string | null
   created_at: string
   updated_at: string
@@ -103,6 +104,7 @@ export interface Post {
   is_liked_by_me?: boolean
   shared_post?: Omit<Post, 'shared_post'> | null
   group?: { name: string; slug: string } | null
+  event?: { id: string; type: string; title: string; slug: string; starts_at: string; city: string | null; state: string | null; going_count: number; cover_photo_url: string | null; status: string } | null
 }
 
 export const GROUP_CATEGORIES = [

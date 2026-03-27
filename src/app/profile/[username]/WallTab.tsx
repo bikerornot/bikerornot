@@ -171,6 +171,7 @@ export default function WallTab({
           post={post}
           currentUserId={currentUserId}
           currentUserProfile={currentUserProfile}
+          wallOwnerId={profileId}
         />
       ))}
 

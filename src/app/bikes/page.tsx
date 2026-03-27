@@ -63,6 +63,9 @@ export default async function BikesPage({
             <Link href="/groups" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors" title="Groups">
               Groups
             </Link>
+            <Link href="/events" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
+              Events
+            </Link>
             <MessagesLink userId={user.id} />
             <NotificationBell userId={user.id} username={profile.username!} />
             <UserMenu

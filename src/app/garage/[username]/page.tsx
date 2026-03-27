@@ -214,6 +214,9 @@ export default async function GaragePageRoute({
             <Link href="/groups" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
               Groups
             </Link>
+            <Link href="/events" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
+              Events
+            </Link>
             <Link href="/bikes" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
               Bikes
             </Link>

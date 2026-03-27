@@ -36,6 +36,9 @@ export default async function ClassifiedsBrowseLayout({ children }: { children: 
                 <Link href="/people" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">Find Riders</Link>
                 <Link href="/bikes" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">Bikes</Link>
                 <Link href="/groups" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">Groups</Link>
+            <Link href="/events" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
+              Events
+            </Link>
                 <MessagesLink userId={user.id} />
                 <NotificationBell userId={user.id} username={profile.username!} />
                 <UserMenu

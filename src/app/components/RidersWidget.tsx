@@ -59,8 +59,6 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
     el.scrollBy({ left: amount, behavior: 'smooth' })
   }
 
-  // Hide widget entirely at 15+ friends
-  if (friendCount >= 15) return null
   // Don't render until localStorage is read (prevents flash)
   if (!mounted) return null
   if (widgetHidden) return null
@@ -244,13 +242,6 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
         })}
       </div>
       </div>
-
-      {/* Phase hint for new users */}
-      {!isCompact && (
-        <p className="text-center text-zinc-600 text-xs pb-3">
-          Connect with riders to fill your feed
-        </p>
-      )}
     </div>
   )
 }

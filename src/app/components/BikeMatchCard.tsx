@@ -107,15 +107,16 @@ export default function BikeMatchCard({ currentUserId }: Props) {
   const status = statuses[currentUser.id] ?? 'idle'
   const bikePhotoSrc = currentUser.bike_photo_url ? getImageUrl('bikes', currentUser.bike_photo_url) : null
   const avatarSrc = currentUser.profile_photo_url ? getImageUrl('avatars', currentUser.profile_photo_url) : null
+  const location = [currentUser.city, currentUser.state].filter(Boolean).join(', ')
   const hasNext = safeIndex < visibleUsers.length - 1
   const hasPrev = safeIndex > 0
 
   return (
     <div className="bg-zinc-900 sm:border sm:border-zinc-800 overflow-hidden">
-      {/* Header: avatar + "@username rides a Make Model" + dismiss */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800 gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <Link href={`/profile/${currentUser.username}`} className="flex-shrink-0">
+      {/* Header: avatar + "@username from City, ST rides a Make Model" + dismiss */}
+      <div className="flex items-start justify-between px-4 py-3 border-b border-zinc-800 gap-2">
+        <div className="flex items-start gap-2.5 min-w-0">
+          <Link href={`/profile/${currentUser.username}`} className="flex-shrink-0 mt-0.5">
             <div className="w-10 h-10 rounded-full bg-zinc-700 overflow-hidden">
               {avatarSrc ? (
                 <Image
@@ -132,11 +133,11 @@ export default function BikeMatchCard({ currentUserId }: Props) {
               )}
             </div>
           </Link>
-          <p className="text-sm text-white truncate">
+          <p className="text-base text-white leading-snug">
             <Link href={`/profile/${currentUser.username}`} className="font-semibold text-white hover:underline">
               @{currentUser.username ?? 'unknown'}
             </Link>
-            {' '}rides a {bikeLabel}
+            {location ? ` from ${location}` : ''} rides a {bikeLabel}
           </p>
         </div>
         <button

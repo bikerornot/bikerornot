@@ -4,10 +4,10 @@ import { useState, useEffect, useTransition, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { sendFriendRequest } from '@/app/actions/friends'
+import { dismissSuggestion } from '@/app/actions/suggestions'
 import type { RiderSuggestion } from '@/app/actions/suggestions'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const DISMISSED_KEY = 'bon_dismissed_suggestions'
 const WIDGET_HIDDEN_KEY = 'bon_widget_hidden'
 
 function avatarUrl(path: string) {
@@ -41,9 +41,7 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
   // Read localStorage after mount (avoids SSR mismatch)
   useEffect(() => {
     const hidden = localStorage.getItem(WIDGET_HIDDEN_KEY) === 'true'
-    const dismissed: string[] = JSON.parse(localStorage.getItem(DISMISSED_KEY) ?? '[]')
     setWidgetHidden(hidden)
-    setDismissedIds(new Set(dismissed))
     setMounted(true)
   }, [])
 
@@ -63,6 +61,8 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
   if (!mounted) return null
   if (widgetHidden) return null
 
+  // Dismissed users are already excluded server-side, but also filter client-side
+  // for instant removal without waiting for page reload
   const riders = initialRiders.filter((r) => !dismissedIds.has(r.id))
   if (riders.length === 0) return null
 
@@ -74,10 +74,12 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
   }
 
   function dismissRider(id: string) {
+    // Instant client-side removal
     const next = new Set(dismissedIds)
     next.add(id)
     setDismissedIds(next)
-    localStorage.setItem(DISMISSED_KEY, JSON.stringify(Array.from(next)))
+    // Persist to database so they're excluded on next page load
+    dismissSuggestion(id).catch(() => {})
   }
 
   async function handleAdd(id: string) {

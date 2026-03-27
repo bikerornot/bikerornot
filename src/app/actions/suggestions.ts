@@ -87,15 +87,17 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
 
   const admin = getServiceClient()
 
-  // Fetch current user profile + connection data in parallel
+  // Fetch current user profile + connection data + dismissed suggestions in parallel
   const [
     { data: me },
     { data: friendships },
     { data: blocks },
+    { data: dismissed },
   ] = await Promise.all([
     admin.from('profiles').select('latitude, longitude, state, riding_style').eq('id', user.id).single(),
     admin.from('friendships').select('requester_id, addressee_id, status').or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
     admin.from('blocks').select('blocker_id, blocked_id').or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`),
+    admin.from('dismissed_suggestions').select('dismissed_user_id').eq('user_id', user.id),
   ])
 
   // Build exclude set + track accepted friend IDs in one pass
@@ -113,6 +115,9 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
   for (const b of blocks ?? []) {
     excludeIds.add(b.blocker_id)
     excludeIds.add(b.blocked_id)
+  }
+  for (const d of dismissed ?? []) {
+    excludeIds.add(d.dismissed_user_id)
   }
 
   const friendCount = acceptedFriendIds.size
@@ -211,4 +216,16 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
   }))
 
   return { riders, friendCount }
+}
+
+export async function dismissSuggestion(dismissedUserId: string): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const admin = getServiceClient()
+  await admin.from('dismissed_suggestions').upsert({
+    user_id: user.id,
+    dismissed_user_id: dismissedUserId,
+  }, { onConflict: 'user_id,dismissed_user_id' })
 }

@@ -279,21 +279,24 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
           </div>
         </div>
 
-        {currentUserId === post.author_id || (wallOwnerId && currentUserId === wallOwnerId) ? (
-          <button
-            onClick={handleDelete}
-            className="text-zinc-600 hover:text-red-400 transition-colors text-xs flex-shrink-0 p-1"
-            title="Delete post"
-          >
-            ✕
-          </button>
-        ) : currentUserId ? (
-          <ContentMenu
-            reportType="post"
-            reportTargetId={post.id}
-            blockUserId={post.author_id}
-          />
-        ) : null}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {currentUserId && currentUserId !== post.author_id && (
+            <ContentMenu
+              reportType="post"
+              reportTargetId={post.id}
+              blockUserId={post.author_id}
+            />
+          )}
+          {(currentUserId === post.author_id || (wallOwnerId && currentUserId === wallOwnerId)) && (
+            <button
+              onClick={handleDelete}
+              className="text-zinc-600 hover:text-red-400 transition-colors text-xs p-1"
+              title="Delete post"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Text content */}

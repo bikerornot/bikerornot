@@ -111,7 +111,7 @@ export default function BikeMatchCard({ currentUserId }: Props) {
   const hasPrev = safeIndex > 0
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+    <div className="bg-zinc-900 sm:border sm:border-zinc-800 overflow-hidden">
       {/* Header: avatar + "@username rides a Make Model" + dismiss */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800 gap-2">
         <div className="flex items-center gap-2.5 min-w-0">

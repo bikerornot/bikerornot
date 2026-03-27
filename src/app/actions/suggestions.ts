@@ -105,16 +105,15 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
   const acceptedFriendIds = new Set<string>()
 
   for (const f of friendships ?? []) {
-    excludeIds.add(f.requester_id)
-    excludeIds.add(f.addressee_id)
+    const otherId = f.requester_id === user.id ? f.addressee_id : f.requester_id
+    excludeIds.add(otherId)
     if (f.status === 'accepted') {
-      const friendId = f.requester_id === user.id ? f.addressee_id : f.requester_id
-      acceptedFriendIds.add(friendId)
+      acceptedFriendIds.add(otherId)
     }
   }
   for (const b of blocks ?? []) {
-    excludeIds.add(b.blocker_id)
-    excludeIds.add(b.blocked_id)
+    const otherId = b.blocker_id === user.id ? b.blocked_id : b.blocker_id
+    excludeIds.add(otherId)
   }
   for (const d of dismissed ?? []) {
     excludeIds.add(d.dismissed_user_id)
@@ -148,8 +147,8 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
     query = query.eq('state', me.state)
   }
 
-  // Exclude known connections (cap at 200 to stay within URL limits)
-  const excludeArr = Array.from(excludeIds).slice(0, 200)
+  // Exclude known connections (cap at 500 to stay within URL limits)
+  const excludeArr = Array.from(excludeIds).slice(0, 500)
   if (excludeArr.length > 0) {
     query = query.not('id', 'in', `(${excludeArr.join(',')})`)
   }

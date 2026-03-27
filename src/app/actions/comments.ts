@@ -39,15 +39,23 @@ export async function createComment(postId: string, content: string, parentComme
 
   // If post is in a private group, require active membership
   if (post.group_id) {
-    const { data: membership } = await admin
-      .from('group_members')
-      .select('id')
-      .eq('group_id', post.group_id)
-      .eq('user_id', user.id)
-      .eq('status', 'active')
+    const { data: group } = await admin
+      .from('groups')
+      .select('privacy')
+      .eq('id', post.group_id)
       .single()
 
-    if (!membership) throw new Error('Not authorized')
+    if (group?.privacy === 'private') {
+      const { data: membership } = await admin
+        .from('group_members')
+        .select('id')
+        .eq('group_id', post.group_id)
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .single()
+
+      if (!membership) throw new Error('Not authorized')
+    }
   }
 
   const { data: comment, error } = await admin

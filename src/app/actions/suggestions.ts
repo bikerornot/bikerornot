@@ -158,18 +158,28 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
 
   if (!candidates?.length) return { riders: [], friendCount }
 
-  // Sort by distance if we have coordinates, otherwise leave as-is
-  let sorted = candidates as any[]
+  // Add distance if we have coordinates
+  let pool = candidates as any[]
   if (myLat && myLon) {
-    sorted = sorted
-      .map((p) => ({
-        ...p,
-        _dist: p.latitude && p.longitude ? haversine(myLat, myLon, p.latitude, p.longitude) : 9999,
-      }))
-      .sort((a, b) => a._dist - b._dist)
+    pool = pool.map((p) => ({
+      ...p,
+      _dist: p.latitude && p.longitude ? haversine(myLat, myLon, p.latitude, p.longitude) : 9999,
+    }))
   }
 
-  const topCandidates = sorted.slice(0, 20)
+  // Take the nearest 50 as a pool, then randomly pick 20 for variety
+  if (myLat && myLon) {
+    pool.sort((a, b) => a._dist - b._dist)
+  }
+  const candidatePool = pool.slice(0, 50)
+
+  // Fisher-Yates shuffle
+  for (let i = candidatePool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[candidatePool[i], candidatePool[j]] = [candidatePool[j], candidatePool[i]]
+  }
+
+  const topCandidates = candidatePool.slice(0, 20)
 
   // Compute mutual friend counts for top candidates
   const mutualCount: Record<string, number> = {}

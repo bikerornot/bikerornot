@@ -144,10 +144,15 @@ export async function getConversations(): Promise<ConversationSummary[]> {
     }) as ConversationSummary[]
 }
 
-export async function getMessages(conversationId: string): Promise<Message[]> {
+const MESSAGES_PAGE_SIZE = 50
+
+export async function getMessages(
+  conversationId: string,
+  before?: string
+): Promise<{ messages: Message[]; hasMore: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
+  if (!user) return { messages: [], hasMore: false }
 
   const admin = getServiceClient()
 
@@ -161,17 +166,30 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
     throw new Error('Not authorized')
   }
 
-  const { data } = await admin
+  let query = admin
     .from('messages')
     .select('*, sender:profiles!sender_id(*)')
     .eq('conversation_id', conversationId)
-    .order('created_at', { ascending: true })
-    .limit(200)
 
-  // Filter out messages from banned/suspended senders (never hide your own messages)
-  return ((data ?? []) as any[]).filter((m) => {
+  if (before) {
+    query = query.lt('created_at', before)
+  }
+
+  // Fetch newest messages first, one extra to detect hasMore
+  const { data } = await query
+    .order('created_at', { ascending: false })
+    .limit(MESSAGES_PAGE_SIZE + 1)
+
+  const raw = (data ?? []) as any[]
+  const hasMore = raw.length > MESSAGES_PAGE_SIZE
+  const page = hasMore ? raw.slice(0, MESSAGES_PAGE_SIZE) : raw
+
+  // Reverse to chronological order, then filter banned/suspended
+  const messages = page.reverse().filter((m) => {
     return m.sender_id === user.id || !m.sender || m.sender.status === 'active'
   }) as Message[]
+
+  return { messages, hasMore }
 }
 
 export async function sendMessage(conversationId: string, content: string): Promise<Message> {

@@ -60,7 +60,7 @@ export default async function ChatPage({
   // Don't show conversations with banned/suspended users
   if (otherUser.status !== 'active' || otherUser.deactivated_at) redirect('/messages')
 
-  const messages = await getMessages(conversationId)
+  const { messages, hasMore } = await getMessages(conversationId)
 
   const otherAvatarUrl = otherUser.profile_photo_url
     ? getImageUrl('avatars', otherUser.profile_photo_url)
@@ -143,6 +143,7 @@ export default async function ChatPage({
         <ChatWindow
           conversationId={conversationId}
           initialMessages={messages}
+          initialHasMore={hasMore}
           currentUserId={user.id}
           otherUser={otherUser}
         />

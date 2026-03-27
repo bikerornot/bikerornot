@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { getImageUrl } from '@/lib/supabase/image'
-import { sendMessage, markConversationRead } from '@/app/actions/messages'
+import { sendMessage, markConversationRead, getMessages } from '@/app/actions/messages'
 import type { Message, Profile } from '@/lib/supabase/types'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
@@ -25,29 +25,94 @@ function formatDateDivider(dateStr: string): string {
 interface Props {
   conversationId: string
   initialMessages: Message[]
+  initialHasMore: boolean
   currentUserId: string
   otherUser: Profile
 }
 
-export default function ChatWindow({ conversationId, initialMessages, currentUserId, otherUser }: Props) {
+export default function ChatWindow({ conversationId, initialMessages, initialHasMore, currentUserId, otherUser }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
+  const [hasMore, setHasMore] = useState(initialHasMore)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [otherUserTyping, setOtherUserTyping] = useState(false)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const channelRef = useRef<RealtimeChannel | null>(null)
+  const initialScrollDone = useRef(false)
+  const isNearBottom = useRef(true)
+
+  // Track whether user is near the bottom of the scroll
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current
+    if (!el) return
+    isNearBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100
+  }, [])
+
+  // Scroll to bottom instantly on initial load
+  useEffect(() => {
+    if (!initialScrollDone.current && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+      initialScrollDone.current = true
+    }
+  }, [messages])
+
+  // Smooth scroll to bottom for new messages (only if already near bottom)
+  const scrollToBottomSmooth = useCallback(() => {
+    if (isNearBottom.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [])
 
   // Mark conversation as read on mount and when new messages arrive
   useEffect(() => {
     markConversationRead(conversationId)
   }, [conversationId, messages.length])
 
-  // Scroll to bottom when messages or typing indicator changes
+  // Scroll when new messages arrive or typing indicator changes
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, otherUserTyping])
+    if (initialScrollDone.current) {
+      scrollToBottomSmooth()
+    }
+  }, [messages, otherUserTyping, scrollToBottomSmooth])
+
+  // Load older messages when scrolling to top
+  const loadOlderMessages = useCallback(async () => {
+    if (loadingMore || !hasMore || messages.length === 0) return
+    setLoadingMore(true)
+
+    const oldestMessage = messages[0]
+    const el = scrollContainerRef.current
+    const prevScrollHeight = el?.scrollHeight ?? 0
+
+    try {
+      const { messages: older, hasMore: moreAvail } = await getMessages(conversationId, oldestMessage.created_at)
+      if (older.length > 0) {
+        setMessages((prev) => [...older, ...prev])
+        // Preserve scroll position after prepending
+        requestAnimationFrame(() => {
+          if (el) {
+            el.scrollTop = el.scrollHeight - prevScrollHeight
+          }
+        })
+      }
+      setHasMore(moreAvail)
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [conversationId, hasMore, loadingMore, messages])
+
+  // Detect scroll to top
+  const handleScrollWithLoadMore = useCallback(() => {
+    handleScroll()
+    const el = scrollContainerRef.current
+    if (el && el.scrollTop < 50 && hasMore && !loadingMore) {
+      loadOlderMessages()
+    }
+  }, [handleScroll, hasMore, loadingMore, loadOlderMessages])
 
   // Single channel for: incoming messages, read receipt updates, and presence (typing)
   useEffect(() => {
@@ -119,6 +184,9 @@ export default function ChatWindow({ conversationId, initialMessages, currentUse
     setSending(true)
     setText('')
 
+    // Force scroll to bottom when sending
+    isNearBottom.current = true
+
     const optimistic: Message = {
       id: `optimistic-${Date.now()}`,
       conversation_id: conversationId,
@@ -169,7 +237,27 @@ export default function ChatWindow({ conversationId, initialMessages, currentUse
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScrollWithLoadMore}
+        className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
+      >
+        {/* Load more indicator */}
+        {hasMore && (
+          <div className="text-center py-3">
+            {loadingMore ? (
+              <span className="text-zinc-500 text-sm">Loading older messages...</span>
+            ) : (
+              <button
+                onClick={loadOlderMessages}
+                className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
+              >
+                Load older messages
+              </button>
+            )}
+          </div>
+        )}
+
         {messages.length === 0 && !otherUserTyping && (
           <p className="text-center text-zinc-600 text-base py-8">
             Say hello to @{otherUser.username}
@@ -259,7 +347,7 @@ export default function ChatWindow({ conversationId, initialMessages, currentUse
             value={text}
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
-            placeholder="Message…"
+            placeholder="Message..."
             rows={1}
             className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 text-base rounded-xl px-4 py-2.5 resize-none outline-none focus:ring-1 focus:ring-orange-500 max-h-32 overflow-y-auto"
             style={{ scrollbarWidth: 'none' }}

@@ -65,6 +65,7 @@ export default async function EventsPage() {
           initialEvents={events}
           userLat={userLat}
           userLng={userLng}
+          userZip={profile.zip_code ?? ''}
           currentUserId={user.id}
         />
       </div>

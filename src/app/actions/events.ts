@@ -35,8 +35,8 @@ export type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed'
 export type RsvpStatus = 'going' | 'interested'
 export type RecurrenceRule = 'weekly' | 'biweekly' | 'monthly'
 export type EventCategory =
-  | 'group_ride' | 'rally' | 'charity' | 'track_day' | 'bike_night'
-  | 'show' | 'swap_meet' | 'workshop' | 'social' | 'other'
+  | 'group_ride' | 'rally' | 'charity' | 'bike_night'
+  | 'show' | 'swap_meet' | 'meetup' | 'poker_run' | 'scenic_tour' | 'other'
 
 export interface EventStop {
   id: string
@@ -60,6 +60,7 @@ export interface EventDetail {
   slug: string
   description: string | null
   cover_photo_url: string | null
+  flyer_url: string | null
   category: EventCategory | null
   starts_at: string
   ends_at: string | null
@@ -121,7 +122,8 @@ export interface CreateEventInput {
 
 export async function createEvent(
   input: CreateEventInput,
-  coverFile?: File | null
+  coverFile?: File | null,
+  flyerFile?: File | null
 ): Promise<EventDetail> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -169,6 +171,22 @@ export async function createEvent(
     cover_photo_url = path
   }
 
+  // Upload flyer image
+  let flyer_url: string | null = null
+  if (flyerFile && flyerFile.size > 0) {
+    validateImageFile(flyerFile)
+    const ext = flyerFile.name.split('.').pop() ?? 'jpg'
+    const path = `events/${user.id}/${slug}-flyer.${ext}`
+    const bytes = await flyerFile.arrayBuffer()
+    const moderation = await moderateImage(bytes, flyerFile.type)
+    if (moderation === 'rejected') throw new Error('Flyer image was rejected by our content filter. Please choose a different image.')
+    const { error: uploadErr } = await admin.storage
+      .from('covers')
+      .upload(path, bytes, { contentType: flyerFile.type, upsert: true })
+    if (uploadErr) throw new Error(uploadErr.message)
+    flyer_url = path
+  }
+
   // Geocode start location
   let latitude: number | null = null
   let longitude: number | null = null
@@ -210,6 +228,7 @@ export async function createEvent(
       slug,
       description: input.description?.trim() || null,
       cover_photo_url,
+      flyer_url,
       category: input.category || null,
       starts_at: input.starts_at,
       ends_at: input.ends_at || null,
@@ -329,6 +348,7 @@ async function generateRecurrenceInstances(
         slug: instanceSlug,
         description: parent.description,
         cover_photo_url: parent.cover_photo_url,
+        flyer_url: parent.flyer_url,
         category: parent.category,
         starts_at: startDate.toISOString(),
         ends_at: endDate ? endDate.toISOString() : null,
@@ -540,7 +560,8 @@ export async function getUserEvents(): Promise<EventDetail[]> {
 export async function updateEvent(
   eventId: string,
   input: Partial<CreateEventInput>,
-  coverFile?: File | null
+  coverFile?: File | null,
+  flyerFile?: File | null
 ): Promise<void> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -577,7 +598,7 @@ export async function updateEvent(
   if (input.address !== undefined) updates.address = input.address?.trim() || null
   if (input.max_attendees !== undefined) updates.max_attendees = input.max_attendees || null
 
-  // Re-geocode if zip changed
+  // Re-geocode start if zip changed
   if (input.zip_code !== undefined) {
     updates.zip_code = input.zip_code?.trim() || null
     if (input.zip_code) {
@@ -588,6 +609,51 @@ export async function updateEvent(
         updates.city = geo.city
         updates.state = geo.state
       }
+    }
+  }
+
+  // Ride end location
+  if (input.end_address !== undefined) updates.end_address = input.end_address?.trim() || null
+  if (input.end_zip_code !== undefined) {
+    updates.end_zip_code = input.end_zip_code?.trim() || null
+    if (input.end_zip_code) {
+      const geo = await geocodeZip(input.end_zip_code)
+      if (geo) {
+        updates.end_latitude = geo.lat
+        updates.end_longitude = geo.lng
+        updates.end_city = geo.city
+        updates.end_state = geo.state
+      }
+    }
+  }
+
+  // Ride stops: delete and re-insert
+  if (input.stops !== undefined) {
+    await admin.from('event_stops').delete().eq('event_id', eventId)
+    const validStops = (input.stops ?? []).filter((s) => s.address.trim())
+    if (validStops.length > 0) {
+      const stopRows = await Promise.all(
+        validStops.map(async (s, i) => {
+          let sLat: number | null = null
+          let sLng: number | null = null
+          let sCity: string | null = null
+          let sState: string | null = null
+          if (s.zip_code) {
+            const geo = await geocodeZip(s.zip_code)
+            if (geo) { sLat = geo.lat; sLng = geo.lng; sCity = geo.city; sState = geo.state }
+          }
+          return {
+            event_id: eventId,
+            order_index: i,
+            label: s.label?.trim() || null,
+            address: s.address.trim(),
+            city: sCity, state: sState,
+            zip_code: s.zip_code?.trim() || null,
+            latitude: sLat, longitude: sLng,
+          }
+        })
+      )
+      await admin.from('event_stops').insert(stopRows)
     }
   }
 
@@ -604,6 +670,21 @@ export async function updateEvent(
       .upload(path, bytes, { contentType: coverFile.type, upsert: true })
     if (uploadErr) throw new Error(uploadErr.message)
     updates.cover_photo_url = path
+  }
+
+  // Flyer upload
+  if (flyerFile && flyerFile.size > 0) {
+    validateImageFile(flyerFile)
+    const ext = flyerFile.name.split('.').pop() ?? 'jpg'
+    const path = `events/${user.id}/${eventId}-flyer.${ext}`
+    const bytes = await flyerFile.arrayBuffer()
+    const moderation = await moderateImage(bytes, flyerFile.type)
+    if (moderation === 'rejected') throw new Error('Flyer image was rejected by our content filter.')
+    const { error: uploadErr } = await admin.storage
+      .from('covers')
+      .upload(path, bytes, { contentType: flyerFile.type, upsert: true })
+    if (uploadErr) throw new Error(uploadErr.message)
+    updates.flyer_url = path
   }
 
   const { error } = await admin.from('events').update(updates).eq('id', eventId)

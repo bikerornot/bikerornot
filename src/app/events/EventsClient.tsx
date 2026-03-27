@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import EventCard from '@/app/components/EventCard'
 import type { EventDetail } from '@/app/actions/events'
@@ -19,18 +19,68 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
+const DISTANCE_OPTIONS = [
+  { value: 25, label: '25 miles' },
+  { value: 50, label: '50 miles' },
+  { value: 100, label: '100 miles' },
+  { value: 200, label: '200 miles' },
+  { value: 0, label: 'Any distance' },
+]
+
 interface Props {
   initialEvents: EventDetail[]
   userLat: number | null
   userLng: number | null
+  userZip: string
   currentUserId: string
 }
 
-export default function EventsClient({ initialEvents, userLat, userLng, currentUserId }: Props) {
+export default function EventsClient({ initialEvents, userLat, userLng, userZip, currentUserId }: Props) {
   const [tab, setTab] = useState<TabType>('all')
   const [sort, setSort] = useState<SortType>('soonest')
   const [dateFilter, setDateFilter] = useState<DateFilter>('')
   const [search, setSearch] = useState('')
+
+  // Zip code search
+  const [zip, setZip] = useState(userZip)
+  const [radius, setRadius] = useState(100)
+  const [searchLat, setSearchLat] = useState<number | null>(userLat)
+  const [searchLng, setSearchLng] = useState<number | null>(userLng)
+  const [geoLoading, setGeoLoading] = useState(false)
+
+  const handleZipSearch = useCallback(async () => {
+    if (!zip || zip.length < 5) return
+    setGeoLoading(true)
+    try {
+      const geo = await geocodeZipClient(zip)
+      if (geo) {
+        setSearchLat(geo.lat)
+        setSearchLng(geo.lng)
+      }
+    } finally {
+      setGeoLoading(false)
+    }
+  }, [zip])
+
+  const handleZipKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleZipSearch()
+    }
+  }, [handleZipSearch])
+
+  // Auto-search when zip reaches 5 digits
+  const handleZipChange = useCallback((value: string) => {
+    const clean = value.replace(/\D/g, '').slice(0, 5)
+    setZip(clean)
+    if (clean.length === 5 && clean !== zip) {
+      setGeoLoading(true)
+      geocodeZipClient(clean).then((geo) => {
+        if (geo) { setSearchLat(geo.lat); setSearchLng(geo.lng) }
+        setGeoLoading(false)
+      }).catch(() => setGeoLoading(false))
+    }
+  }, [zip])
 
   const filtered = useMemo(() => {
     let results = [...initialEvents]
@@ -69,6 +119,15 @@ export default function EventsClient({ initialEvents, userLat, userLng, currentU
       })
     }
 
+    // Zip code radius filter
+    if (searchLat && searchLng && radius > 0) {
+      results = results.filter((e) => {
+        if (!e.latitude || !e.longitude) return false
+        const dist = haversine(searchLat, searchLng, Number(e.latitude), Number(e.longitude))
+        return dist <= radius
+      })
+    }
+
     // Text search
     if (search.trim()) {
       const term = search.toLowerCase()
@@ -82,19 +141,18 @@ export default function EventsClient({ initialEvents, userLat, userLng, currentU
     }
 
     // Sort
-    if (sort === 'nearest' && userLat && userLng) {
+    if (sort === 'nearest' && searchLat && searchLng) {
       results.sort((a, b) => {
-        const distA = a.latitude && a.longitude ? haversine(userLat, userLng, Number(a.latitude), Number(a.longitude)) : 99999
-        const distB = b.latitude && b.longitude ? haversine(userLat, userLng, Number(b.latitude), Number(b.longitude)) : 99999
+        const distA = a.latitude && a.longitude ? haversine(searchLat, searchLng, Number(a.latitude), Number(a.longitude)) : 99999
+        const distB = b.latitude && b.longitude ? haversine(searchLat, searchLng, Number(b.latitude), Number(b.longitude)) : 99999
         return distA - distB
       })
     } else if (sort === 'popular') {
       results.sort((a, b) => b.going_count - a.going_count)
     }
-    // 'soonest' is the default order from the server
 
     return results
-  }, [initialEvents, tab, sort, dateFilter, search, userLat, userLng, currentUserId])
+  }, [initialEvents, tab, sort, dateFilter, search, searchLat, searchLng, radius, currentUserId])
 
   const TABS: { key: TabType; label: string }[] = [
     { key: 'all', label: 'All' },
@@ -123,8 +181,8 @@ export default function EventsClient({ initialEvents, userLat, userLng, currentU
         </Link>
       </div>
 
-      {/* Search */}
-      <div className="px-4 sm:px-0">
+      {/* Search + Location */}
+      <div className="space-y-2 px-4 sm:px-0">
         <input
           type="text"
           value={search}
@@ -132,6 +190,30 @@ export default function EventsClient({ initialEvents, userLat, userLng, currentU
           placeholder="Search events and rides..."
           className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
         />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={zip}
+            onChange={(e) => handleZipChange(e.target.value)}
+            onKeyDown={handleZipKeyDown}
+            placeholder="Zip code"
+            inputMode="numeric"
+            maxLength={5}
+            className="flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+          />
+          <select
+            value={radius}
+            onChange={(e) => setRadius(parseInt(e.target.value))}
+            className="bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-2.5 text-base text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+          >
+            {DISTANCE_OPTIONS.map((d) => (
+              <option key={d.value} value={d.value}>{d.label}</option>
+            ))}
+          </select>
+        </div>
+        {geoLoading && (
+          <p className="text-zinc-500 text-xs">Looking up location...</p>
+        )}
       </div>
 
       {/* Type tabs */}
@@ -174,7 +256,7 @@ export default function EventsClient({ initialEvents, userLat, userLng, currentU
           className="bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-400 focus:outline-none"
         >
           <option value="soonest">Soonest</option>
-          {userLat && <option value="nearest">Nearest</option>}
+          {searchLat && <option value="nearest">Nearest</option>}
           <option value="popular">Most Popular</option>
         </select>
       </div>
@@ -194,4 +276,20 @@ export default function EventsClient({ initialEvents, userLat, userLng, currentU
       )}
     </div>
   )
+}
+
+// Client-side geocoding via Zippopotam.us (same API as server-side)
+async function geocodeZipClient(zip: string): Promise<{ lat: number; lng: number } | null> {
+  const clean = zip.trim().slice(0, 5)
+  if (!/^\d{5}$/.test(clean)) return null
+  try {
+    const res = await fetch(`https://api.zippopotam.us/us/${clean}`)
+    if (!res.ok) return null
+    const data = await res.json()
+    const place = data?.places?.[0]
+    if (!place) return null
+    return { lat: parseFloat(place.latitude), lng: parseFloat(place.longitude) }
+  } catch {
+    return null
+  }
 }

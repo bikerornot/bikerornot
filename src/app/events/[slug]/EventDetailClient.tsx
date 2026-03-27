@@ -50,7 +50,11 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
     ? getImageUrl('avatars', creator.profile_photo_url)
     : null
 
-  const location = [event.venue_name, event.address, [event.city, event.state].filter(Boolean).join(', ')].filter(Boolean).join(' — ')
+  const cityStateZip = [
+    [event.city, event.state].filter(Boolean).join(', '),
+    event.zip_code,
+  ].filter(Boolean).join(' ')
+  const location = [event.venue_name, event.address, cityStateZip].filter(Boolean).join(' — ')
 
   async function handleRsvp(status: RsvpStatus) {
     if (rsvpBusy || isCancelled) return
@@ -271,6 +275,17 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
       {/* Tab content */}
       {tab === 'details' && (
         <div className="px-4 py-4 space-y-4">
+          {/* Flyer */}
+          {event.flyer_url && (
+            <div className="rounded-xl overflow-hidden">
+              <img
+                src={getImageUrl('covers', event.flyer_url)}
+                alt="Event flyer"
+                className="w-full"
+              />
+            </div>
+          )}
+
           {/* Description */}
           {event.description && (
             <div>
@@ -290,7 +305,7 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
                   <div>
                     <p className="text-zinc-300 text-sm font-medium">Start</p>
                     <p className="text-zinc-500 text-sm">{event.address || 'No address specified'}</p>
-                    {event.city && <p className="text-zinc-600 text-xs">{event.city}, {event.state}</p>}
+                    {event.city && <p className="text-zinc-600 text-xs">{[event.city, event.state].filter(Boolean).join(', ')} {event.zip_code ?? ''}</p>}
                   </div>
                 </div>
 
@@ -302,7 +317,7 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
                     <div>
                       <p className="text-zinc-300 text-sm font-medium">{stop.label || `Stop ${stop.order_index + 1}`}</p>
                       <p className="text-zinc-500 text-sm">{stop.address}</p>
-                      {stop.city && <p className="text-zinc-600 text-xs">{stop.city}, {stop.state}</p>}
+                      {stop.city && <p className="text-zinc-600 text-xs">{[stop.city, stop.state].filter(Boolean).join(', ')} {stop.zip_code ?? ''}</p>}
                     </div>
                   </div>
                 ))}
@@ -315,7 +330,7 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
                     <div>
                       <p className="text-zinc-300 text-sm font-medium">End</p>
                       <p className="text-zinc-500 text-sm">{event.end_address}</p>
-                      {event.end_city && <p className="text-zinc-600 text-xs">{event.end_city}, {event.end_state}</p>}
+                      {event.end_city && <p className="text-zinc-600 text-xs">{[event.end_city, event.end_state].filter(Boolean).join(', ')} {event.end_zip_code ?? ''}</p>}
                     </div>
                   </div>
                 )}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -82,15 +82,32 @@ export default function GroupTabs({
     setHasMore(data.length === PAGE_SIZE)
   }
 
-  async function loadMore() {
-    if (!hasMore || loadingMore || !cursorRef.current) return
+  const loadMoreRef = useRef(false)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+
+  const loadMore = useCallback(async () => {
+    if (!hasMore || loadMoreRef.current || !cursorRef.current) return
+    loadMoreRef.current = true
     setLoadingMore(true)
     const data = await getGroupPosts(group.id, cursorRef.current)
     setPosts((prev) => [...prev, ...data])
     if (data.length > 0) cursorRef.current = data[data.length - 1].created_at
     setHasMore(data.length === PAGE_SIZE)
     setLoadingMore(false)
-  }
+    loadMoreRef.current = false
+  }, [hasMore, group.id])
+
+  // Infinite scroll
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMore() },
+      { rootMargin: '300px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [loadMore])
 
   async function handleRemove(userId: string) {
     if (pendingActions.has(userId)) return
@@ -200,15 +217,11 @@ export default function GroupTabs({
             />
           ))}
 
-          {(isMember || group.privacy === 'public') && hasMore && (
-            <div className="text-center py-2">
-              <button
-                onClick={loadMore}
-                disabled={loadingMore}
-                className="text-orange-400 hover:text-orange-300 disabled:opacity-40 text-sm font-medium transition-colors"
-              >
-                {loadingMore ? 'Loading…' : 'Load more'}
-              </button>
+          {/* Infinite scroll sentinel */}
+          <div ref={sentinelRef} />
+          {loadingMore && (
+            <div className="text-center py-4">
+              <p className="text-zinc-500 text-sm">Loading...</p>
             </div>
           )}
         </div>

@@ -6,6 +6,7 @@ import { Post, Profile } from '@/lib/supabase/types'
 import PostCard from '@/app/components/PostCard'
 import PostComposer from '@/app/components/PostComposer'
 import AdCard from '@/app/components/AdCard'
+import BikeMatchCard from '@/app/components/BikeMatchCard'
 import { getNextAd, type AdData } from '@/app/actions/ads'
 
 const PAGE_SIZE = 10
@@ -219,6 +220,11 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
           {idx === 0 && ad && (
             <div className="mt-2 sm:mt-4">
               <AdCard ad={ad} onDismiss={() => setAd(null)} />
+            </div>
+          )}
+          {idx === Math.min(4, posts.length - 1) && (
+            <div className="mt-2 sm:mt-4">
+              <BikeMatchCard currentUserId={currentUserId} />
             </div>
           )}
         </div>

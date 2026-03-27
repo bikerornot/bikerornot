@@ -476,13 +476,16 @@ export async function getGroupPosts(groupId: string, cursor?: string): Promise<P
     if (!membership) throw new Error('Not a member of this group')
   }
 
+  // Fetch extra to account for banned/suspended authors being filtered out
+  const FETCH_SIZE = PAGE_SIZE + 10
+
   const base = admin
     .from('posts')
     .select('*, author:profiles!author_id(*), images:post_images(*)')
     .eq('group_id', groupId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
-    .limit(PAGE_SIZE)
+    .limit(FETCH_SIZE)
 
   const { data, error } = cursor ? await base.lt('created_at', cursor) : await base
 
@@ -490,7 +493,7 @@ export async function getGroupPosts(groupId: string, cursor?: string): Promise<P
   if (!data || data.length === 0) return []
 
   // Only keep posts where the author is confirmed active (not banned/suspended/missing)
-  const filtered = data.filter((p: any) => p.author?.status === 'active')
+  const filtered = data.filter((p: any) => p.author?.status === 'active').slice(0, PAGE_SIZE)
 
   const postIds = filtered.map((p: any) => p.id)
   const sharedPostIds = filtered.map((p: any) => p.shared_post_id).filter(Boolean) as string[]

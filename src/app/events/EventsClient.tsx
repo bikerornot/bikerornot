@@ -234,26 +234,24 @@ export default function EventsClient({ initialEvents, userLat, userLng, userZip,
       </div>
 
       {/* Date filters + sort */}
-      <div className="flex items-center justify-between gap-2 px-4 sm:px-0">
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
-          {DATE_FILTERS.map((d) => (
-            <button
-              key={d.key}
-              onClick={() => setDateFilter(d.key)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
-                dateFilter === d.key
-                  ? 'bg-zinc-700 text-white'
-                  : 'bg-zinc-800/50 text-zinc-500 hover:text-zinc-300'
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center gap-2 px-4 sm:px-0 overflow-x-auto scrollbar-hide">
+        {DATE_FILTERS.map((d) => (
+          <button
+            key={d.key}
+            onClick={() => setDateFilter(d.key)}
+            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+              dateFilter === d.key
+                ? 'bg-zinc-700 text-white'
+                : 'bg-zinc-800/50 text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            {d.label}
+          </button>
+        ))}
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as SortType)}
-          className="bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-400 focus:outline-none"
+          className="bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-400 focus:outline-none flex-shrink-0"
         >
           <option value="soonest">Soonest</option>
           {searchLat && <option value="nearest">Nearest</option>}

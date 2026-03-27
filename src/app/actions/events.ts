@@ -5,7 +5,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { validateImageFile } from '@/lib/rate-limit'
 import { moderateImage } from '@/lib/sightengine'
 import { notifyIfActive } from '@/lib/notify'
-import { geocodeZip } from '@/lib/geocode'
+import { geocodeZip, geocodeAddress } from '@/lib/geocode'
 
 function getServiceClient() {
   return createServiceClient(
@@ -187,33 +187,45 @@ export async function createEvent(
     flyer_url = path
   }
 
-  // Geocode start location
+  // Geocode start location — try full address first, fall back to zip
   let latitude: number | null = null
   let longitude: number | null = null
   let city: string | null = null
   let state: string | null = null
-  if (input.zip_code) {
-    const geo = await geocodeZip(input.zip_code)
+  if (input.address && input.zip_code) {
+    const geo = await geocodeAddress(input.address, input.zip_code)
     if (geo) {
       latitude = geo.lat
       longitude = geo.lng
-      city = geo.city
-      state = geo.state
+    }
+  }
+  if (input.zip_code) {
+    const zipGeo = await geocodeZip(input.zip_code)
+    if (zipGeo) {
+      if (!latitude) { latitude = zipGeo.lat; longitude = zipGeo.lng }
+      city = zipGeo.city
+      state = zipGeo.state
     }
   }
 
-  // Geocode ride end location
+  // Geocode ride end location — try full address first, fall back to zip
   let end_latitude: number | null = null
   let end_longitude: number | null = null
   let end_city: string | null = null
   let end_state: string | null = null
-  if (input.type === 'ride' && input.end_zip_code) {
-    const geo = await geocodeZip(input.end_zip_code)
+  if (input.type === 'ride' && input.end_address && input.end_zip_code) {
+    const geo = await geocodeAddress(input.end_address, input.end_zip_code)
     if (geo) {
       end_latitude = geo.lat
       end_longitude = geo.lng
-      end_city = geo.city
-      end_state = geo.state
+    }
+  }
+  if (input.type === 'ride' && input.end_zip_code) {
+    const zipGeo = await geocodeZip(input.end_zip_code)
+    if (zipGeo) {
+      if (!end_latitude) { end_latitude = zipGeo.lat; end_longitude = zipGeo.lng }
+      end_city = zipGeo.city
+      end_state = zipGeo.state
     }
   }
 
@@ -260,9 +272,13 @@ export async function createEvent(
         let sLng: number | null = null
         let sCity: string | null = null
         let sState: string | null = null
+        if (s.address && s.zip_code) {
+          const addrGeo = await geocodeAddress(s.address, s.zip_code)
+          if (addrGeo) { sLat = addrGeo.lat; sLng = addrGeo.lng }
+        }
         if (s.zip_code) {
-          const geo = await geocodeZip(s.zip_code)
-          if (geo) { sLat = geo.lat; sLng = geo.lng; sCity = geo.city; sState = geo.state }
+          const zipGeo = await geocodeZip(s.zip_code)
+          if (zipGeo) { if (!sLat) { sLat = zipGeo.lat; sLng = zipGeo.lng }; sCity = zipGeo.city; sState = zipGeo.state }
         }
         return {
           event_id: event.id,

@@ -353,7 +353,7 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
             <div className="rounded-xl overflow-hidden border border-zinc-800">
               <iframe
                 src={`https://www.openstreetmap.org/export/embed.html?bbox=${event.longitude - 0.02},${event.latitude - 0.015},${event.longitude + 0.02},${event.latitude + 0.015}&layer=mapnik&marker=${event.latitude},${event.longitude}`}
-                className="w-full h-48 border-0"
+                className="w-full aspect-square border-0"
                 loading="lazy"
               />
             </div>

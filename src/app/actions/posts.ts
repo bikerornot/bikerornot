@@ -226,14 +226,15 @@ export async function deletePost(postId: string): Promise<void> {
 
   const { data: post } = await admin
     .from('posts')
-    .select('author_id, bike_id')
+    .select('author_id, bike_id, wall_owner_id')
     .eq('id', postId)
     .single()
 
   if (!post) throw new Error('Not authorized')
 
-  // Allow if post author OR bike wall owner
+  // Allow if post author, profile wall owner, or bike wall owner
   let authorized = post.author_id === user.id
+  if (!authorized && post.wall_owner_id === user.id) authorized = true
   if (!authorized && post.bike_id) {
     const { data: bike } = await admin
       .from('user_bikes')

@@ -198,16 +198,18 @@ export interface Comment {
 export interface Notification {
   id: string
   user_id: string
-  type: 'friend_request' | 'friend_accepted' | 'post_like' | 'post_comment' | 'comment_reply' | 'comment_like' | 'group_invite' | 'wall_post' | 'dmca_takedown' | 'mention'
+  type: 'friend_request' | 'friend_accepted' | 'post_like' | 'post_comment' | 'comment_reply' | 'comment_like' | 'group_invite' | 'wall_post' | 'dmca_takedown' | 'mention' | 'event_invite' | 'event_rsvp' | 'event_reminder' | 'event_cancelled' | 'event_update'
   actor_id: string
   post_id: string | null
   comment_id: string | null
   group_id: string | null
+  event_id: string | null
   content_url: string | null
   read_at: string | null
   created_at: string
   actor?: Profile
   group?: { id: string; name: string; slug: string } | null
+  event?: { id: string; title: string; slug: string } | null
 }
 
 export interface DmcaCounterNotice {

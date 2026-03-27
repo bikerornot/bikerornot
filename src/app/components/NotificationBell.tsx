@@ -33,6 +33,11 @@ function notificationMessage(n: Notification): string {
     case 'wall_post':       return `@${actor} posted on your wall`
     case 'mention':         return `@${actor} mentioned you in a post`
     case 'dmca_takedown':   return `Content you posted was removed following a copyright complaint`
+    case 'event_invite':    return `@${actor} invited you to ${n.event?.title ?? 'an event'}`
+    case 'event_rsvp':      return `@${actor} is going to your event ${n.event?.title ?? ''}`
+    case 'event_cancelled': return `${n.event?.title ?? 'An event'} has been cancelled`
+    case 'event_update':    return `${n.event?.title ?? 'An event'} has been updated`
+    case 'event_reminder':  return `Reminder: ${n.event?.title ?? 'An event'} starts soon`
     default:                return `Notification from @${actor}`
   }
 }
@@ -56,6 +61,12 @@ function notificationHref(n: Notification, currentUsername: string): string {
       return n.post_id ? `/posts/${n.post_id}` : '/feed'
     case 'dmca_takedown':
       return '/dmca/counter-notice'
+    case 'event_invite':
+    case 'event_rsvp':
+    case 'event_cancelled':
+    case 'event_update':
+    case 'event_reminder':
+      return n.event?.slug ? `/events/${n.event.slug}` : '/events'
     default:
       return '/feed'
   }

@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation'
 import { getImageUrl } from '@/lib/supabase/image'
 import { rsvpEvent, cancelRsvp, cancelEvent, type EventDetail, type RsvpStatus } from '@/app/actions/events'
 import VerifiedBadge from '@/app/components/VerifiedBadge'
+import InviteToEventButton from './InviteToEventButton'
+import ShareToGroupButton from './ShareToGroupButton'
 
 function formatEventDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', {
@@ -249,6 +251,14 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
           >
             {cancelBusy ? 'Cancelling...' : 'Cancel Event'}
           </button>
+        </div>
+      )}
+
+      {/* Invite + Share */}
+      {!isCancelled && (
+        <div className="flex items-center gap-4 px-4 py-3 border-b border-zinc-800">
+          <InviteToEventButton eventId={event.id} />
+          <ShareToGroupButton eventId={event.id} currentUserId={currentUserId} />
         </div>
       )}
 

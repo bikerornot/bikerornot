@@ -6,13 +6,15 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Group, GroupMember, Post, Profile } from '@/lib/supabase/types'
 import { getGroupPosts, approveRequest, denyRequest, removeMember } from '@/app/actions/groups'
+import { getGroupEvents, type EventDetail } from '@/app/actions/events'
 import { getImageUrl } from '@/lib/supabase/image'
 import PostCard from '@/app/components/PostCard'
 import PostComposer from '@/app/components/PostComposer'
+import EventCard from '@/app/components/EventCard'
 
 const PAGE_SIZE = 10
 
-type Tab = 'posts' | 'members' | 'requests'
+type Tab = 'posts' | 'events' | 'members' | 'requests'
 
 interface Props {
   group: Group
@@ -39,6 +41,8 @@ export default function GroupTabs({
   const [posts, setPosts] = useState<Post[]>(initialPosts)
   const [members, setMembers] = useState<GroupMember[]>(initialMembers)
   const [requests, setRequests] = useState<GroupMember[]>(initialRequests)
+  const [events, setEvents] = useState<EventDetail[]>([])
+  const [eventsLoaded, setEventsLoaded] = useState(false)
   const [hasMore, setHasMore] = useState(initialPosts.length === PAGE_SIZE)
   const [loadingMore, setLoadingMore] = useState(false)
   const [newPostCount, setNewPostCount] = useState(0)
@@ -109,6 +113,16 @@ export default function GroupTabs({
     return () => observer.disconnect()
   }, [loadMore])
 
+  // Lazy load events on tab switch
+  useEffect(() => {
+    if (tab === 'events' && !eventsLoaded) {
+      getGroupEvents(group.id).then((data) => {
+        setEvents(data)
+        setEventsLoaded(true)
+      }).catch(() => setEventsLoaded(true))
+    }
+  }, [tab, eventsLoaded, group.id])
+
   async function handleRemove(userId: string) {
     if (pendingActions.has(userId)) return
     setPendingActions((p) => new Set(p).add(userId))
@@ -150,6 +164,7 @@ export default function GroupTabs({
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'posts', label: 'Posts' },
+    { key: 'events', label: 'Events' },
     { key: 'members', label: `Members (${members.length})` },
     ...(showRequests ? [{ key: 'requests' as Tab, label: `Requests (${requests.length})` }] : []),
   ]
@@ -223,6 +238,39 @@ export default function GroupTabs({
             <div className="text-center py-4">
               <p className="text-zinc-500 text-sm">Loading...</p>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Events tab */}
+      {tab === 'events' && (
+        <div className="space-y-3">
+          {isMember && (
+            <div className="text-center py-2">
+              <a
+                href={`/events/new?group=${group.id}`}
+                className="inline-block bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+              >
+                Create Event or Ride
+              </a>
+            </div>
+          )}
+
+          {!eventsLoaded ? (
+            <div className="text-center py-8">
+              <p className="text-zinc-500 text-sm">Loading events...</p>
+            </div>
+          ) : events.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-zinc-500 text-sm">No events yet</p>
+              {isMember && (
+                <p className="text-zinc-600 text-xs mt-1">Create one to get things started!</p>
+              )}
+            </div>
+          ) : (
+            events.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))
           )}
         </div>
       )}

@@ -992,31 +992,36 @@ export async function shareEventToGroup(eventId: string, groupId: string): Promi
   })
 }
 
-export async function getFriendsNotInvitedToEvent(eventId: string): Promise<any[]> {
+export interface InvitableFriend {
+  id: string
+  username: string | null
+  first_name: string | null
+  last_name: string | null
+  profile_photo_url: string | null
+  phone_verified_at: string | null
+  distance_miles: number | null
+}
+
+export async function getFriendsNotInvitedToEvent(eventId: string): Promise<InvitableFriend[]> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
   const admin = getServiceClient()
 
-  // Get my friends
-  const { data: friendships } = await admin
-    .from('friendships')
-    .select('requester_id, addressee_id')
-    .eq('status', 'accepted')
-    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+  // Get event location + friends + already invited/RSVP'd in parallel
+  const [{ data: event }, { data: friendships }, { data: invited }, { data: rsvpd }] = await Promise.all([
+    admin.from('events').select('latitude, longitude').eq('id', eventId).single(),
+    admin.from('friendships').select('requester_id, addressee_id').eq('status', 'accepted').or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
+    admin.from('event_invites').select('invited_user_id').eq('event_id', eventId),
+    admin.from('event_rsvps').select('user_id').eq('event_id', eventId),
+  ])
 
   const friendIds = (friendships ?? []).map((f) =>
     f.requester_id === user.id ? f.addressee_id : f.requester_id
   )
 
   if (friendIds.length === 0) return []
-
-  // Get already invited + already RSVP'd
-  const [{ data: invited }, { data: rsvpd }] = await Promise.all([
-    admin.from('event_invites').select('invited_user_id').eq('event_id', eventId),
-    admin.from('event_rsvps').select('user_id').eq('event_id', eventId),
-  ])
 
   const excludeSet = new Set([
     ...(invited ?? []).map((i) => i.invited_user_id),
@@ -1028,12 +1033,45 @@ export async function getFriendsNotInvitedToEvent(eventId: string): Promise<any[
 
   const { data: profiles } = await admin
     .from('profiles')
-    .select('id, username, first_name, last_name, profile_photo_url, phone_verified_at')
-    .in('id', eligibleIds.slice(0, 50))
+    .select('id, username, first_name, last_name, profile_photo_url, phone_verified_at, latitude, longitude')
+    .in('id', eligibleIds.slice(0, 200))
     .eq('status', 'active')
     .is('deactivated_at', null)
 
-  return profiles ?? []
+  const eventLat = event?.latitude ? Number(event.latitude) : null
+  const eventLng = event?.longitude ? Number(event.longitude) : null
+
+  // Calculate distance and sort by closest
+  const results: InvitableFriend[] = (profiles ?? []).map((p: any) => {
+    let distance_miles: number | null = null
+    if (eventLat && eventLng && p.latitude && p.longitude) {
+      const R = 3959
+      const dLat = ((Number(p.latitude) - eventLat) * Math.PI) / 180
+      const dLon = ((Number(p.longitude) - eventLng) * Math.PI) / 180
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((eventLat * Math.PI) / 180) * Math.cos((Number(p.latitude) * Math.PI) / 180) * Math.sin(dLon / 2) ** 2
+      distance_miles = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))
+    }
+    return {
+      id: p.id,
+      username: p.username,
+      first_name: p.first_name,
+      last_name: p.last_name,
+      profile_photo_url: p.profile_photo_url,
+      phone_verified_at: p.phone_verified_at,
+      distance_miles,
+    }
+  })
+
+  results.sort((a, b) => {
+    if (a.distance_miles === null && b.distance_miles === null) return 0
+    if (a.distance_miles === null) return 1
+    if (b.distance_miles === null) return -1
+    return a.distance_miles - b.distance_miles
+  })
+
+  return results
 }
 
 // ─── Search ────────────────────────────────────────────────

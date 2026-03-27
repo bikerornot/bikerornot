@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Profile } from '@/lib/supabase/types'
-import { getFriendsNotInvitedToEvent, inviteFriendsToEvent } from '@/app/actions/events'
+import { getFriendsNotInvitedToEvent, inviteFriendsToEvent, type InvitableFriend } from '@/app/actions/events'
 import { getImageUrl } from '@/lib/supabase/image'
 
 interface Props {
@@ -12,8 +11,8 @@ interface Props {
 
 export default function InviteToEventButton({ eventId }: Props) {
   const [open, setOpen] = useState(false)
-  const [friends, setFriends] = useState<Profile[]>([])
-  const [filtered, setFiltered] = useState<Profile[]>([])
+  const [friends, setFriends] = useState<InvitableFriend[]>([])
+  const [filtered, setFiltered] = useState<InvitableFriend[]>([])
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
@@ -165,7 +164,10 @@ export default function InviteToEventButton({ eventId }: Props) {
                             </div>
                           )}
                         </div>
-                        <span className="text-sm text-white truncate">@{f.username ?? 'unknown'}</span>
+                        <span className="text-sm text-white truncate flex-1">@{f.username ?? 'unknown'}</span>
+                        {f.distance_miles != null && (
+                          <span className="text-xs text-zinc-500 flex-shrink-0">{f.distance_miles < 1 ? '< 1 mi' : `${f.distance_miles} mi`}</span>
+                        )}
                       </button>
                     )
                   })}

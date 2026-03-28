@@ -254,6 +254,7 @@ export async function joinGroup(groupId: string): Promise<void> {
     .insert({ group_id: groupId, user_id: user.id, role: 'member', status })
 
   if (error && error.code !== '23505') throw new Error(error.message)
+  if (error?.code === '23505') return // Already a member — skip duplicate join post
 
   // Create a "joined" activity post in the group feed (public groups only)
   if (status === 'active') {

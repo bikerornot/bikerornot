@@ -121,8 +121,17 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
   }
 
   const friendCount = acceptedFriendIds.size
+  const myLat = me?.latitude
+  const myLon = me?.longitude
 
-  // Build candidate query with bounding box if we have location
+  // Exclude known connections (cap at 500 to stay within URL limits)
+  const excludeArr = Array.from(excludeIds).slice(0, 500)
+  const excludeFilter = excludeArr.length > 0
+    ? `.not('id', 'in', '(${excludeArr.join(',')})')`
+    : null
+
+  // Fetch active users: anyone who posted, commented, or liked in the last 14 days
+  // This is the engagement pool — no geo restriction
   let query = admin
     .from('profiles')
     .select('id, username, first_name, last_name, profile_photo_url, city, state, latitude, longitude, riding_style')
@@ -131,49 +140,69 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
     .is('deactivated_at', null)
     .not('profile_photo_url', 'is', null)
 
-  const myLat = me?.latitude
-  const myLon = me?.longitude
-
-  if (myLat && myLon) {
-    // ~300 mile bounding box
-    const bbox = 5
-    query = query
-      .not('latitude', 'is', null)
-      .gte('latitude', myLat - bbox)
-      .lte('latitude', myLat + bbox)
-      .gte('longitude', myLon - bbox)
-      .lte('longitude', myLon + bbox)
-  } else if (me?.state) {
-    // Fall back to same state if no coordinates
-    query = query.eq('state', me.state)
-  }
-
-  // Exclude known connections (cap at 500 to stay within URL limits)
-  const excludeArr = Array.from(excludeIds).slice(0, 500)
   if (excludeArr.length > 0) {
     query = query.not('id', 'in', `(${excludeArr.join(',')})`)
   }
 
-  const { data: candidates } = await query.limit(100)
+  const { data: candidates } = await query.limit(500)
 
   if (!candidates?.length) return { riders: [], friendCount }
 
-  // Add distance if we have coordinates
-  let pool = candidates as any[]
-  if (myLat && myLon) {
-    pool = pool.map((p) => ({
-      ...p,
-      _dist: p.latitude && p.longitude ? haversine(myLat, myLon, p.latitude, p.longitude) : 9999,
-    }))
+  // Get recent activity counts for all candidates (last 14 days)
+  const candidateIds = candidates.map((c: any) => c.id)
+  const twoWeeksAgo = new Date(Date.now() - 14 * 86400000).toISOString()
+
+  const [{ data: postCounts }, { data: commentCounts }, { data: likeCounts }, { data: acceptanceData }] = await Promise.all([
+    admin.from('posts').select('author_id').in('author_id', candidateIds).is('deleted_at', null).gte('created_at', twoWeeksAgo),
+    admin.from('comments').select('author_id').in('author_id', candidateIds).is('deleted_at', null).gte('created_at', twoWeeksAgo),
+    admin.from('post_likes').select('user_id').in('user_id', candidateIds).gte('created_at', twoWeeksAgo),
+    admin.from('friendships').select('addressee_id, status').in('addressee_id', candidateIds),
+  ])
+
+  // Count actions per user
+  const actionMap: Record<string, number> = {}
+  for (const p of postCounts ?? []) actionMap[p.author_id] = (actionMap[p.author_id] ?? 0) + 1
+  for (const c of commentCounts ?? []) actionMap[c.author_id] = (actionMap[c.author_id] ?? 0) + 1
+  for (const l of likeCounts ?? []) actionMap[l.user_id] = (actionMap[l.user_id] ?? 0) + 1
+
+  // Compute acceptance rates
+  const acceptMap: Record<string, { accepted: number; total: number }> = {}
+  for (const f of acceptanceData ?? []) {
+    if (!acceptMap[f.addressee_id]) acceptMap[f.addressee_id] = { accepted: 0, total: 0 }
+    acceptMap[f.addressee_id].total++
+    if (f.status === 'accepted') acceptMap[f.addressee_id].accepted++
   }
 
-  // Take the nearest 50 as a pool, then randomly pick 20 for variety
-  if (myLat && myLon) {
-    pool.sort((a, b) => a._dist - b._dist)
-  }
+  // Score each candidate: activity * acceptance rate
+  // Filter out users with zero activity or <50% acceptance rate
+  let pool = (candidates as any[]).map((p) => {
+    const actions = actionMap[p.id] ?? 0
+    const acc = acceptMap[p.id]
+    const acceptRate = acc && acc.total >= 2 ? acc.accepted / acc.total : 0.5 // default 50% for new users
+    const dist = myLat && myLon && p.latitude && p.longitude
+      ? haversine(myLat, myLon, p.latitude, p.longitude)
+      : null
+    return {
+      ...p,
+      _actions: actions,
+      _acceptRate: acceptRate,
+      _score: actions * acceptRate,
+      _dist: dist,
+    }
+  }).filter((p) => {
+    // Must have at least 1 action in last 14 days
+    if (p._actions === 0) return false
+    // If they have enough data, must have >= 50% acceptance rate
+    const acc = acceptMap[p.id]
+    if (acc && acc.total >= 4 && p._acceptRate < 0.5) return false
+    return true
+  })
+
+  // Sort by score descending, take top 50
+  pool.sort((a, b) => b._score - a._score)
   const candidatePool = pool.slice(0, 50)
 
-  // Fisher-Yates shuffle
+  // Shuffle for variety
   for (let i = candidatePool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[candidatePool[i], candidatePool[j]] = [candidatePool[j], candidatePool[i]]

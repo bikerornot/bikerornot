@@ -1,11 +1,16 @@
--- Scored feed algorithm: friends/groups first, then engagement-ranked discovery
--- Returns post IDs with scores, like counts, and comment counts for display
+-- Track when user last viewed their feed so we can demote already-seen friend posts
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS feed_seen_at timestamptz;
 
+-- Updated feed algorithm with 3-tier scoring:
+--   Tier 1: Unseen friend/group posts (created after feed_seen_at) — top of feed
+--   Tier 2: Seen friend/group posts (created before feed_seen_at) — boosted discovery
+--   Tier 3: Discovery — pure engagement with time decay
 CREATE OR REPLACE FUNCTION get_feed_post_ids(
   p_user_id uuid,
   p_friend_ids uuid[],
   p_group_ids uuid[],
   p_blocked_ids uuid[],
+  p_seen_before timestamptz DEFAULT NULL,
   p_page_size int DEFAULT 10,
   p_offset int DEFAULT 0
 ) RETURNS TABLE (
@@ -51,11 +56,18 @@ AS $$
   SELECT
     e.id as post_id,
     CASE
-      -- Tier 1: Friend posts and group posts — scored high with recency ordering
-      WHEN e.author_id = ANY(p_friend_ids)
-           OR (e.group_id IS NOT NULL AND e.group_id = ANY(p_group_ids))
+      -- Tier 1: UNSEEN friend/group posts — top of feed, ordered by recency
+      WHEN (e.author_id = ANY(p_friend_ids) OR (e.group_id IS NOT NULL AND e.group_id = ANY(p_group_ids)))
+           AND (p_seen_before IS NULL OR e.created_at > p_seen_before)
       THEN 10000.0 - EXTRACT(EPOCH FROM now() - e.created_at) / 3600.0
-      -- Tier 2: Discovery — engagement-weighted with time decay
+
+      -- Tier 2: SEEN friend/group posts — engagement scoring with a small boost over discovery
+      WHEN e.author_id = ANY(p_friend_ids) OR (e.group_id IS NOT NULL AND e.group_id = ANY(p_group_ids))
+      THEN (COALESCE(lc.cnt, 0) + COALESCE(cc.cnt, 0) * 3 + COALESCE(sc.cnt, 0) * 5 + 1)::double precision
+           / POWER(EXTRACT(EPOCH FROM now() - e.created_at) / 3600.0 + 2.0, 1.2)
+           + 5.0
+
+      -- Tier 3: Discovery — pure engagement with time decay
       ELSE (COALESCE(lc.cnt, 0) + COALESCE(cc.cnt, 0) * 3 + COALESCE(sc.cnt, 0) * 5 + 1)::double precision
            / POWER(EXTRACT(EPOCH FROM now() - e.created_at) / 3600.0 + 2.0, 1.2)
     END as feed_score,

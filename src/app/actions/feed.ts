@@ -20,8 +20,8 @@ export async function getFeedPage(page: number): Promise<{ posts: Post[]; hasMor
 
   const admin = getServiceClient()
 
-  // Fetch friend IDs, group IDs, and blocked IDs in parallel
-  const [{ data: friendships }, { data: groupMemberships }, { data: blocks }] = await Promise.all([
+  // Fetch friend IDs, group IDs, blocked IDs, and feed_seen_at in parallel
+  const [{ data: friendships }, { data: groupMemberships }, { data: blocks }, { data: profile }] = await Promise.all([
     admin
       .from('friendships')
       .select('requester_id, addressee_id')
@@ -36,7 +36,14 @@ export async function getFeedPage(page: number): Promise<{ posts: Post[]; hasMor
       .from('blocks')
       .select('blocker_id, blocked_id')
       .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`),
+    admin
+      .from('profiles')
+      .select('feed_seen_at')
+      .eq('id', user.id)
+      .single(),
   ])
+
+  const feedSeenAt: string | null = profile?.feed_seen_at ?? null
 
   const friendIds = (friendships ?? []).map((f) =>
     f.requester_id === user.id ? f.addressee_id : f.requester_id
@@ -52,9 +59,15 @@ export async function getFeedPage(page: number): Promise<{ posts: Post[]; hasMor
     p_friend_ids: friendIds,
     p_group_ids: groupIds,
     p_blocked_ids: blockedIds,
+    p_seen_before: feedSeenAt,
     p_page_size: PAGE_SIZE + 1,
     p_offset: page * PAGE_SIZE,
   })
+
+  // Update feed_seen_at on initial load so next visit knows what was already seen
+  if (page === 0) {
+    admin.from('profiles').update({ feed_seen_at: new Date().toISOString() }).eq('id', user.id).then()
+  }
 
   if (rpcError || !scored?.length) return { posts: [], hasMore: false }
 

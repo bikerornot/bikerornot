@@ -417,7 +417,7 @@ export default function FriendsTab({ profileId, isOwnProfile, currentUserId }: P
 
       <div className="space-y-3">
         {displayFriends.map((friend) => {
-          const count = showMutualTab ? getMutualCount(friend.id) : undefined
+          const count = showMutualTab && friend.id !== currentUserId ? getMutualCount(friend.id) : undefined
           const isMutual = mutualFriendIds.has(friend.id)
           const isRequested = requestedIds.has(friend.id)
           // Show Add Friend on non-mutual friends in All view (not own profile, not self)

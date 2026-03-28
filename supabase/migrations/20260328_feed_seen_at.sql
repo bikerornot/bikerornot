@@ -1,6 +1,9 @@
 -- Track when user last viewed their feed so we can demote already-seen friend posts
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS feed_seen_at timestamptz;
 
+-- Drop the old 6-parameter signature (Postgres treats different param lists as separate functions)
+DROP FUNCTION IF EXISTS get_feed_post_ids(uuid, uuid[], uuid[], uuid[], int, int);
+
 -- Updated feed algorithm with 3-tier scoring:
 --   Tier 1: Unseen friend/group posts (created after feed_seen_at) — top of feed
 --   Tier 2: Seen friend/group posts (created before feed_seen_at) — boosted discovery

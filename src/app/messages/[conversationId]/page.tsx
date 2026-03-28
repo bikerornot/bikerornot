@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getImageUrl } from '@/lib/supabase/image'
 import Logo from '@/app/components/Logo'
+import DesktopNav from '@/app/components/DesktopNav'
 import { getMessages } from '@/app/actions/messages'
 import ChatWindow from './ChatWindow'
 import UserMenu from '@/app/components/UserMenu'
@@ -79,18 +80,7 @@ export default async function ChatPage({
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <Logo />
           <div className="flex items-center gap-2">
-            <Link href="/people" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors" title="Find Riders">
-              Find Riders
-            </Link>
-            <Link href="/groups" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors" title="Groups">
-              Groups
-            </Link>
-            <Link href="/events" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
-              Events
-            </Link>
-            <Link href="/bikes" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors" title="Find Bike Owners">
-              Bikes
-            </Link>
+            <DesktopNav />
             <MessagesLink userId={user.id} />
             <NotificationBell userId={user.id} username={currentUserProfile?.username ?? ''} />
             <UserMenu

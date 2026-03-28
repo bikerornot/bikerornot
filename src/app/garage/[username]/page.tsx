@@ -5,6 +5,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import Image from 'next/image'
 import { getImageUrl } from '@/lib/supabase/image'
 import Logo from '@/app/components/Logo'
+import DesktopNav from '@/app/components/DesktopNav'
 import GaragePage from './GaragePage'
 import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
@@ -205,21 +206,10 @@ export default async function GaragePageRoute({
 
       {/* Header */}
       <header className="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <Logo />
           <div className="flex items-center gap-4">
-            <Link href="/people" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
-              Find Riders
-            </Link>
-            <Link href="/groups" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
-              Groups
-            </Link>
-            <Link href="/events" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
-              Events
-            </Link>
-            <Link href="/bikes" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
-              Bikes
-            </Link>
+            <DesktopNav />
             {user && currentUserProfile && (
               <>
                 <MessagesLink userId={user.id} />
@@ -238,7 +228,7 @@ export default async function GaragePageRoute({
       </header>
 
       {/* Profile header + content */}
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-2xl mx-auto px-4">
         {/* Avatar + action buttons row */}
         <div className="flex items-end justify-between mb-3 pt-5">
           {/* Avatar */}

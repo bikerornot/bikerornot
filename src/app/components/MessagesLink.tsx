@@ -43,7 +43,8 @@ export default function MessagesLink({ userId }: { userId: string }) {
   return (
     <Link
       href="/messages"
-      className="relative p-1.5 text-zinc-400 hover:text-white transition-colors"
+      className="relative p-1.5 text-zinc-400 hover:text-orange-400 transition-colors"
+      title="Messages"
       aria-label="Messages"
     >
       <svg

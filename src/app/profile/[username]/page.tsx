@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getImageUrl } from '@/lib/supabase/image'
 import Logo from '@/app/components/Logo'
+import DesktopNav from '@/app/components/DesktopNav'
 import AvatarLightbox from './AvatarLightbox'
 import CoverPhotoUpload from './CoverPhotoUpload'
 import ProfileTabs from './ProfileTabs'
@@ -311,21 +312,10 @@ export default async function ProfilePage({
       <LastSeenTracker />
       {/* Header */}
       <header className="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <Logo />
           <div className="flex items-center gap-4">
-            <Link href="/people" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors" title="Find Riders">
-              Find Riders
-            </Link>
-            <Link href="/groups" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors" title="Groups">
-              Groups
-            </Link>
-            <Link href="/events" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
-              Events
-            </Link>
-            <Link href="/bikes" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors" title="Find Bike Owners">
-              Bikes
-            </Link>
+            <DesktopNav />
             {user && currentUserProfile && (
               <>
                 <MessagesLink userId={user.id} />
@@ -363,7 +353,7 @@ export default async function ProfilePage({
       ) : null}
 
       {/* Profile body */}
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-2xl mx-auto px-4">
         {/* Avatar + action buttons row */}
         <div className={`flex items-end justify-between mb-3 ${coverUrl ? '-mt-16' : 'pt-5'}`}>
           {/* Avatar */}
@@ -516,7 +506,7 @@ export default async function ProfilePage({
       </div>
 
       {/* Tabs — sm:px-4 so wall posts go edge-to-edge on mobile like the feed */}
-      <div className="max-w-4xl mx-auto sm:px-4">
+      <div className="max-w-2xl mx-auto sm:px-4">
         <ProfileTabs
           profileId={profile.id}
           isOwnProfile={isOwnProfile}

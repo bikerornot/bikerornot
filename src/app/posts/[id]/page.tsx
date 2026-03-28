@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getImageUrl } from '@/lib/supabase/image'
 import Logo from '@/app/components/Logo'
+import DesktopNav from '@/app/components/DesktopNav'
 import PostCard from '@/app/components/PostCard'
 import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
@@ -86,18 +87,7 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <Logo />
           <div className="flex items-center gap-4">
-            <Link href="/people" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors" title="Find Riders">
-              Find Riders
-            </Link>
-            <Link href="/groups" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors" title="Groups">
-              Groups
-            </Link>
-            <Link href="/events" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
-              Events
-            </Link>
-            <Link href="/bikes" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors" title="Find Bike Owners">
-              Bikes
-            </Link>
+            <DesktopNav />
             <MessagesLink userId={user.id} />
             <NotificationBell userId={user.id} username={currentUserProfile.username!} />
             <UserMenu

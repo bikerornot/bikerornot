@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getImageUrl } from '@/lib/supabase/image'
 import Logo from '@/app/components/Logo'
+import DesktopNav from '@/app/components/DesktopNav'
 import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
 import MessagesLink from '@/app/components/MessagesLink'
@@ -35,21 +35,10 @@ export default async function EventsPage() {
   return (
     <div className="min-h-screen bg-zinc-950 pb-20 sm:pb-0">
       <header className="bg-zinc-900 border-b border-zinc-800 sticky top-0 z-40">
-        <div className="max-w-2xl mx-auto px-4 py-4 sm:py-3 flex items-center justify-between">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <Logo />
           <div className="flex items-center gap-4">
-            <Link href="/people" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
-              Find Riders
-            </Link>
-            <Link href="/groups" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
-              Groups
-            </Link>
-            <Link href="/events" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
-              Events
-            </Link>
-            <Link href="/bikes" className="hidden sm:block text-sm text-zinc-400 hover:text-orange-400 transition-colors">
-              Bikes
-            </Link>
+            <DesktopNav />
             <MessagesLink userId={user.id} />
             <NotificationBell userId={user.id} username={profile.username!} />
             <UserMenu

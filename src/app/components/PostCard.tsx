@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Post, Profile } from '@/lib/supabase/types'
 import { getImageUrl } from '@/lib/supabase/image'
-import { likePost, unlikePost, deletePost, sharePost } from '@/app/actions/posts'
+import { likePost, unlikePost, deletePost, sharePost, editPost } from '@/app/actions/posts'
 import PostImages from './PostImages'
 import CommentSection from './CommentSection'
 import ContentMenu from './ContentMenu'
@@ -192,6 +192,12 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
   const [showShareModal, setShowShareModal] = useState(false)
   const [shareCaption, setShareCaption] = useState('')
   const [sharing, setSharing] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editContent, setEditContent] = useState(post.content ?? '')
+  const [editError, setEditError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [displayContent, setDisplayContent] = useState(post.content)
+  const [wasEdited, setWasEdited] = useState(!!post.edited_at)
 
   if (deleted) return null
 
@@ -217,6 +223,27 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
   async function handleDelete() {
     setDeleted(true)
     await deletePost(post.id)
+  }
+
+  const EDIT_WINDOW_MS = 15 * 60 * 1000
+  const isOwnPost = currentUserId === post.author_id
+  const postAge = Date.now() - new Date(post.created_at).getTime()
+  const canEdit = isOwnPost && !post.shared_post_id && commentCount === 0 && postAge <= EDIT_WINDOW_MS
+
+  async function handleEdit() {
+    if (saving) return
+    setSaving(true)
+    setEditError('')
+    const result = await editPost(post.id, editContent)
+    if (result.error) {
+      setEditError(result.error)
+      setSaving(false)
+    } else {
+      setDisplayContent(editContent.trim())
+      setWasEdited(true)
+      setEditing(false)
+      setSaving(false)
+    }
   }
 
   async function handleShare() {
@@ -277,6 +304,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
             )}
             <span className="text-zinc-600 text-xs">·</span>
             <span className="text-zinc-500 text-xs">{formatTimeAgo(post.created_at)}</span>
+            {wasEdited && <><span className="text-zinc-600 text-xs">·</span><span className="text-zinc-600 text-xs">Edited</span></>}
           </div>
         </div>
 
@@ -287,6 +315,17 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
               reportTargetId={post.id}
               blockUserId={post.author_id}
             />
+          )}
+          {canEdit && !editing && (
+            <button
+              onClick={() => { setEditContent(displayContent ?? ''); setEditing(true); setEditError('') }}
+              className="text-zinc-600 hover:text-orange-400 transition-colors text-xs p-1"
+              title="Edit post"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.4 7.125a.75.75 0 0 0-.188.335l-.775 2.902a.75.75 0 0 0 .919.919l2.902-.775a.75.75 0 0 0 .335-.188l4.612-4.612a1.75 1.75 0 0 0 0-2.475l-.712-.718ZM3.5 3A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8a1.5 1.5 0 0 0 1.5-1.5V9.5a.75.75 0 0 0-1.5 0v3a.25.25 0 0 1-.25.25h-7.5a.25.25 0 0 1-.25-.25v-7.5A.25.25 0 0 1 3.75 4.75H7a.75.75 0 0 0 0-1.5H3.75A.25.25 0 0 0 3.5 3Z" />
+              </svg>
+            </button>
           )}
           {(currentUserId === post.author_id || (wallOwnerId && currentUserId === wallOwnerId)) && (
             <button
@@ -300,17 +339,44 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
         </div>
       </div>
 
-      {/* Text content */}
-      {(post.content || post.shared_post_id) && (() => {
-        const garageContent = post.content ? renderGaragePost(post.content, post.author?.username) : null
-        const listingContent = !garageContent && post.content ? renderListingPost(post.content) : null
+      {/* Text content — edit mode or display mode */}
+      {editing ? (
+        <div className="px-4 pb-3 space-y-2">
+          <textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            rows={3}
+            maxLength={5000}
+            className="w-full bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:border-orange-500 transition-colors resize-none"
+            autoFocus
+          />
+          {editError && <p className="text-red-400 text-xs">{editError}</p>}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleEdit}
+              disabled={saving || !editContent.trim()}
+              className="bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors"
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              onClick={() => { setEditing(false); setEditError('') }}
+              className="text-zinc-400 hover:text-white text-sm px-3 py-1.5 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (displayContent || post.shared_post_id) && (() => {
+        const garageContent = displayContent ? renderGaragePost(displayContent, post.author?.username) : null
+        const listingContent = !garageContent && displayContent ? renderListingPost(displayContent) : null
         const specialContent = garageContent ?? listingContent
-        const ytVideo = !specialContent && post.content ? extractYouTubeId(post.content) : null
+        const ytVideo = !specialContent && displayContent ? extractYouTubeId(displayContent) : null
         return (
           <div className="px-4 pb-3 space-y-2">
-            {post.content && (
+            {displayContent && (
               <p className="text-zinc-200 text-lg leading-relaxed whitespace-pre-wrap">
-                {specialContent ?? renderContent(post.content, ytVideo?.fullUrl)}
+                {specialContent ?? renderContent(displayContent, ytVideo?.fullUrl)}
               </p>
             )}
             {ytVideo && <YouTubeEmbed videoId={ytVideo.id} />}

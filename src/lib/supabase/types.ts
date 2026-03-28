@@ -97,6 +97,7 @@ export interface Post {
   created_at: string
   updated_at: string
   deleted_at: string | null
+  edited_at?: string | null
   author?: Profile
   images?: PostImage[]
   like_count?: number

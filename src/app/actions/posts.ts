@@ -256,6 +256,53 @@ export async function deletePost(postId: string): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
+const EDIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
+
+export async function editPost(postId: string, newContent: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const content = newContent.trim()
+  if (!content) return { error: 'Post cannot be empty' }
+  if (content.length > 5000) return { error: 'Post is too long (max 5000 characters)' }
+
+  const admin = getServiceClient()
+
+  const { data: post } = await admin
+    .from('posts')
+    .select('author_id, created_at, shared_post_id')
+    .eq('id', postId)
+    .is('deleted_at', null)
+    .single()
+
+  if (!post) return { error: 'Post not found' }
+  if (post.author_id !== user.id) return { error: 'Not authorized' }
+  if (post.shared_post_id) return { error: 'Shared posts cannot be edited' }
+
+  // Check 15-minute edit window
+  const ageMs = Date.now() - new Date(post.created_at).getTime()
+  if (ageMs > EDIT_WINDOW_MS) return { error: 'Edit window has expired (15 minutes)' }
+
+  // Block editing if post has comments
+  const { count } = await admin
+    .from('comments')
+    .select('id', { count: 'exact', head: true })
+    .eq('post_id', postId)
+    .is('deleted_at', null)
+
+  if (count && count > 0) return { error: 'Cannot edit a post that has comments' }
+
+  const { error } = await admin
+    .from('posts')
+    .update({ content, edited_at: new Date().toISOString() })
+    .eq('id', postId)
+
+  if (error) return { error: error.message }
+  return {}
+}
+
+
 export async function likePost(postId: string): Promise<void> {
   const supabase = await createClient()
   const {

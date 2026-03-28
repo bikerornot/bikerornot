@@ -50,15 +50,6 @@ export default async function FeedPage() {
     await admin.from('profiles').update({ deactivated_at: null }).eq('id', user.id)
   }
 
-  // Fetch user's active group IDs for feed filtering
-  const { data: groupMemberships } = await supabase
-    .from('group_members')
-    .select('group_id')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-
-  const userGroupIds = (groupMemberships ?? []).map((m) => m.group_id)
-
   // Fetch unread DMCA takedown notifications for this user
   const { data: dmcaTakedowns } = await supabase
     .from('notifications')
@@ -136,7 +127,7 @@ export default async function FeedPage() {
             <BirthdayCard birthdays={friendBirthdays} />
           </div>
         )}
-        <FeedClient currentUserId={user.id} currentUserProfile={profile} userGroupIds={userGroupIds} blockedUserIds={Array.from(blockedIds)} />
+        <FeedClient currentUserId={user.id} currentUserProfile={profile} blockedUserIds={Array.from(blockedIds)} />
       </div>
       <BottomNav />
     </div>

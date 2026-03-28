@@ -98,7 +98,7 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-white">
-            {isCompact ? 'Riders you might know' : 'Riders near you'}
+            Riders to Connect With
           </span>
           <span className="text-xs text-zinc-500">{riders.length} suggestions</span>
         </div>

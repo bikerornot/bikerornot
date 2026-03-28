@@ -123,15 +123,13 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
   const friendCount = acceptedFriendIds.size
   const myLat = me?.latitude
   const myLon = me?.longitude
+  const myState = me?.state
+  const myStyles = new Set(me?.riding_style ?? [])
 
   // Exclude known connections (cap at 500 to stay within URL limits)
   const excludeArr = Array.from(excludeIds).slice(0, 500)
-  const excludeFilter = excludeArr.length > 0
-    ? `.not('id', 'in', '(${excludeArr.join(',')})')`
-    : null
 
-  // Fetch active users: anyone who posted, commented, or liked in the last 14 days
-  // This is the engagement pool — no geo restriction
+  // Fetch recently active profiles — ordered by last_seen_at so we get engaged users first
   let query = admin
     .from('profiles')
     .select('id, username, first_name, last_name, profile_photo_url, city, state, latitude, longitude, riding_style')
@@ -139,107 +137,115 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
     .eq('onboarding_complete', true)
     .is('deactivated_at', null)
     .not('profile_photo_url', 'is', null)
+    .order('last_seen_at', { ascending: false, nullsFirst: false })
 
   if (excludeArr.length > 0) {
     query = query.not('id', 'in', `(${excludeArr.join(',')})`)
   }
 
-  const { data: candidates } = await query.limit(500)
+  const { data: candidates } = await query.limit(200)
 
   if (!candidates?.length) return { riders: [], friendCount }
 
-  // Get recent activity counts for all candidates (last 14 days)
-  const candidateIds = candidates.map((c: any) => c.id)
+  // Batch data collection: activity, acceptance rate, and mutual friends — chunked to avoid URL limits
   const twoWeeksAgo = new Date(Date.now() - 14 * 86400000).toISOString()
-
-  const [{ data: postCounts }, { data: commentCounts }, { data: likeCounts }, { data: acceptanceData }] = await Promise.all([
-    admin.from('posts').select('author_id').in('author_id', candidateIds).is('deleted_at', null).gte('created_at', twoWeeksAgo),
-    admin.from('comments').select('author_id').in('author_id', candidateIds).is('deleted_at', null).gte('created_at', twoWeeksAgo),
-    admin.from('post_likes').select('user_id').in('user_id', candidateIds).gte('created_at', twoWeeksAgo),
-    admin.from('friendships').select('addressee_id, status').in('addressee_id', candidateIds),
-  ])
-
-  // Count actions per user
   const actionMap: Record<string, number> = {}
-  for (const p of postCounts ?? []) actionMap[p.author_id] = (actionMap[p.author_id] ?? 0) + 1
-  for (const c of commentCounts ?? []) actionMap[c.author_id] = (actionMap[c.author_id] ?? 0) + 1
-  for (const l of likeCounts ?? []) actionMap[l.user_id] = (actionMap[l.user_id] ?? 0) + 1
-
-  // Compute acceptance rates
   const acceptMap: Record<string, { accepted: number; total: number }> = {}
-  for (const f of acceptanceData ?? []) {
-    if (!acceptMap[f.addressee_id]) acceptMap[f.addressee_id] = { accepted: 0, total: 0 }
-    acceptMap[f.addressee_id].total++
-    if (f.status === 'accepted') acceptMap[f.addressee_id].accepted++
-  }
-
-  // Score each candidate: activity * acceptance rate
-  // Filter out users with zero activity or <50% acceptance rate
-  let pool = (candidates as any[]).map((p) => {
-    const actions = actionMap[p.id] ?? 0
-    const acc = acceptMap[p.id]
-    const acceptRate = acc && acc.total >= 2 ? acc.accepted / acc.total : 0.5 // default 50% for new users
-    const dist = myLat && myLon && p.latitude && p.longitude
-      ? haversine(myLat, myLon, p.latitude, p.longitude)
-      : null
-    return {
-      ...p,
-      _actions: actions,
-      _acceptRate: acceptRate,
-      _score: actions * acceptRate,
-      _dist: dist,
-    }
-  }).filter((p) => {
-    // Must have at least 1 action in last 14 days
-    if (p._actions === 0) return false
-    // If they have enough data, must have >= 50% acceptance rate
-    const acc = acceptMap[p.id]
-    if (acc && acc.total >= 4 && p._acceptRate < 0.5) return false
-    return true
-  })
-
-  // Sort by score descending, take top 50
-  pool.sort((a, b) => b._score - a._score)
-  const candidatePool = pool.slice(0, 50)
-
-  // Shuffle for variety
-  for (let i = candidatePool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[candidatePool[i], candidatePool[j]] = [candidatePool[j], candidatePool[i]]
-  }
-
-  const topCandidates = candidatePool.slice(0, 20)
-
-  // Compute mutual friend counts for top candidates
   const mutualCount: Record<string, number> = {}
-  if (acceptedFriendIds.size > 0 && topCandidates.length > 0) {
-    const candidateIds = new Set(topCandidates.map((c: any) => c.id as string))
-    const viewerFriendArr = Array.from(acceptedFriendIds).slice(0, 200)
-    const candidateArr = Array.from(candidateIds)
 
-    // Two queries for both directions of mutual friendships (runs in parallel)
-    const [{ data: dir1 }, { data: dir2 }] = await Promise.all([
-      admin
-        .from('friendships')
-        .select('requester_id, addressee_id')
-        .eq('status', 'accepted')
-        .in('requester_id', viewerFriendArr)
-        .in('addressee_id', candidateArr),
-      admin
-        .from('friendships')
-        .select('requester_id, addressee_id')
-        .eq('status', 'accepted')
-        .in('requester_id', candidateArr)
-        .in('addressee_id', viewerFriendArr),
+  const CHUNK = 50
+  const candidateIds = candidates.map((c: any) => c.id)
+  const viewerFriendArr = Array.from(acceptedFriendIds).slice(0, 200)
+
+  for (let i = 0; i < candidateIds.length; i += CHUNK) {
+    const chunk = candidateIds.slice(i, i + CHUNK)
+
+    // Activity + acceptance rate + mutual friend queries — all in parallel
+    const hasFriends = viewerFriendArr.length > 0
+    const [
+      { data: posts }, { data: comments }, { data: likes },
+      { data: receivedFriends }, { data: sentFriends },
+      { data: mutualDir1 }, { data: mutualDir2 },
+    ] = await Promise.all([
+      admin.from('posts').select('author_id').in('author_id', chunk).is('deleted_at', null).gte('created_at', twoWeeksAgo),
+      admin.from('comments').select('author_id').in('author_id', chunk).is('deleted_at', null).gte('created_at', twoWeeksAgo),
+      admin.from('post_likes').select('user_id').in('user_id', chunk).gte('created_at', twoWeeksAgo),
+      admin.from('friendships').select('addressee_id, status').in('addressee_id', chunk),
+      admin.from('friendships').select('requester_id, status').in('requester_id', chunk).eq('status', 'accepted'),
+      hasFriends
+        ? admin.from('friendships').select('requester_id, addressee_id').eq('status', 'accepted').in('requester_id', viewerFriendArr).in('addressee_id', chunk)
+        : Promise.resolve({ data: [] }),
+      hasFriends
+        ? admin.from('friendships').select('requester_id, addressee_id').eq('status', 'accepted').in('requester_id', chunk).in('addressee_id', viewerFriendArr)
+        : Promise.resolve({ data: [] }),
     ])
 
-    for (const f of dir1 ?? []) {
+    for (const p of posts ?? []) actionMap[p.author_id] = (actionMap[p.author_id] ?? 0) + 1
+    for (const c of comments ?? []) actionMap[c.author_id] = (actionMap[c.author_id] ?? 0) + 1
+    for (const l of likes ?? []) actionMap[l.user_id] = (actionMap[l.user_id] ?? 0) + 1
+
+    for (const f of receivedFriends ?? []) {
+      if (!acceptMap[f.addressee_id]) acceptMap[f.addressee_id] = { accepted: 0, total: 0 }
+      acceptMap[f.addressee_id].total++
+      if (f.status === 'accepted') acceptMap[f.addressee_id].accepted++
+    }
+    for (const f of sentFriends ?? []) {
+      if (!acceptMap[f.requester_id]) acceptMap[f.requester_id] = { accepted: 0, total: 0 }
+      acceptMap[f.requester_id].accepted++
+      acceptMap[f.requester_id].total++
+    }
+
+    for (const f of mutualDir1 ?? []) {
       mutualCount[f.addressee_id] = (mutualCount[f.addressee_id] ?? 0) + 1
     }
-    for (const f of dir2 ?? []) {
+    for (const f of mutualDir2 ?? []) {
       mutualCount[f.requester_id] = (mutualCount[f.requester_id] ?? 0) + 1
     }
   }
+
+  // Score each candidate for maximum friend-request acceptance probability
+  const pool = (candidates as any[]).map((p) => {
+    const actions = actionMap[p.id] ?? 0
+    const acc = acceptMap[p.id]
+    const totalFriends = acc?.accepted ?? 0
+    const mutuals = mutualCount[p.id] ?? 0
+    const dist = myLat && myLon && p.latitude && p.longitude
+      ? haversine(myLat, myLon, p.latitude, p.longitude)
+      : null
+
+    // Acceptance rate with Bayesian smoothing (default 50% when < 3 data points)
+    const acceptanceRate = acc && acc.total >= 3
+      ? acc.accepted / acc.total
+      : 0.5
+
+    // Riding style overlap count
+    const theirStyles: string[] = p.riding_style ?? []
+    const styleOverlap = theirStyles.filter((s: string) => myStyles.has(s)).length
+
+    // Same state bonus
+    const sameState = myState && p.state && myState === p.state
+
+    // Proximity bonus: 20 pts at 0 miles, tapering to 0 at 1000 miles
+    const proximityBonus = dist != null ? Math.max(0, 20 - dist / 50) : 0
+
+    const score =
+      mutuals * 15 +             // Mutual friends — strongest acceptance signal
+      (sameState ? 10 : 0) +     // Same state — geographic relevance
+      styleOverlap * 8 +         // Riding style overlap — shared interests
+      Math.min(actions, 50) +    // Recent activity — proves they're engaged
+      acceptanceRate * 20 +      // Acceptance rate — likely to accept
+      proximityBonus +           // Proximity — closer riders are more relevant
+      totalFriends * 0.5         // Light friend count bonus — socially connected
+
+    return { ...p, _score: score, _dist: dist, _mutuals: mutuals }
+  }).filter((p) => {
+    // Must have at least 1 action in last 14 days (proves they're alive)
+    return (actionMap[p.id] ?? 0) > 0
+  })
+
+  // Sort by score descending — no shuffle, let the algorithm decide
+  pool.sort((a, b) => b._score - a._score)
+  const topCandidates = pool.slice(0, 20)
 
   const riders: RiderSuggestion[] = topCandidates.map((p: any) => ({
     id: p.id,
@@ -251,7 +257,7 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
     state: p.state,
     distance_miles: p._dist != null && p._dist < 9999 ? Math.round(p._dist) : null,
     riding_style: p.riding_style ?? [],
-    mutual_friend_count: mutualCount[p.id] ?? 0,
+    mutual_friend_count: p._mutuals,
   }))
 
   return { riders, friendCount }

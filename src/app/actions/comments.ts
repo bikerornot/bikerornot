@@ -35,6 +35,7 @@ export async function createComment(postId: string, content: string, parentComme
     .single()
 
   if (!post || post.deleted_at) throw new Error('Post not found')
+  if (!content.trim()) throw new Error('Comment cannot be empty')
   if (content.trim().length > 1000) throw new Error('Comment too long (max 1000 characters)')
 
   // If post is in a private group, require active membership

@@ -259,6 +259,15 @@ export async function markConversationRead(conversationId: string): Promise<void
   if (!user) return
 
   const admin = getServiceClient()
+
+  // Verify user is a participant
+  const { data: convo } = await admin
+    .from('conversations')
+    .select('participant1_id, participant2_id')
+    .eq('id', conversationId)
+    .single()
+  if (!convo || (convo.participant1_id !== user.id && convo.participant2_id !== user.id)) return
+
   await admin
     .from('messages')
     .update({ read_at: new Date().toISOString() })

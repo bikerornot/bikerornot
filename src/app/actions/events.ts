@@ -2,10 +2,43 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { validateImageFile } from '@/lib/rate-limit'
+import { validateImageFile, checkRateLimit } from '@/lib/rate-limit'
 import { moderateImage } from '@/lib/sightengine'
 import { notifyIfActive } from '@/lib/notify'
 import { geocodeZip, geocodeAddress } from '@/lib/geocode'
+
+async function refreshEventCounts(admin: ReturnType<typeof getServiceClient>, eventId: string) {
+  const [{ count: goingCount }, { count: interestedCount }] = await Promise.all([
+    admin.from('event_rsvps').select('*', { count: 'exact', head: true }).eq('event_id', eventId).eq('status', 'going'),
+    admin.from('event_rsvps').select('*', { count: 'exact', head: true }).eq('event_id', eventId).eq('status', 'interested'),
+  ])
+  await admin.from('events').update({
+    going_count: goingCount ?? 0,
+    interested_count: interestedCount ?? 0,
+  }).eq('id', eventId)
+}
+
+async function requireAuth() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  return user
+}
+
+async function checkPrivateGroupAccess(admin: ReturnType<typeof getServiceClient>, groupId: string | null, userId: string) {
+  if (!groupId) return
+  const { data: group } = await admin.from('groups').select('privacy').eq('id', groupId).single()
+  if (group?.privacy === 'private') {
+    const { data: membership } = await admin
+      .from('group_members')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .single()
+    if (!membership) throw new Error('Not authorized')
+  }
+}
 
 function getServiceClient() {
   return createServiceClient(
@@ -125,9 +158,10 @@ export async function createEvent(
   coverFile?: File | null,
   flyerFile?: File | null
 ): Promise<EventDetail> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const user = await requireAuth()
+
+  // Rate limit: 5 events per hour
+  checkRateLimit(`create-event:${user.id}`, 5, 3600000)
 
   if (!input.title.trim()) throw new Error('Title is required')
   if (input.title.trim().length > 150) throw new Error('Title too long (max 150 characters)')
@@ -425,6 +459,15 @@ export async function getEvent(slug: string): Promise<EventDetail | null> {
 
   if (!event) return null
 
+  // Check private group access
+  if (user) {
+    await checkPrivateGroupAccess(admin, event.group_id, user.id)
+  } else if (event.group_id) {
+    // Unauthenticated users can't see group events at all
+    const { data: group } = await admin.from('groups').select('privacy').eq('id', event.group_id).single()
+    if (group?.privacy === 'private') return null
+  }
+
   // Get group info if group event
   let group: { id: string; name: string; slug: string } | null = null
   if (event.group_id) {
@@ -512,7 +555,10 @@ export async function getEvents(): Promise<{
 }
 
 export async function getGroupEvents(groupId: string): Promise<EventDetail[]> {
+  const user = await requireAuth()
   const admin = getServiceClient()
+
+  await checkPrivateGroupAccess(admin, groupId, user.id)
 
   const { data } = await admin
     .from('events')
@@ -582,6 +628,11 @@ export async function updateEvent(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
+
+  // Input validation
+  if (input.title !== undefined && !input.title.trim()) throw new Error('Title is required')
+  if (input.title !== undefined && input.title.trim().length > 150) throw new Error('Title too long (max 150 characters)')
+  if (input.description !== undefined && input.description && input.description.length > 5000) throw new Error('Description too long (max 5000 characters)')
 
   const admin = getServiceClient()
 
@@ -774,19 +825,23 @@ export async function cancelEvent(eventId: string, reason?: string): Promise<voi
 // ─── RSVP ──────────────────────────────────────────────────
 
 export async function rsvpEvent(eventId: string, status: RsvpStatus): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const user = await requireAuth()
+
+  // Rate limit: 20 RSVP actions per minute
+  checkRateLimit(`rsvp:${user.id}`, 20, 60000)
 
   const admin = getServiceClient()
 
   // Check event exists and is published
   const { data: event } = await admin
     .from('events')
-    .select('id, status, max_attendees, going_count, creator_id')
+    .select('id, status, max_attendees, going_count, creator_id, group_id')
     .eq('id', eventId)
     .single()
   if (!event || event.status !== 'published') return { error: 'Event not available' }
+
+  // Check private group membership
+  await checkPrivateGroupAccess(admin, event.group_id, user.id)
 
   // If trying to go and at capacity, force to interested
   let finalStatus = status
@@ -807,21 +862,12 @@ export async function rsvpEvent(eventId: string, status: RsvpStatus): Promise<{ 
 
   if (existing) {
     if (existing.status === finalStatus) return {} // No change
-    const oldStatus = existing.status
     await admin.from('event_rsvps').update({
       status: finalStatus,
       updated_at: new Date().toISOString(),
     }).eq('id', existing.id)
 
-    // Update counts
-    const countUpdates: Record<string, any> = {}
-    if (oldStatus === 'going') countUpdates.going_count = Math.max(0, event.going_count - 1)
-    if (oldStatus === 'interested') countUpdates.interested_count = (event as any).interested_count ? Math.max(0, (event as any).interested_count - 1) : 0
-    if (finalStatus === 'going') countUpdates.going_count = (countUpdates.going_count ?? event.going_count) + 1
-    if (finalStatus === 'interested') countUpdates.interested_count = ((event as any).interested_count ?? 0) + 1
-    if (Object.keys(countUpdates).length) {
-      await admin.from('events').update(countUpdates).eq('id', eventId)
-    }
+    await refreshEventCounts(admin, eventId)
   } else {
     await admin.from('event_rsvps').insert({
       event_id: eventId,
@@ -829,12 +875,7 @@ export async function rsvpEvent(eventId: string, status: RsvpStatus): Promise<{ 
       status: finalStatus,
     })
 
-    // Increment count
-    if (finalStatus === 'going') {
-      await admin.from('events').update({ going_count: event.going_count + 1 }).eq('id', eventId)
-    } else {
-      await admin.from('events').update({ interested_count: ((event as any).interested_count ?? 0) + 1 }).eq('id', eventId)
-    }
+    await refreshEventCounts(admin, eventId)
 
     // Notify event creator
     if (finalStatus === 'going' && user.id !== event.creator_id) {
@@ -867,19 +908,14 @@ export async function cancelRsvp(eventId: string): Promise<void> {
   if (!rsvp) return
 
   await admin.from('event_rsvps').delete().eq('id', rsvp.id)
-
-  // Decrement count
-  const field = rsvp.status === 'going' ? 'going_count' : 'interested_count'
-  const { data: event } = await admin.from('events').select(field).eq('id', eventId).single()
-  if (event) {
-    await admin.from('events').update({ [field]: Math.max(0, (event as any)[field] - 1) }).eq('id', eventId)
-  }
+  await refreshEventCounts(admin, eventId)
 }
 
 export async function getEventAttendees(
   eventId: string,
   status?: RsvpStatus
 ): Promise<any[]> {
+  await requireAuth()
   const admin = getServiceClient()
 
   let query = admin
@@ -920,6 +956,18 @@ export async function inviteFriendsToEvent(
     .gte('created_at', dayAgo)
   if ((sentToday ?? 0) + userIds.length > 50) throw new Error('Daily invite limit reached (50/day)')
 
+  // Verify caller is actually friends with all invited users
+  const { data: friendships } = await admin
+    .from('friendships')
+    .select('requester_id, addressee_id')
+    .eq('status', 'accepted')
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+  const friendIds = new Set((friendships ?? []).map((f) =>
+    f.requester_id === user.id ? f.addressee_id : f.requester_id
+  ))
+  const verifiedIds = userIds.filter((id) => friendIds.has(id))
+  if (verifiedIds.length === 0) return { sent: 0, skipped: userIds.length }
+
   // Get existing invites + RSVPs to skip
   const [{ data: existingInvites }, { data: existingRsvps }] = await Promise.all([
     admin.from('event_invites').select('invited_user_id').eq('event_id', eventId),
@@ -931,7 +979,7 @@ export async function inviteFriendsToEvent(
     ...(existingRsvps ?? []).map((r) => r.user_id),
   ])
 
-  const toInvite = userIds.filter((id) => !skipSet.has(id))
+  const toInvite = verifiedIds.filter((id) => !skipSet.has(id))
 
   if (toInvite.length === 0) return { sent: 0, skipped: userIds.length }
 
@@ -977,9 +1025,10 @@ export async function respondToEventInvite(eventId: string, accept: boolean): Pr
 }
 
 export async function shareEventToGroup(eventId: string, groupId: string): Promise<void> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const user = await requireAuth()
+
+  // Rate limit: 10 shares per hour
+  checkRateLimit(`share-event:${user.id}`, 10, 3600000)
 
   const admin = getServiceClient()
 
@@ -1103,11 +1152,20 @@ export interface EventSearchFilters {
 }
 
 export async function searchEvents(filters: EventSearchFilters): Promise<EventDetail[]> {
+  const user = await requireAuth()
   const admin = getServiceClient()
+
+  // Get user's group IDs for private group filtering
+  const { data: memberships } = await admin
+    .from('group_members')
+    .select('group_id')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+  const myGroupIds = new Set((memberships ?? []).map((m) => m.group_id))
 
   let query = admin
     .from('events')
-    .select('*, creator:profiles!creator_id(id, username, first_name, last_name, profile_photo_url)')
+    .select('*, creator:profiles!creator_id(id, username, first_name, last_name, profile_photo_url), group:groups!group_id(id, privacy)')
     .eq('status', 'published')
 
   if (filters.type) query = query.eq('type', filters.type)
@@ -1130,8 +1188,12 @@ export async function searchEvents(filters: EventSearchFilters): Promise<EventDe
 
   const { data } = await query.limit(100)
 
-  // Text search client-side (Supabase doesn't support full-text on multiple columns easily)
-  let results = (data ?? []) as EventDetail[]
+  // Filter out private group events the user is not a member of
+  let results = ((data ?? []) as any[]).filter((e) => {
+    if (!e.group_id) return true
+    if (e.group?.privacy !== 'private') return true
+    return myGroupIds.has(e.group_id)
+  }) as EventDetail[]
   if (filters.search_term) {
     const term = filters.search_term.toLowerCase()
     results = results.filter((e) =>

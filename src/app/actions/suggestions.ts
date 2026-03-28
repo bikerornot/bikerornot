@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { haversine } from '@/lib/geo'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 function getServiceClient() {
   return createServiceClient(
@@ -231,6 +232,8 @@ export async function dismissSuggestion(dismissedUserId: string): Promise<void> 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
+
+  checkRateLimit(`dismiss:${user.id}`, 50, 60000)
 
   const admin = getServiceClient()
   await admin.from('dismissed_suggestions').upsert({

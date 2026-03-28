@@ -190,6 +190,8 @@ export async function sharePost(postId: string, caption?: string): Promise<strin
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
+  checkRateLimit(`share-post:${user.id}`, 10, 60000)
+
   const admin = getServiceClient()
 
   // Verify the original post exists and isn't deleted

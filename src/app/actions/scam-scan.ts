@@ -162,7 +162,17 @@ export interface ContentFlag {
   } | null
 }
 
+async function requireAdminOrMod() {
+  const { createClient } = await import('@/lib/supabase/server')
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!profile || !['admin', 'moderator', 'super_admin'].includes(profile.role)) throw new Error('Not authorized')
+}
+
 export async function getFlaggedContent(): Promise<ContentFlag[]> {
+  await requireAdminOrMod()
   const admin = getAdmin()
   const { data } = await admin
     .from('content_flags')
@@ -203,6 +213,7 @@ export async function getFlaggedContent(): Promise<ContentFlag[]> {
 }
 
 export async function dismissFlag(flagId: string): Promise<void> {
+  await requireAdminOrMod()
   const admin = getAdmin()
   await admin
     .from('content_flags')
@@ -211,6 +222,7 @@ export async function dismissFlag(flagId: string): Promise<void> {
 }
 
 export async function reviewFlag(flagId: string): Promise<void> {
+  await requireAdminOrMod()
   const admin = getAdmin()
   await admin
     .from('content_flags')
@@ -219,6 +231,7 @@ export async function reviewFlag(flagId: string): Promise<void> {
 }
 
 export async function getPendingFlagsCount(): Promise<number> {
+  await requireAdminOrMod()
   const admin = getAdmin()
   const { count } = await admin
     .from('content_flags')

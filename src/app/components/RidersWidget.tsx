@@ -209,11 +209,6 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
                   {location && (
                     <p className="text-zinc-500 text-xs truncate leading-tight mt-0.5">{location}</p>
                   )}
-                  {rider.distance_miles != null && (
-                    <p className="text-zinc-600 text-xs leading-tight">
-                      {rider.distance_miles < 1 ? '< 1 mi' : `${rider.distance_miles} mi`}
-                    </p>
-                  )}
                   {topStyle && (
                     <p className="text-orange-400/80 text-xs leading-tight truncate mt-0.5">{topStyle}</p>
                   )}

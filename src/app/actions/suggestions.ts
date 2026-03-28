@@ -243,9 +243,13 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
     return (actionMap[p.id] ?? 0) > 0
   })
 
-  // Sort by score descending — no shuffle, let the algorithm decide
+  // Sort by score, take top 20, then shuffle so the widget feels fresh each load
   pool.sort((a, b) => b._score - a._score)
   const topCandidates = pool.slice(0, 20)
+  for (let i = topCandidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[topCandidates[i], topCandidates[j]] = [topCandidates[j], topCandidates[i]]
+  }
 
   const riders: RiderSuggestion[] = topCandidates.map((p: any) => ({
     id: p.id,

@@ -41,6 +41,31 @@ function renderGaragePost(text: string, authorUsername?: string | null) {
   )
 }
 
+const GROUP_JOIN_REGEX = /^Joined the group (.+)!(?:\n([\s\S]+))?$/
+
+function renderGroupJoinPost(text: string, groupSlug?: string | null) {
+  const match = text.match(GROUP_JOIN_REGEX)
+  if (!match) return null
+  const groupName = match[1]
+  const description = match[2]?.trim()
+  const href = groupSlug ? `/groups/${groupSlug}` : null
+  return (
+    <div>
+      <span>
+        Joined{' '}
+        {href ? (
+          <Link href={href} className="text-orange-400 hover:text-orange-300 font-semibold">{groupName}</Link>
+        ) : (
+          <span className="font-semibold text-white">{groupName}</span>
+        )}
+      </span>
+      {description && (
+        <p className="text-zinc-500 text-sm mt-1 leading-snug">{description}</p>
+      )}
+    </div>
+  )
+}
+
 const LISTING_REGEX = /^Listed my (.+) for sale(.*)\n\nhttps:\/\/bikerornot\.com\/classifieds\/(.+)$/
 
 function renderListingPost(text: string) {
@@ -369,8 +394,9 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
         </div>
       ) : (displayContent || post.shared_post_id) && (() => {
         const garageContent = displayContent ? renderGaragePost(displayContent, post.author?.username) : null
-        const listingContent = !garageContent && displayContent ? renderListingPost(displayContent) : null
-        const specialContent = garageContent ?? listingContent
+        const groupJoinContent = !garageContent && displayContent ? renderGroupJoinPost(displayContent, post.group?.slug) : null
+        const listingContent = !garageContent && !groupJoinContent && displayContent ? renderListingPost(displayContent) : null
+        const specialContent = garageContent ?? groupJoinContent ?? listingContent
         const ytVideo = !specialContent && displayContent ? extractYouTubeId(displayContent) : null
         return (
           <div className="px-4 pb-3 space-y-2">

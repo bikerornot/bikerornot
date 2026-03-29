@@ -241,7 +241,7 @@ export async function joinGroup(groupId: string): Promise<void> {
 
   const { data: group } = await admin
     .from('groups')
-    .select('privacy')
+    .select('privacy, name, description')
     .eq('id', groupId)
     .single()
 
@@ -258,10 +258,11 @@ export async function joinGroup(groupId: string): Promise<void> {
 
   // Create a "joined" activity post in the group feed (public groups only)
   if (status === 'active') {
+    const desc = group.description ? `\n${group.description.slice(0, 150)}` : ''
     await admin.from('posts').insert({
       author_id: user.id,
       group_id: groupId,
-      content: 'Joined the group! 👋',
+      content: `Joined the group ${group.name}!${desc}`,
     })
   }
 }
@@ -372,19 +373,19 @@ export async function approveRequest(groupId: string, userId: string): Promise<v
 
   if (membership?.role !== 'admin') throw new Error('Not authorized')
 
-  const { error } = await admin
-    .from('group_members')
-    .update({ status: 'active' })
-    .eq('group_id', groupId)
-    .eq('user_id', userId)
+  const [{ error }, { data: group }] = await Promise.all([
+    admin.from('group_members').update({ status: 'active' }).eq('group_id', groupId).eq('user_id', userId),
+    admin.from('groups').select('name, description').eq('id', groupId).single(),
+  ])
 
   if (error) throw new Error(error.message)
 
   // Create a "joined" activity post in the group feed
+  const desc = group?.description ? `\n${group.description.slice(0, 150)}` : ''
   await admin.from('posts').insert({
     author_id: userId,
     group_id: groupId,
-    content: 'Joined the group! 👋',
+    content: `Joined the group ${group?.name ?? ''}!${desc}`,
   })
 }
 
@@ -867,7 +868,7 @@ export async function respondToGroupInvite(
     // Add as member — check group privacy for status
     const { data: group } = await admin
       .from('groups')
-      .select('privacy')
+      .select('privacy, name, description')
       .eq('id', groupId)
       .single()
 
@@ -882,10 +883,11 @@ export async function respondToGroupInvite(
 
     // Create a "joined" activity post in the group feed
     if (memberStatus === 'active') {
+      const desc = group?.description ? `\n${group.description.slice(0, 150)}` : ''
       await admin.from('posts').insert({
         author_id: user.id,
         group_id: groupId,
-        content: 'Joined the group! 👋',
+        content: `Joined the group ${group?.name ?? ''}!${desc}`,
       })
     }
   }

@@ -71,6 +71,7 @@ export default function InviteToEventButton({ eventId }: Props) {
       setFriends((prev) => prev.filter((f) => !selected.has(f.id)))
       setSelected(new Set())
     } catch (err: unknown) {
+      console.error('Event invite error:', err)
       setFeedback({ sent: 0, skipped: 0 })
     } finally {
       setSending(false)

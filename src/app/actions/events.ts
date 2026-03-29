@@ -554,6 +554,40 @@ export async function getEvents(): Promise<{
   }
 }
 
+export async function getRecentEvents(): Promise<EventDetail[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const admin = getServiceClient()
+
+  const { data: events } = await admin
+    .from('events')
+    .select('*, creator:profiles!creator_id(id, username, first_name, last_name, profile_photo_url, phone_verified_at)')
+    .in('status', ['published', 'completed'])
+    .order('created_at', { ascending: false })
+    .limit(10)
+
+  let myRsvps: Record<string, RsvpStatus> = {}
+  if (user) {
+    const eventIds = (events ?? []).map((e) => e.id)
+    if (eventIds.length > 0) {
+      const { data: rsvps } = await admin
+        .from('event_rsvps')
+        .select('event_id, status')
+        .eq('user_id', user.id)
+        .in('event_id', eventIds)
+      for (const r of rsvps ?? []) {
+        myRsvps[r.event_id] = r.status as RsvpStatus
+      }
+    }
+  }
+
+  return (events ?? []).map((e) => ({
+    ...e,
+    my_rsvp: myRsvps[e.id] ?? null,
+  })) as EventDetail[]
+}
+
 export async function getGroupEvents(groupId: string): Promise<EventDetail[]> {
   const user = await requireAuth()
   const admin = getServiceClient()

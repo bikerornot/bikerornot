@@ -29,13 +29,14 @@ const DISTANCE_OPTIONS = [
 
 interface Props {
   initialEvents: EventDetail[]
+  recentEvents: EventDetail[]
   userLat: number | null
   userLng: number | null
   userZip: string
   currentUserId: string
 }
 
-export default function EventsClient({ initialEvents, userLat, userLng, userZip, currentUserId }: Props) {
+export default function EventsClient({ initialEvents, recentEvents, userLat, userLng, userZip, currentUserId }: Props) {
   const [tab, setTab] = useState<TabType>('all')
   const [sort, setSort] = useState<SortType>('soonest')
   const [dateFilter, setDateFilter] = useState<DateFilter>('')
@@ -262,7 +263,7 @@ export default function EventsClient({ initialEvents, userLat, userLng, userZip,
       {/* Event list */}
       {filtered.length === 0 ? (
         <div className="text-center py-12 px-4">
-          <p className="text-zinc-500 text-sm">No events found</p>
+          <p className="text-zinc-500 text-sm">No upcoming events match your filters</p>
           <p className="text-zinc-600 text-sm mt-1">Try adjusting your filters or create one!</p>
         </div>
       ) : (
@@ -270,6 +271,20 @@ export default function EventsClient({ initialEvents, userLat, userLng, userZip,
           {filtered.map((event) => (
             <EventCard key={event.id} event={event} />
           ))}
+        </div>
+      )}
+
+      {/* Recent events — always shown to fill the page */}
+      {recentEvents.length > 0 && (
+        <div className="space-y-3 mt-6 px-4 sm:px-0">
+          <h2 className="text-base font-semibold text-white">Recent Events</h2>
+          <div className="space-y-2 sm:space-y-3">
+            {recentEvents
+              .filter((e) => !filtered.some((f) => f.id === e.id))
+              .map((event) => (
+                <EventCard key={event.id} event={event} />
+              ))}
+          </div>
         </div>
       )}
     </div>

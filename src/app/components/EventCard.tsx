@@ -1,8 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
-import { getImageUrl } from '@/lib/supabase/image'
 
 interface Props {
   event: {
@@ -43,7 +41,6 @@ function formatCardDate(dateStr: string): string {
 }
 
 export default function EventCard({ event }: Props) {
-  const coverUrl = event.cover_photo_url ? getImageUrl('covers', event.cover_photo_url) : null
   const location = [event.venue_name, [event.city, event.state].filter(Boolean).join(', ')].filter(Boolean).join(' — ')
   const isCancelled = event.status === 'cancelled'
 
@@ -52,20 +49,6 @@ export default function EventCard({ event }: Props) {
       href={`/events/${event.slug}`}
       className="block bg-zinc-900 sm:border sm:border-zinc-800 sm:rounded-xl overflow-hidden hover:bg-zinc-800/50 transition-colors"
     >
-      {/* Cover image or gradient */}
-      {coverUrl ? (
-        <div className="relative w-full aspect-[3/1] bg-zinc-800">
-          <Image src={coverUrl} alt="" fill className="object-cover" sizes="(max-width: 640px) 100vw, 640px" />
-          {isCancelled && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <span className="text-red-400 font-bold text-sm bg-black/60 px-3 py-1 rounded-full">Cancelled</span>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className={`w-full h-16 ${isCancelled ? 'bg-red-500/10' : 'bg-gradient-to-r from-orange-500/10 to-zinc-900'}`} />
-      )}
-
       <div className="px-4 py-3">
         {/* Date + type badge */}
         <div className="flex items-center gap-2 mb-1">

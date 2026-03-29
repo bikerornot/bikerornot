@@ -136,9 +136,13 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
     setStops(stops.map((s, i) => i === idx ? { ...s, [field]: value } : s))
   }
 
+  const submittingRef = useRef(false)
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!title.trim() || !startsAt) return
+    if (!title.trim() || !startsAt || !address.trim() || !zipCode.trim()) return
+    if (submittingRef.current) return
+    submittingRef.current = true
 
     setSubmitting(true)
     setError(null)
@@ -368,7 +372,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Address</label>
+            <label className="block text-sm font-medium text-zinc-300 mb-1">Address <span className="text-orange-400">*</span></label>
             <input
               type="text"
               value={address}
@@ -378,7 +382,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Zip Code</label>
+            <label className="block text-sm font-medium text-zinc-300 mb-1">Zip Code <span className="text-orange-400">*</span></label>
             <input
               type="text"
               value={zipCode}
@@ -523,7 +527,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
       {/* Submit */}
       <button
         type="submit"
-        disabled={submitting || !title.trim() || !startsAt}
+        disabled={submitting || !title.trim() || !startsAt || !address.trim() || !zipCode.trim()}
         className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white font-semibold py-3 rounded-xl transition-colors text-base"
       >
         {submitting ? 'Creating...' : type === 'ride' ? 'Create Ride' : 'Create Event'}

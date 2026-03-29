@@ -401,9 +401,15 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
         return (
           <div className="px-4 pb-3 space-y-2">
             {displayContent && (
-              <p className="text-zinc-200 text-lg leading-relaxed whitespace-pre-wrap">
-                {specialContent ?? renderContent(displayContent, ytVideo?.fullUrl)}
-              </p>
+              specialContent ? (
+                <div className="text-zinc-200 text-lg leading-relaxed whitespace-pre-wrap">
+                  {specialContent}
+                </div>
+              ) : (
+                <p className="text-zinc-200 text-lg leading-relaxed whitespace-pre-wrap">
+                  {renderContent(displayContent, ytVideo?.fullUrl)}
+                </p>
+              )
             )}
             {ytVideo && <YouTubeEmbed videoId={ytVideo.id} />}
             {post.shared_post_id && (

@@ -96,12 +96,9 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
     <div className={`bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden ${isCompact ? 'mb-4' : 'mb-5'}`}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-white">
-            Riders to Connect With
-          </span>
-          <span className="text-sm text-zinc-500">{riders.length} suggestions</span>
-        </div>
+        <span className="text-sm font-semibold text-white">
+          Riders to Connect With
+        </span>
         <div className="flex items-center gap-3">
           <Link href="/people" className="text-sm text-orange-400 hover:text-orange-300 transition-colors font-medium">
             See all →

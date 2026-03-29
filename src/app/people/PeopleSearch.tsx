@@ -45,7 +45,7 @@ function FriendAction({
 
   if (friendshipStatus === 'accepted') {
     return (
-      <span className="text-xs font-medium text-green-400 border border-green-400/30 rounded-full px-3 py-1">
+      <span className="text-sm font-medium text-green-400 border border-green-400/30 rounded-full px-3 py-1">
         Friends
       </span>
     )
@@ -65,7 +65,7 @@ function FriendAction({
             }
           })
         }
-        className="text-xs font-medium text-zinc-400 border border-zinc-600 rounded-full px-3 py-1 hover:border-zinc-400 transition-colors disabled:opacity-50"
+        className="text-sm font-medium text-zinc-400 border border-zinc-600 rounded-full px-3 py-1 hover:border-zinc-400 transition-colors disabled:opacity-50"
       >
         {pending ? 'Cancelling…' : 'Pending'}
       </button>
@@ -86,7 +86,7 @@ function FriendAction({
             }
           })
         }
-        className="text-xs font-medium text-orange-400 border border-orange-400/50 rounded-full px-3 py-1 hover:bg-orange-400/10 transition-colors disabled:opacity-50"
+        className="text-sm font-medium text-orange-400 border border-orange-400/50 rounded-full px-3 py-1 hover:bg-orange-400/10 transition-colors disabled:opacity-50"
       >
         {pending ? 'Accepting…' : 'Accept Request'}
       </button>
@@ -108,11 +108,11 @@ function FriendAction({
             }
           })
         }}
-        className="text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-full px-3 py-1 transition-colors disabled:opacity-50"
+        className="text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-full px-3 py-1 transition-colors disabled:opacity-50"
       >
         {pending ? 'Sending…' : 'Friend Request'}
       </button>
-      {error && <p className="text-red-400 text-xs max-w-[160px] text-right">{error}</p>}
+      {error && <p className="text-red-400 text-sm max-w-[160px] text-right">{error}</p>}
     </div>
   )
 }
@@ -159,7 +159,7 @@ function UserCard({
             {profile.phone_verified_at && <VerifiedBadge />}
           </Link>
           {distanceMiles !== null && (
-            <span className="text-xs text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 flex-shrink-0">
+            <span className="text-sm text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 flex-shrink-0">
               {distanceMiles < 1 ? '< 1 mi' : `${distanceMiles} mi`}
             </span>
           )}
@@ -484,7 +484,7 @@ export default function PeopleSearch({
             <span>{showAdvanced ? '▾' : '▸'}</span>
             Advanced Search
             {activeFilterCount > 0 && (
-              <span className="ml-1 bg-orange-500 text-white rounded-full px-1.5 py-0.5 text-xs leading-none">
+              <span className="ml-1 bg-orange-500 text-white rounded-full px-1.5 py-0.5 text-sm leading-none">
                 {activeFilterCount}
               </span>
             )}
@@ -493,7 +493,7 @@ export default function PeopleSearch({
           {showAdvanced && (
             <div className="mt-3 space-y-3 pt-3 border-t border-zinc-800">
               <div>
-                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Gender</p>
+                <p className="text-sm font-medium text-zinc-500 uppercase tracking-wider mb-2">Gender</p>
                 <div className="flex flex-wrap gap-2">
                   {GENDER_FILTERS.map((f) => (
                     <FilterCheckbox
@@ -507,7 +507,7 @@ export default function PeopleSearch({
               </div>
 
               <div>
-                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Relationship Status</p>
+                <p className="text-sm font-medium text-zinc-500 uppercase tracking-wider mb-2">Relationship Status</p>
                 <div className="flex flex-wrap gap-2">
                   {RELATIONSHIP_FILTERS.map((f) => (
                     <FilterCheckbox
@@ -528,7 +528,7 @@ export default function PeopleSearch({
                     setRelationshipFilter([])
                     if (results !== null) triggerSearch({})
                   }}
-                  className="text-xs text-zinc-500 hover:text-red-400 transition-colors"
+                  className="text-sm text-zinc-500 hover:text-red-400 transition-colors"
                 >
                   Clear filters
                 </button>
@@ -574,7 +574,7 @@ export default function PeopleSearch({
         <>
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold text-zinc-400">{defaultLabel}</p>
-            <p className="text-xs text-zinc-600">Search above to find riders near you</p>
+            <p className="text-sm text-zinc-600">Search above to find riders near you</p>
           </div>
           <div className="space-y-3">
             {initialResults.map((user) => (

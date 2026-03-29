@@ -158,7 +158,7 @@ export default function WallTab({
         <div className="bg-zinc-900 sm:rounded-xl sm:border sm:border-zinc-800 p-8 text-center">
           <p className="text-zinc-400 text-sm">No posts on this wall yet.</p>
           {isOwnProfile && currentUserId && (
-            <p className="text-zinc-600 text-xs mt-1">
+            <p className="text-zinc-600 text-sm mt-1">
               Share something above to get started!
             </p>
           )}

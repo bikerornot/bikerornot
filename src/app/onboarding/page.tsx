@@ -196,7 +196,7 @@ function StepPhoto({
           <button
             type="button"
             onClick={() => { setPhotoFile(null); setPhotoPreview(null) }}
-            className="text-zinc-500 hover:text-zinc-300 text-xs"
+            className="text-zinc-500 hover:text-zinc-300 text-sm"
           >
             Remove
           </button>
@@ -286,14 +286,14 @@ function StepBikes({
         {bikes.map((bike, index) => (
           <div key={index} className="bg-zinc-800 rounded-lg p-3 border border-zinc-700">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-zinc-400 text-xs font-medium uppercase tracking-wider">
+              <span className="text-zinc-400 text-sm font-medium uppercase tracking-wider">
                 Bike {index + 1}
               </span>
               {bikes.length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeBike(index)}
-                  className="text-zinc-500 hover:text-red-400 text-xs transition-colors"
+                  className="text-zinc-500 hover:text-red-400 text-sm transition-colors"
                 >
                   Remove
                 </button>
@@ -316,14 +316,14 @@ function StepBikes({
                     <button
                       type="button"
                       onClick={() => fileInputRefs.current[index]?.click()}
-                      className="text-orange-400 hover:text-orange-300 text-xs font-medium transition-colors text-left"
+                      className="text-orange-400 hover:text-orange-300 text-sm font-medium transition-colors text-left"
                     >
                       Change photo
                     </button>
                     <button
                       type="button"
                       onClick={() => removePhoto(index)}
-                      className="text-zinc-500 hover:text-zinc-300 text-xs transition-colors text-left"
+                      className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors text-left"
                     >
                       Remove
                     </button>
@@ -333,7 +333,7 @@ function StepBikes({
                 <button
                   type="button"
                   onClick={() => fileInputRefs.current[index]?.click()}
-                  className="flex items-center gap-2 text-zinc-500 hover:text-orange-400 text-xs transition-colors"
+                  className="flex items-center gap-2 text-zinc-500 hover:text-orange-400 text-sm transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />

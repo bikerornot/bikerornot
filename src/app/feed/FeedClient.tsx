@@ -205,7 +205,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       {!loading && posts.length === 0 && (
         <div className="bg-zinc-900 sm:rounded-xl sm:border sm:border-zinc-800 p-8 text-center">
           <p className="text-zinc-400 text-sm">No posts yet.</p>
-          <p className="text-zinc-600 text-xs mt-1">Be the first to share something!</p>
+          <p className="text-zinc-600 text-sm mt-1">Be the first to share something!</p>
         </div>
       )}
 
@@ -241,7 +241,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
       {!hasMore && !loading && posts.length > 0 && (
         <div className="py-6 text-center">
-          <p className="text-zinc-600 text-xs">You're all caught up</p>
+          <p className="text-zinc-600 text-sm">You're all caught up</p>
         </div>
       )}
     </div>

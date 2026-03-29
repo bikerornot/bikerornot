@@ -100,10 +100,10 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
           <span className="text-sm font-semibold text-white">
             Riders to Connect With
           </span>
-          <span className="text-xs text-zinc-500">{riders.length} suggestions</span>
+          <span className="text-sm text-zinc-500">{riders.length} suggestions</span>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/people" className="text-xs text-orange-400 hover:text-orange-300 transition-colors font-medium">
+          <Link href="/people" className="text-sm text-orange-400 hover:text-orange-300 transition-colors font-medium">
             See all →
           </Link>
           <button
@@ -203,17 +203,17 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
               {/* Info */}
               <div className="px-2 pt-2 pb-2.5 flex flex-col gap-1.5 flex-1">
                 <div>
-                  <p className="text-zinc-400 text-xs font-medium leading-tight truncate">
+                  <p className="text-zinc-400 text-sm font-medium leading-tight truncate">
                     @{rider.username ?? 'unknown'}
                   </p>
                   {location && (
-                    <p className="text-zinc-500 text-xs truncate leading-tight mt-0.5">{location}</p>
+                    <p className="text-zinc-500 text-sm truncate leading-tight mt-0.5">{location}</p>
                   )}
                   {topStyle && (
-                    <p className="text-orange-400/80 text-xs leading-tight truncate mt-0.5">{topStyle}</p>
+                    <p className="text-orange-400/80 text-sm leading-tight truncate mt-0.5">{topStyle}</p>
                   )}
                   {rider.mutual_friend_count > 0 && (
-                    <p className="text-zinc-500 text-xs leading-tight mt-0.5">
+                    <p className="text-zinc-500 text-sm leading-tight mt-0.5">
                       {rider.mutual_friend_count} mutual
                     </p>
                   )}
@@ -223,7 +223,7 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
                 <button
                   onClick={() => status === 'idle' && handleAdd(rider.id)}
                   disabled={status !== 'idle'}
-                  className={`w-full text-xs font-semibold py-1.5 rounded-lg transition-colors mt-auto ${
+                  className={`w-full text-sm font-semibold py-1.5 rounded-lg transition-colors mt-auto ${
                     status === 'sent'
                       ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
                       : status === 'pending'

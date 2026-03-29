@@ -219,7 +219,7 @@ export default function GroupTabs({
           {(isMember || group.privacy === 'public') && posts.length === 0 && (
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center">
               <p className="text-zinc-400 text-sm">No posts yet.</p>
-              {isMember && <p className="text-zinc-600 text-xs mt-1">Be the first to share something!</p>}
+              {isMember && <p className="text-zinc-600 text-sm mt-1">Be the first to share something!</p>}
             </div>
           )}
 
@@ -264,7 +264,7 @@ export default function GroupTabs({
             <div className="text-center py-8">
               <p className="text-zinc-500 text-sm">No events yet</p>
               {isMember && (
-                <p className="text-zinc-600 text-xs mt-1">Create one to get things started!</p>
+                <p className="text-zinc-600 text-sm mt-1">Create one to get things started!</p>
               )}
             </div>
           ) : (
@@ -308,11 +308,11 @@ export default function GroupTabs({
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-medium text-sm truncate">@{profile.username}</p>
                   {profile.city || profile.state ? (
-                    <p className="text-zinc-500 text-xs">{[profile.city, profile.state].filter(Boolean).join(', ')}</p>
+                    <p className="text-zinc-500 text-sm">{[profile.city, profile.state].filter(Boolean).join(', ')}</p>
                   ) : null}
                 </div>
                 {m.role === 'admin' && (
-                  <span className="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full">
+                  <span className="text-sm bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full">
                     Admin
                   </span>
                 )}
@@ -320,7 +320,7 @@ export default function GroupTabs({
                   <button
                     onClick={(e) => { e.preventDefault(); handleRemove(m.user_id) }}
                     disabled={pendingActions.has(m.user_id)}
-                    className="text-xs bg-zinc-800 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 text-zinc-500 border border-zinc-700 px-2.5 py-1 rounded-full transition-colors disabled:opacity-40"
+                    className="text-sm bg-zinc-800 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 text-zinc-500 border border-zinc-700 px-2.5 py-1 rounded-full transition-colors disabled:opacity-40"
                   >
                     {pendingActions.has(m.user_id) ? '…' : 'Remove'}
                   </button>
@@ -366,21 +366,21 @@ export default function GroupTabs({
                     @{profile.username}
                   </Link>
                   {profile.city || profile.state ? (
-                    <p className="text-zinc-500 text-xs">{[profile.city, profile.state].filter(Boolean).join(', ')}</p>
+                    <p className="text-zinc-500 text-sm">{[profile.city, profile.state].filter(Boolean).join(', ')}</p>
                   ) : null}
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleApprove(r.user_id)}
                     disabled={isLoading}
-                    className="text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-full font-medium transition-colors disabled:opacity-40"
+                    className="text-sm bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-full font-medium transition-colors disabled:opacity-40"
                   >
                     {isLoading ? '…' : 'Approve'}
                   </button>
                   <button
                     onClick={() => handleDeny(r.user_id)}
                     disabled={isLoading}
-                    className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white border border-zinc-700 px-3 py-1.5 rounded-full font-medium transition-colors disabled:opacity-40"
+                    className="text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white border border-zinc-700 px-3 py-1.5 rounded-full font-medium transition-colors disabled:opacity-40"
                   >
                     {isLoading ? '…' : 'Deny'}
                   </button>

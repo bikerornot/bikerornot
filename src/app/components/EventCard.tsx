@@ -69,10 +69,10 @@ export default function EventCard({ event }: Props) {
       <div className="px-4 py-3">
         {/* Date + type badge */}
         <div className="flex items-center gap-2 mb-1">
-          <span className={`text-xs font-semibold ${isCancelled ? 'text-red-400' : 'text-orange-400'}`}>
+          <span className={`text-sm font-semibold ${isCancelled ? 'text-red-400' : 'text-orange-400'}`}>
             {isCancelled ? 'Cancelled' : formatCardDate(event.starts_at)}
           </span>
-          <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${
+          <span className={`text-sm font-medium px-1.5 py-0.5 rounded-full ${
             event.type === 'ride' ? 'bg-blue-500/15 text-blue-400' : 'bg-zinc-800 text-zinc-400'
           }`}>
             {event.type === 'ride' ? 'Ride' : 'Event'}
@@ -92,12 +92,12 @@ export default function EventCard({ event }: Props) {
         {/* Attendance */}
         <div className="flex items-center gap-3 mt-2">
           {event.going_count > 0 && (
-            <span className="text-zinc-400 text-xs">
+            <span className="text-zinc-400 text-sm">
               {event.going_count} going
             </span>
           )}
           {event.interested_count > 0 && (
-            <span className="text-zinc-500 text-xs">
+            <span className="text-zinc-500 text-sm">
               {event.interested_count} interested
             </span>
           )}

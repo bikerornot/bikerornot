@@ -150,7 +150,7 @@ function BikePhotoGallery({
   }
 
   if (loading) {
-    return <div className="text-zinc-600 text-xs py-1">Loading photos…</div>
+    return <div className="text-zinc-600 text-sm py-1">Loading photos…</div>
   }
 
   return (
@@ -230,7 +230,7 @@ function BikePhotoGallery({
           </button>
         )}
       </div>
-      {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
+      {error && <p className="text-red-400 text-sm mt-1">{error}</p>}
     </div>
   )
 }
@@ -428,7 +428,7 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
                 {(ownerCounts[bike.id] ?? 0) > 0 && (
                   <Link
                     href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}
-                    className="text-orange-400 hover:text-orange-300 text-xs mt-1 block transition-colors"
+                    className="text-orange-400 hover:text-orange-300 text-sm mt-1 block transition-colors"
                   >
                     {ownerCounts[bike.id]} other {ownerCounts[bike.id] === 1 ? 'owner' : 'owners'} →
                   </Link>
@@ -465,19 +465,19 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
           return (
             <div key={bike.id} className="bg-zinc-900 border border-orange-500/30 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                <span className="text-sm font-medium text-zinc-500 uppercase tracking-wider">
                   Editing bike
                 </span>
                 <button
                   onClick={cancelEdit}
-                  className="text-zinc-500 hover:text-zinc-300 text-xs transition-colors"
+                  className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
                 >
                   Cancel
                 </button>
               </div>
               <BikeSelector value={editForm} onChange={setEditForm} />
               <div className="mt-3">
-                <label className="text-zinc-400 text-xs block mb-1">About this bike <span className="text-zinc-600">(optional)</span></label>
+                <label className="text-zinc-400 text-sm block mb-1">About this bike <span className="text-zinc-600">(optional)</span></label>
                 <textarea
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
@@ -486,7 +486,7 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
                   rows={3}
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500 resize-none"
                 />
-                <p className="text-zinc-600 text-xs text-right mt-0.5">{editDescription.length}/2000</p>
+                <p className="text-zinc-600 text-sm text-right mt-0.5">{editDescription.length}/2000</p>
               </div>
               <button
                 onClick={() => handleUpdate(bike.id)}
@@ -523,7 +523,7 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
                 {(ownerCounts[bike.id] ?? 0) > 0 ? (
                   <Link
                     href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}
-                    className="text-orange-400 hover:text-orange-300 text-xs mt-1 block transition-colors"
+                    className="text-orange-400 hover:text-orange-300 text-sm mt-1 block transition-colors"
                   >
                     {ownerCounts[bike.id]} other {ownerCounts[bike.id] === 1 ? 'owner' : 'owners'} →
                   </Link>
@@ -575,12 +575,12 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
       {addingNew ? (
         <div className="bg-zinc-900 border border-orange-500/30 rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+            <span className="text-sm font-medium text-zinc-500 uppercase tracking-wider">
               New bike
             </span>
             <button
               onClick={cancelAdd}
-              className="text-zinc-500 hover:text-zinc-300 text-xs transition-colors"
+              className="text-zinc-500 hover:text-zinc-300 text-sm transition-colors"
             >
               Cancel
             </button>

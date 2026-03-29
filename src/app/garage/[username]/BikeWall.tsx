@@ -154,7 +154,7 @@ export default function BikeWall({
         <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-8 text-center">
           <p className="text-zinc-400 text-sm">No posts about this bike yet.</p>
           {(isOwnGarage || isFriend) && currentUserId && (
-            <p className="text-zinc-600 text-xs mt-1">
+            <p className="text-zinc-600 text-sm mt-1">
               {isOwnGarage ? 'Share something about your ride above!' : 'Be the first to post on this bike wall!'}
             </p>
           )}

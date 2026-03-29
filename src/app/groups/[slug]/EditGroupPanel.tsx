@@ -107,7 +107,7 @@ export default function EditGroupPanel({
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="text-xs text-zinc-400 hover:text-orange-400 border border-zinc-700 hover:border-orange-500 rounded-full px-3 py-1.5 transition-colors flex items-center gap-1.5"
+        className="text-sm text-zinc-400 hover:text-orange-400 border border-zinc-700 hover:border-orange-500 rounded-full px-3 py-1.5 transition-colors flex items-center gap-1.5"
       >
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
@@ -120,7 +120,7 @@ export default function EditGroupPanel({
 
           {/* Cover photo */}
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-2">Cover Photo</label>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">Cover Photo</label>
             {displayCover ? (
               <div className="relative h-32 rounded-xl overflow-hidden bg-zinc-800">
                 <Image src={displayCover} alt="Group cover" fill className="object-cover" />
@@ -128,7 +128,7 @@ export default function EditGroupPanel({
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
-                    className="bg-black/70 text-white text-xs font-medium px-3 py-1.5 rounded-full hover:bg-black transition-colors"
+                    className="bg-black/70 text-white text-sm font-medium px-3 py-1.5 rounded-full hover:bg-black transition-colors"
                   >
                     Change Photo
                   </button>
@@ -136,7 +136,7 @@ export default function EditGroupPanel({
                     <button
                       type="button"
                       onClick={removeCoverPreview}
-                      className="bg-black/70 text-white text-xs font-medium px-3 py-1.5 rounded-full hover:bg-black transition-colors"
+                      className="bg-black/70 text-white text-sm font-medium px-3 py-1.5 rounded-full hover:bg-black transition-colors"
                     >
                       Remove
                     </button>
@@ -164,7 +164,7 @@ export default function EditGroupPanel({
 
           {/* Category */}
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-2">Category</label>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">Category</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as GroupCategory | '')}
@@ -179,7 +179,7 @@ export default function EditGroupPanel({
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-2">Description</label>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -192,7 +192,7 @@ export default function EditGroupPanel({
 
           {/* Location */}
           <div>
-            <label className="block text-xs font-medium text-zinc-400 mb-2">Location</label>
+            <label className="block text-sm font-medium text-zinc-400 mb-2">Location</label>
             <div className="space-y-2">
               <input
                 type="text"
@@ -229,7 +229,7 @@ export default function EditGroupPanel({
           {/* Privacy — one-way toggle, only shown if currently public */}
           {currentPrivacy === 'public' && (
             <div>
-              <label className="block text-xs font-medium text-zinc-400 mb-2">Privacy</label>
+              <label className="block text-sm font-medium text-zinc-400 mb-2">Privacy</label>
               <div className="flex gap-2">
                 {(['public', 'private'] as const).map((p) => (
                   <button
@@ -247,7 +247,7 @@ export default function EditGroupPanel({
                 ))}
               </div>
               {privacy === 'private' && (
-                <p className="text-amber-400/80 text-xs mt-1.5">
+                <p className="text-amber-400/80 text-sm mt-1.5">
                   Warning: This is permanent — private groups cannot be made public again.
                 </p>
               )}

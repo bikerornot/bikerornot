@@ -54,7 +54,7 @@ function ProfileCard({ profile, isMutual, mutualCount, showAddFriend, onAddFrien
   const addFriendBtn = showAddFriend && onAddFriend ? (
     <button
       onClick={() => onAddFriend(profile.id)}
-      className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors border border-zinc-700 whitespace-nowrap"
+      className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-semibold px-3 py-1.5 rounded-full transition-colors border border-zinc-700 whitespace-nowrap"
     >
       + Add Friend
     </button>
@@ -91,7 +91,7 @@ function ProfileCard({ profile, isMutual, mutualCount, showAddFriend, onAddFrien
               {profile.phone_verified_at && <VerifiedBadge className="w-3.5 h-3.5" />}
             </Link>
             {isMutual && (
-              <span className="text-[11px] font-medium text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">
+              <span className="text-xs font-medium text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">
                 Mutual
               </span>
             )}
@@ -116,7 +116,7 @@ function ProfileCard({ profile, isMutual, mutualCount, showAddFriend, onAddFrien
           </div>
 
           {mutualCount !== undefined && mutualCount > 0 && (
-            <p className="text-xs text-zinc-500 mt-1.5">
+            <p className="text-sm text-zinc-500 mt-1.5">
               {mutualCount} mutual friend{mutualCount !== 1 ? 's' : ''} with you
             </p>
           )}
@@ -370,7 +370,7 @@ export default function FriendsTab({ profileId, isOwnProfile, currentUserId }: P
       {/* Pending requests — own profile only */}
       {isOwnProfile && pending.length > 0 && (
         <div>
-          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
+          <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">
             Friend Requests ({pending.length})
           </h3>
           <div className="space-y-3">
@@ -382,13 +382,13 @@ export default function FriendsTab({ profileId, isOwnProfile, currentUserId }: P
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleAccept(requesterId)}
-                      className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-colors"
+                      className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-3 py-1.5 rounded-full transition-colors"
                     >
                       Accept
                     </button>
                     <button
                       onClick={() => handleDecline(requesterId)}
-                      className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-xs font-semibold px-3 py-1.5 rounded-full transition-colors border border-zinc-700"
+                      className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 text-sm font-semibold px-3 py-1.5 rounded-full transition-colors border border-zinc-700"
                     >
                       Decline
                     </button>
@@ -399,7 +399,7 @@ export default function FriendsTab({ profileId, isOwnProfile, currentUserId }: P
           </div>
 
           {friends.length > 0 && (
-            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mt-6 mb-3">
+            <h3 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mt-6 mb-3">
               Friends ({friends.length})
             </h3>
           )}
@@ -431,7 +431,7 @@ export default function FriendsTab({ profileId, isOwnProfile, currentUserId }: P
               showAddFriend={canAdd && !isRequested}
               onAddFriend={handleAddFriend}
               actions={isRequested && canAdd ? (
-                <span className="text-xs text-zinc-500 font-medium">Requested</span>
+                <span className="text-sm text-zinc-500 font-medium">Requested</span>
               ) : undefined}
             />
           )

@@ -93,7 +93,7 @@ export default function OwnersSection({
                     @{owner.username}
                   </p>
                   {location && (
-                    <p className="text-zinc-500 text-xs truncate">{location}</p>
+                    <p className="text-zinc-500 text-sm truncate">{location}</p>
                   )}
                 </div>
               </Link>

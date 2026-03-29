@@ -440,7 +440,7 @@ export default async function ProfilePage({
                         className="object-cover w-full h-full"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs font-bold text-zinc-300">
+                      <div className="w-full h-full flex items-center justify-center text-sm font-bold text-zinc-300">
                         {(mf.username?.[0] ?? '?').toUpperCase()}
                       </div>
                     )}

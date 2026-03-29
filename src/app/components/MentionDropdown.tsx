@@ -123,7 +123,7 @@ export default function MentionDropdown({ suggestions, activeIndex, onSelect, in
               {photo ? (
                 <Image src={photo} alt="" width={28} height={28} className="object-cover w-full h-full" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-zinc-400 text-xs font-bold">
+                <div className="w-full h-full flex items-center justify-center text-zinc-400 text-sm font-bold">
                   {(s.username?.[0] ?? '?').toUpperCase()}
                 </div>
               )}

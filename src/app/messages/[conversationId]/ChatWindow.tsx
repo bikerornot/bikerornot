@@ -276,7 +276,7 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
               {showDivider && (
                 <div className="flex items-center gap-3 my-4">
                   <div className="flex-1 h-px bg-zinc-800" />
-                  <span className="text-xs text-zinc-600">{formatDateDivider(msg.created_at)}</span>
+                  <span className="text-sm text-zinc-600">{formatDateDivider(msg.created_at)}</span>
                   <div className="flex-1 h-px bg-zinc-800" />
                 </div>
               )}
@@ -287,7 +287,7 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
                     {otherAvatarUrl ? (
                       <Image src={otherAvatarUrl} alt={otherInitial} width={28} height={28} className="object-cover w-full h-full" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xs font-bold text-zinc-300">
+                      <div className="w-full h-full flex items-center justify-center text-sm font-bold text-zinc-300">
                         {otherInitial}
                       </div>
                     )}
@@ -305,9 +305,9 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
                     {msg.content}
                   </div>
                   <div className="flex items-center gap-1 mt-0.5 px-1">
-                    <span className="text-xs text-zinc-600">{formatTime(msg.created_at)}</span>
+                    <span className="text-sm text-zinc-600">{formatTime(msg.created_at)}</span>
                     {showSeen && (
-                      <span className="text-xs text-zinc-500">· Seen</span>
+                      <span className="text-sm text-zinc-500">· Seen</span>
                     )}
                   </div>
                 </div>
@@ -323,7 +323,7 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
               {otherAvatarUrl ? (
                 <Image src={otherAvatarUrl} alt={otherInitial} width={28} height={28} className="object-cover w-full h-full" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-xs font-bold text-zinc-300">
+                <div className="w-full h-full flex items-center justify-center text-sm font-bold text-zinc-300">
                   {otherInitial}
                 </div>
               )}
@@ -360,7 +360,7 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
             Send
           </button>
         </div>
-        <p className="text-xs text-zinc-600 mt-1.5 text-right">Enter to send · Shift+Enter for newline</p>
+        <p className="text-sm text-zinc-600 mt-1.5 text-right">Enter to send · Shift+Enter for newline</p>
       </div>
     </div>
   )

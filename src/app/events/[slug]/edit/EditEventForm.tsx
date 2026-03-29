@@ -162,7 +162,7 @@ export default function EditEventForm({ event }: Props) {
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="absolute top-1.5 right-1.5 bg-black/70 text-white rounded-full px-2.5 py-0.5 text-xs hover:bg-black"
+                className="absolute top-1.5 right-1.5 bg-black/70 text-white rounded-full px-2.5 py-0.5 text-sm hover:bg-black"
               >
                 Change
               </button>
@@ -171,7 +171,7 @@ export default function EditEventForm({ event }: Props) {
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="w-full h-32 rounded-xl border-2 border-dashed border-zinc-700 hover:border-orange-500 text-zinc-500 hover:text-orange-400 transition-colors flex flex-col items-center justify-center gap-1.5 text-xs"
+              className="w-full h-32 rounded-xl border-2 border-dashed border-zinc-700 hover:border-orange-500 text-zinc-500 hover:text-orange-400 transition-colors flex flex-col items-center justify-center gap-1.5 text-sm"
             >
               <span>Add cover photo</span>
             </button>
@@ -192,7 +192,7 @@ export default function EditEventForm({ event }: Props) {
               <button
                 type="button"
                 onClick={() => flyerRef.current?.click()}
-                className="absolute top-1.5 right-1.5 bg-black/70 text-white rounded-full px-2.5 py-0.5 text-xs hover:bg-black"
+                className="absolute top-1.5 right-1.5 bg-black/70 text-white rounded-full px-2.5 py-0.5 text-sm hover:bg-black"
               >
                 Change
               </button>
@@ -201,7 +201,7 @@ export default function EditEventForm({ event }: Props) {
             <button
               type="button"
               onClick={() => flyerRef.current?.click()}
-              className="w-full h-32 rounded-xl border-2 border-dashed border-zinc-700 hover:border-orange-500 text-zinc-500 hover:text-orange-400 transition-colors flex flex-col items-center justify-center gap-1.5 text-xs"
+              className="w-full h-32 rounded-xl border-2 border-dashed border-zinc-700 hover:border-orange-500 text-zinc-500 hover:text-orange-400 transition-colors flex flex-col items-center justify-center gap-1.5 text-sm"
             >
               <span>Upload flyer</span>
             </button>
@@ -343,7 +343,7 @@ export default function EditEventForm({ event }: Props) {
                 <button
                   type="button"
                   onClick={() => removeStop(idx)}
-                  className="text-zinc-500 hover:text-red-400 text-xs transition-colors"
+                  className="text-zinc-500 hover:text-red-400 text-sm transition-colors"
                 >
                   Remove
                 </button>

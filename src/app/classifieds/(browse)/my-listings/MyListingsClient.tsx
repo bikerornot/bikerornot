@@ -200,21 +200,21 @@ export default function MyListingsClient({ initialListings }: Props) {
       {/* Aggregate stats bar (active tab only) */}
       {tab === 'active' && counts.active > 0 && (
         <div className="flex gap-6 mb-4 px-3 py-2.5 bg-zinc-900 rounded-xl border border-zinc-800">
-          <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+          <div className="flex items-center gap-1.5 text-sm text-zinc-400">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
             <span className="text-white font-medium">{activeStats.totalViews}</span> views
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+          <div className="flex items-center gap-1.5 text-sm text-zinc-400">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
             </svg>
             <span className="text-white font-medium">{activeStats.totalSaves}</span> saves
           </div>
           {activeStats.daysUntilExpiry !== null && (
-            <div className="flex items-center gap-1.5 text-xs text-zinc-400">
+            <div className="flex items-center gap-1.5 text-sm text-zinc-400">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -360,9 +360,9 @@ function ListingRow({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-white truncate">{listing.title}</h3>
-            <p className="text-xs text-zinc-500 truncate">{subtitle}</p>
+            <p className="text-sm text-zinc-500 truncate">{subtitle}</p>
           </div>
-          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full flex-shrink-0 ${statusBadge(listing.status)}`}>
+          <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full flex-shrink-0 ${statusBadge(listing.status)}`}>
             {listing.status}
           </span>
         </div>
@@ -372,7 +372,7 @@ function ListingRow({
           <span className="text-sm font-bold text-orange-400">
             {formatPrice(listing.price, listing.price_type)}
           </span>
-          <div className="flex items-center gap-3 text-xs text-zinc-500">
+          <div className="flex items-center gap-3 text-sm text-zinc-500">
             <span className="flex items-center gap-1">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -404,28 +404,28 @@ function ListingRow({
             <>
               <Link
                 href={`/classifieds/${listing.id}/edit`}
-                className="text-xs text-zinc-400 hover:text-white px-2 py-1 rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors"
+                className="text-sm text-zinc-400 hover:text-white px-2 py-1 rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors"
               >
                 Edit
               </Link>
               <button
                 onClick={onDeactivate}
                 disabled={pending}
-                className="text-xs text-blue-400 hover:text-blue-300 px-2 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                className="text-sm text-blue-400 hover:text-blue-300 px-2 py-1 rounded-md bg-blue-500/10 hover:bg-blue-500/20 transition-colors disabled:opacity-50"
               >
                 Deactivate
               </button>
               <button
                 onClick={onMarkSold}
                 disabled={pending}
-                className="text-xs text-green-400 hover:text-green-300 px-2 py-1 rounded-md bg-green-500/10 hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                className="text-sm text-green-400 hover:text-green-300 px-2 py-1 rounded-md bg-green-500/10 hover:bg-green-500/20 transition-colors disabled:opacity-50"
               >
                 Mark as Sold
               </button>
               <button
                 onClick={onDelete}
                 disabled={pending}
-                className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded-md bg-red-500/10 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                className="text-sm text-red-400 hover:text-red-300 px-2 py-1 rounded-md bg-red-500/10 hover:bg-red-500/20 transition-colors disabled:opacity-50"
               >
                 Delete
               </button>
@@ -436,21 +436,21 @@ function ListingRow({
               <button
                 onClick={onReactivate}
                 disabled={pending}
-                className="text-xs text-orange-400 hover:text-orange-300 px-2 py-1 rounded-md bg-orange-500/10 hover:bg-orange-500/20 transition-colors disabled:opacity-50"
+                className="text-sm text-orange-400 hover:text-orange-300 px-2 py-1 rounded-md bg-orange-500/10 hover:bg-orange-500/20 transition-colors disabled:opacity-50"
               >
                 {pending ? 'Reactivating...' : 'Reactivate'}
               </button>
               <button
                 onClick={onMarkSold}
                 disabled={pending}
-                className="text-xs text-green-400 hover:text-green-300 px-2 py-1 rounded-md bg-green-500/10 hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                className="text-sm text-green-400 hover:text-green-300 px-2 py-1 rounded-md bg-green-500/10 hover:bg-green-500/20 transition-colors disabled:opacity-50"
               >
                 Mark as Sold
               </button>
               <button
                 onClick={onDelete}
                 disabled={pending}
-                className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded-md bg-red-500/10 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                className="text-sm text-red-400 hover:text-red-300 px-2 py-1 rounded-md bg-red-500/10 hover:bg-red-500/20 transition-colors disabled:opacity-50"
               >
                 Delete
               </button>
@@ -461,14 +461,14 @@ function ListingRow({
               <button
                 onClick={onRenew}
                 disabled={pending}
-                className="text-xs text-orange-400 hover:text-orange-300 px-2 py-1 rounded-md bg-orange-500/10 hover:bg-orange-500/20 transition-colors disabled:opacity-50"
+                className="text-sm text-orange-400 hover:text-orange-300 px-2 py-1 rounded-md bg-orange-500/10 hover:bg-orange-500/20 transition-colors disabled:opacity-50"
               >
                 {pending ? 'Renewing...' : 'Renew'}
               </button>
               <button
                 onClick={onDelete}
                 disabled={pending}
-                className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded-md bg-red-500/10 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                className="text-sm text-red-400 hover:text-red-300 px-2 py-1 rounded-md bg-red-500/10 hover:bg-red-500/20 transition-colors disabled:opacity-50"
               >
                 Delete
               </button>
@@ -478,21 +478,21 @@ function ListingRow({
             <>
               <Link
                 href={`/classifieds/${listing.id}/edit`}
-                className="text-xs text-orange-400 hover:text-orange-300 px-2 py-1 rounded-md bg-orange-500/10 hover:bg-orange-500/20 transition-colors"
+                className="text-sm text-orange-400 hover:text-orange-300 px-2 py-1 rounded-md bg-orange-500/10 hover:bg-orange-500/20 transition-colors"
               >
                 Edit
               </Link>
               <button
                 onClick={onDelete}
                 disabled={pending}
-                className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded-md bg-red-500/10 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                className="text-sm text-red-400 hover:text-red-300 px-2 py-1 rounded-md bg-red-500/10 hover:bg-red-500/20 transition-colors disabled:opacity-50"
               >
                 Delete
               </button>
             </>
           )}
           {listing.status === 'sold' && (
-            <span className="text-xs text-zinc-600 italic">
+            <span className="text-sm text-zinc-600 italic">
               Sold {listing.sold_at ? new Date(listing.sold_at).toLocaleDateString() : ''}
             </span>
           )}

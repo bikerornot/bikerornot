@@ -131,7 +131,7 @@ export default function InviteToEventButton({ eventId }: Props) {
                   {filtered.length > 1 && (
                     <button
                       onClick={selectAll}
-                      className="text-xs text-orange-400 hover:text-orange-300 mb-2 transition-colors"
+                      className="text-sm text-orange-400 hover:text-orange-300 mb-2 transition-colors"
                     >
                       {selected.size === filtered.length ? 'Deselect all' : 'Select all'}
                     </button>
@@ -160,14 +160,14 @@ export default function InviteToEventButton({ eventId }: Props) {
                           {avatarUrl ? (
                             <Image src={avatarUrl} alt="" width={32} height={32} className="object-cover w-full h-full" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-zinc-400 text-xs font-bold">
+                            <div className="w-full h-full flex items-center justify-center text-zinc-400 text-sm font-bold">
                               {f.username?.[0]?.toUpperCase() ?? '?'}
                             </div>
                           )}
                         </div>
                         <span className="text-sm text-white truncate flex-1">@{f.username ?? 'unknown'}</span>
                         {f.distance_miles != null && (
-                          <span className="text-xs text-zinc-500 flex-shrink-0">{f.distance_miles < 1 ? '< 1 mi' : `${f.distance_miles} mi`}</span>
+                          <span className="text-sm text-zinc-500 flex-shrink-0">{f.distance_miles < 1 ? '< 1 mi' : `${f.distance_miles} mi`}</span>
                         )}
                       </button>
                     )

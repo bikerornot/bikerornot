@@ -133,7 +133,7 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
             {group.category && (
               <>
                 <span className="text-zinc-700">·</span>
-                <span className="text-xs bg-orange-500/15 text-orange-400 px-2 py-0.5 rounded-full">
+                <span className="text-sm bg-orange-500/15 text-orange-400 px-2 py-0.5 rounded-full">
                   {GROUP_CATEGORIES.find((c) => c.value === group.category)?.label ?? group.category}
                 </span>
               </>

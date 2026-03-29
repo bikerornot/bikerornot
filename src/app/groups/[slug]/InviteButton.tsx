@@ -152,12 +152,12 @@ export default function InviteButton({ groupId, autoOpen, onClose }: Props) {
                   {massAllowed ? (
                     <button
                       onClick={allSelected ? deselectAll : selectAll}
-                      className="text-xs text-orange-400 hover:text-orange-300 font-medium transition-colors"
+                      className="text-sm text-orange-400 hover:text-orange-300 font-medium transition-colors"
                     >
                       {allSelected ? 'Deselect All' : 'Select All'}
                     </button>
                   ) : (
-                    <p className="text-xs text-zinc-600">
+                    <p className="text-sm text-zinc-600">
                       Select All available{' '}
                       {massNextDate
                         ? massNextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -165,7 +165,7 @@ export default function InviteButton({ groupId, autoOpen, onClose }: Props) {
                     </p>
                   )}
                   {selected.size > 0 && (
-                    <span className="text-xs text-zinc-500">{selected.size} selected</span>
+                    <span className="text-sm text-zinc-500">{selected.size} selected</span>
                   )}
                 </div>
               )}
@@ -240,7 +240,7 @@ export default function InviteButton({ groupId, autoOpen, onClose }: Props) {
                       <div className="flex-1 min-w-0">
                         <p className="text-white font-medium text-sm">@{friend.username}</p>
                         {(friend.city || friend.state) && (
-                          <p className="text-zinc-500 text-xs">
+                          <p className="text-zinc-500 text-sm">
                             {[friend.city, friend.state].filter(Boolean).join(', ')}
                           </p>
                         )}

@@ -59,7 +59,7 @@ function FriendAction({
 
   if (friendshipStatus === 'accepted') {
     return (
-      <span className="text-xs font-medium text-green-400 border border-green-400/30 rounded-full px-3 py-1">
+      <span className="text-sm font-medium text-green-400 border border-green-400/30 rounded-full px-3 py-1">
         Friends
       </span>
     )
@@ -69,7 +69,7 @@ function FriendAction({
       <button
         disabled={pending}
         onClick={() => startTransition(async () => { await cancelFriendRequest(profile.id); onStatusChange(profile.id, 'none') })}
-        className="text-xs font-medium text-zinc-400 border border-zinc-600 rounded-full px-3 py-1 hover:border-zinc-400 transition-colors disabled:opacity-50"
+        className="text-sm font-medium text-zinc-400 border border-zinc-600 rounded-full px-3 py-1 hover:border-zinc-400 transition-colors disabled:opacity-50"
       >
         {pending ? 'Cancelling…' : 'Pending'}
       </button>
@@ -80,7 +80,7 @@ function FriendAction({
       <button
         disabled={pending}
         onClick={() => startTransition(async () => { await acceptFriendRequest(profile.id); onStatusChange(profile.id, 'accepted') })}
-        className="text-xs font-medium text-orange-400 border border-orange-400/50 rounded-full px-3 py-1 hover:bg-orange-400/10 transition-colors disabled:opacity-50"
+        className="text-sm font-medium text-orange-400 border border-orange-400/50 rounded-full px-3 py-1 hover:bg-orange-400/10 transition-colors disabled:opacity-50"
       >
         {pending ? 'Accepting…' : 'Accept Request'}
       </button>
@@ -90,7 +90,7 @@ function FriendAction({
     <button
       disabled={pending}
       onClick={() => startTransition(async () => { await sendFriendRequest(profile.id); onStatusChange(profile.id, 'pending_sent') })}
-      className="text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-full px-3 py-1 transition-colors disabled:opacity-50"
+      className="text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-full px-3 py-1 transition-colors disabled:opacity-50"
     >
       {pending ? 'Sending…' : 'Friend Request'}
     </button>
@@ -126,7 +126,7 @@ function OwnerCard({
             @{profile.username}
           </Link>
           {distanceMiles !== null && (
-            <span className="text-xs text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 flex-shrink-0">
+            <span className="text-sm text-orange-400 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 flex-shrink-0">
               {distanceMiles < 1 ? '< 1 mi' : `${distanceMiles} mi`}
             </span>
           )}

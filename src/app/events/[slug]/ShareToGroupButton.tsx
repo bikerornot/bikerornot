@@ -104,7 +104,7 @@ export default function ShareToGroupButton({ eventId, currentUserId }: Props) {
                       <button
                         onClick={() => !isShared && handleShare(g.id)}
                         disabled={sharing || isShared}
-                        className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0 ${
+                        className={`text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors flex-shrink-0 ${
                           isShared
                             ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
                             : 'bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-40'

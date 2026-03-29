@@ -40,12 +40,12 @@ export default function CoverPhotoUpload({ userId }: { userId: string }) {
       <button
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
-        className="absolute bottom-3 right-3 bg-black/60 hover:bg-black/80 disabled:opacity-50 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors border border-white/20 flex items-center gap-1.5"
+        className="absolute bottom-3 right-3 bg-black/60 hover:bg-black/80 disabled:opacity-50 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors border border-white/20 flex items-center gap-1.5"
       >
         📷 {uploading ? 'Uploading…' : 'Update cover'}
       </button>
       {error && (
-        <p className="absolute bottom-12 right-3 bg-red-500/90 text-white text-xs px-3 py-1.5 rounded-lg">
+        <p className="absolute bottom-12 right-3 bg-red-500/90 text-white text-sm px-3 py-1.5 rounded-lg">
           {error}
         </p>
       )}

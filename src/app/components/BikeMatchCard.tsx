@@ -127,7 +127,7 @@ export default function BikeMatchCard({ currentUserId }: Props) {
                   className="object-cover w-full h-full"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-xs">
+                <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-sm">
                   {currentUser.username?.[0]?.toUpperCase() ?? '?'}
                 </div>
               )}
@@ -168,7 +168,7 @@ export default function BikeMatchCard({ currentUserId }: Props) {
               <button
                 onClick={() => status === 'idle' && handleAdd(currentUser.id)}
                 disabled={status !== 'idle'}
-                className={`text-xs font-semibold px-4 py-2 rounded-lg shadow-lg transition-colors ${
+                className={`text-sm font-semibold px-4 py-2 rounded-lg shadow-lg transition-colors ${
                   status === 'sent'
                     ? 'bg-emerald-500/90 text-white cursor-default'
                     : status === 'pending'

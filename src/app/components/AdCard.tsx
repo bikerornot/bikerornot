@@ -79,7 +79,7 @@ export default function AdCard({ ad, onDismiss, preview }: Props) {
       <div className="flex items-center justify-between px-4 pt-3 pb-1">
         <div className="leading-tight">
           {ad.advertiserName && <p className="text-white text-sm font-semibold">{ad.advertiserName}</p>}
-          <span className="text-[11px] text-zinc-500 font-medium">Sponsored</span>
+          <span className="text-xs text-zinc-500 font-medium">Sponsored</span>
         </div>
         <div ref={menuRef} className="relative">
           <button

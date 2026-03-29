@@ -79,7 +79,7 @@ export default function SavedListingsClient({ initialListings }: Props) {
                       </div>
                     )}
                     {listing.trade_considered && (
-                      <div className="absolute top-2 right-2 bg-orange-500/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                      <div className="absolute top-2 right-2 bg-orange-500/90 text-white text-xs font-bold px-1.5 py-0.5 rounded">
                         TRADE
                       </div>
                     )}
@@ -92,9 +92,9 @@ export default function SavedListingsClient({ initialListings }: Props) {
                       {formatPrice(listing.price, listing.price_type)}
                     </p>
                     {location && (
-                      <p className="text-zinc-500 text-xs mt-0.5">{location}</p>
+                      <p className="text-zinc-500 text-sm mt-0.5">{location}</p>
                     )}
-                    <div className="flex items-center gap-1.5 mt-2 text-xs">
+                    <div className="flex items-center gap-1.5 mt-2 text-sm">
                       {sellerAvatarUrl ? (
                         <Image src={sellerAvatarUrl} alt="" width={16} height={16} className="rounded-full object-cover" />
                       ) : (

@@ -212,7 +212,7 @@ export default function EventsClient({ initialEvents, userLat, userLng, userZip,
           </select>
         </div>
         {geoLoading && (
-          <p className="text-zinc-500 text-xs">Looking up location...</p>
+          <p className="text-zinc-500 text-sm">Looking up location...</p>
         )}
       </div>
 
@@ -222,7 +222,7 @@ export default function EventsClient({ initialEvents, userLat, userLng, userZip,
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
               tab === t.key
                 ? 'bg-orange-500 text-white'
                 : 'bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700'
@@ -239,7 +239,7 @@ export default function EventsClient({ initialEvents, userLat, userLng, userZip,
           <button
             key={d.key}
             onClick={() => setDateFilter(d.key)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+            className={`px-2.5 py-1 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
               dateFilter === d.key
                 ? 'bg-zinc-700 text-white'
                 : 'bg-zinc-800/50 text-zinc-500 hover:text-zinc-300'
@@ -251,7 +251,7 @@ export default function EventsClient({ initialEvents, userLat, userLng, userZip,
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as SortType)}
-          className="bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1 text-xs text-zinc-400 focus:outline-none flex-shrink-0"
+          className="bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1 text-sm text-zinc-400 focus:outline-none flex-shrink-0"
         >
           <option value="soonest">Soonest</option>
           {searchLat && <option value="nearest">Nearest</option>}
@@ -263,7 +263,7 @@ export default function EventsClient({ initialEvents, userLat, userLng, userZip,
       {filtered.length === 0 ? (
         <div className="text-center py-12 px-4">
           <p className="text-zinc-500 text-sm">No events found</p>
-          <p className="text-zinc-600 text-xs mt-1">Try adjusting your filters or create one!</p>
+          <p className="text-zinc-600 text-sm mt-1">Try adjusting your filters or create one!</p>
         </div>
       ) : (
         <div className="space-y-2 sm:space-y-3">

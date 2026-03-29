@@ -136,16 +136,16 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
       <div className="px-4 py-4 border-b border-zinc-800">
         {/* Type badge + recurrence */}
         <div className="flex items-center gap-2 mb-2">
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+          <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${
             event.type === 'ride' ? 'bg-blue-500/15 text-blue-400' : 'bg-orange-500/15 text-orange-400'
           }`}>
             {event.type === 'ride' ? 'Ride' : 'Event'}
           </span>
           {event.category && (
-            <span className="text-xs text-zinc-500 capitalize">{event.category.replace('_', ' ')}</span>
+            <span className="text-sm text-zinc-500 capitalize">{event.category.replace('_', ' ')}</span>
           )}
           {event.recurrence_rule && (
-            <span className="text-xs text-zinc-500">
+            <span className="text-sm text-zinc-500">
               Repeats {event.recurrence_rule}
             </span>
           )}
@@ -182,7 +182,7 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
               {creatorAvatar ? (
                 <Image src={creatorAvatar} alt="" width={28} height={28} className="object-cover w-full h-full" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-zinc-400 text-xs font-bold">
+                <div className="w-full h-full flex items-center justify-center text-zinc-400 text-sm font-bold">
                   {creator?.username?.[0]?.toUpperCase() ?? '?'}
                 </div>
               )}
@@ -315,7 +315,7 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
                   <div>
                     <p className="text-zinc-300 text-sm font-medium">Start</p>
                     <p className="text-zinc-500 text-sm">{event.address || 'No address specified'}</p>
-                    {event.city && <p className="text-zinc-600 text-xs">{[event.city, event.state].filter(Boolean).join(', ')} {event.zip_code ?? ''}</p>}
+                    {event.city && <p className="text-zinc-600 text-sm">{[event.city, event.state].filter(Boolean).join(', ')} {event.zip_code ?? ''}</p>}
                   </div>
                 </div>
 
@@ -327,7 +327,7 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
                     <div>
                       <p className="text-zinc-300 text-sm font-medium">{stop.label || `Stop ${stop.order_index + 1}`}</p>
                       <p className="text-zinc-500 text-sm">{stop.address}</p>
-                      {stop.city && <p className="text-zinc-600 text-xs">{[stop.city, stop.state].filter(Boolean).join(', ')} {stop.zip_code ?? ''}</p>}
+                      {stop.city && <p className="text-zinc-600 text-sm">{[stop.city, stop.state].filter(Boolean).join(', ')} {stop.zip_code ?? ''}</p>}
                     </div>
                   </div>
                 ))}
@@ -340,7 +340,7 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
                     <div>
                       <p className="text-zinc-300 text-sm font-medium">End</p>
                       <p className="text-zinc-500 text-sm">{event.end_address}</p>
-                      {event.end_city && <p className="text-zinc-600 text-xs">{[event.end_city, event.end_state].filter(Boolean).join(', ')} {event.end_zip_code ?? ''}</p>}
+                      {event.end_city && <p className="text-zinc-600 text-sm">{[event.end_city, event.end_state].filter(Boolean).join(', ')} {event.end_zip_code ?? ''}</p>}
                     </div>
                   </div>
                 )}

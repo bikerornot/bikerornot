@@ -37,7 +37,7 @@ export default function MessageButton({
         >
           Message
         </button>
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-xs text-zinc-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
           Post or comment to unlock messaging
         </div>
       </div>
@@ -54,7 +54,7 @@ export default function MessageButton({
         {loading ? '…' : 'Message'}
       </button>
       {error && (
-        <p className="text-red-400 text-xs mt-1 max-w-[200px]">{error}</p>
+        <p className="text-red-400 text-sm mt-1 max-w-[200px]">{error}</p>
       )}
     </div>
   )

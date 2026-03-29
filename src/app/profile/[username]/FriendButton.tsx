@@ -118,7 +118,7 @@ export default function FriendButton({ profileId, initialStatus }: Props) {
       >
         {loading ? '…' : 'Add Friend'}
       </button>
-      {error && <p className="text-red-400 text-xs mt-1.5">{error}</p>}
+      {error && <p className="text-red-400 text-sm mt-1.5">{error}</p>}
     </div>
   )
 }

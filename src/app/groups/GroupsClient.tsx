@@ -174,7 +174,7 @@ export default function GroupsClient({ initialGroups, currentUserId, userLat, us
       <div className="flex flex-wrap gap-2 mb-4">
         <button
           onClick={() => setCategoryFilter(null)}
-          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+          className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
             categoryFilter === null
               ? 'bg-orange-500 text-white'
               : 'bg-zinc-800 text-zinc-400 hover:text-white'
@@ -186,7 +186,7 @@ export default function GroupsClient({ initialGroups, currentUserId, userLat, us
           <button
             key={c.value}
             onClick={() => setCategoryFilter(categoryFilter === c.value ? null : c.value)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
               categoryFilter === c.value
                 ? 'bg-orange-500 text-white'
                 : 'bg-zinc-800 text-zinc-400 hover:text-white'
@@ -222,7 +222,7 @@ export default function GroupsClient({ initialGroups, currentUserId, userLat, us
         <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-10 text-center">
           <p className="text-zinc-400 text-sm">No groups found.</p>
           {(search || categoryFilter || filter === 'my') && (
-            <p className="text-zinc-600 text-xs mt-1">Try adjusting your filters.</p>
+            <p className="text-zinc-600 text-sm mt-1">Try adjusting your filters.</p>
           )}
         </div>
       )}
@@ -268,13 +268,13 @@ export default function GroupsClient({ initialGroups, currentUserId, userLat, us
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-sm text-zinc-500">
                     {group.privacy === 'private' ? '🔒 Private' : '🌐 Public'}
                   </span>
                   {(group.member_count ?? 0) >= 10 && (
                     <>
                       <span className="text-zinc-700">·</span>
-                      <span className="text-xs text-zinc-500">
+                      <span className="text-sm text-zinc-500">
                         {group.member_count} member{group.member_count !== 1 ? 's' : ''}
                       </span>
                     </>
@@ -282,7 +282,7 @@ export default function GroupsClient({ initialGroups, currentUserId, userLat, us
                   {categoryLabel && (
                     <>
                       <span className="text-zinc-700">·</span>
-                      <span className="text-xs bg-orange-500/15 text-orange-400 px-1.5 py-0.5 rounded-full">
+                      <span className="text-sm bg-orange-500/15 text-orange-400 px-1.5 py-0.5 rounded-full">
                         {categoryLabel}
                       </span>
                     </>
@@ -291,12 +291,12 @@ export default function GroupsClient({ initialGroups, currentUserId, userLat, us
                 {(locationStr || distance != null) && (
                   <div className="flex items-center gap-2 mt-1">
                     {locationStr && (
-                      <span className="text-xs text-zinc-500">{locationStr}</span>
+                      <span className="text-sm text-zinc-500">{locationStr}</span>
                     )}
                     {distance != null && (
                       <>
                         {locationStr && <span className="text-zinc-700">·</span>}
-                        <span className="text-xs text-zinc-400">{distance} mi</span>
+                        <span className="text-sm text-zinc-400">{distance} mi</span>
                       </>
                     )}
                   </div>
@@ -308,7 +308,7 @@ export default function GroupsClient({ initialGroups, currentUserId, userLat, us
                   {isActiveMember || isAdmin ? (
                     <Link
                       href={`/groups/${group.slug}`}
-                      className="inline-block text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 px-3 py-1.5 rounded-full font-medium transition-colors"
+                      className="inline-block text-sm bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 px-3 py-1.5 rounded-full font-medium transition-colors"
                     >
                       Enter
                     </Link>
@@ -316,7 +316,7 @@ export default function GroupsClient({ initialGroups, currentUserId, userLat, us
                     <button
                       onClick={() => handleLeave(group.id)}
                       disabled={isLoading}
-                      className="text-xs bg-zinc-800 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded-full font-medium transition-colors disabled:opacity-40"
+                      className="text-sm bg-zinc-800 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 text-zinc-400 border border-zinc-700 px-3 py-1.5 rounded-full font-medium transition-colors disabled:opacity-40"
                     >
                       {isLoading ? '...' : 'Pending'}
                     </button>
@@ -324,7 +324,7 @@ export default function GroupsClient({ initialGroups, currentUserId, userLat, us
                     <button
                       onClick={() => handleJoin(group.id, group.privacy)}
                       disabled={isLoading}
-                      className="text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-full font-medium transition-colors disabled:opacity-40"
+                      className="text-sm bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-full font-medium transition-colors disabled:opacity-40"
                     >
                       {isLoading ? '...' : group.privacy === 'private' ? 'Request' : 'Join'}
                     </button>

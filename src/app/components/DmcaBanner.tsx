@@ -57,7 +57,7 @@ export default function DmcaBanner({
               <p className="text-amber-300 text-sm font-semibold leading-snug">
                 One of your posts was removed — copyright complaint
               </p>
-              <p className="text-amber-400/80 text-xs mt-0.5 leading-relaxed">
+              <p className="text-amber-400/80 text-sm mt-0.5 leading-relaxed">
                 A post was removed from your profile following a DMCA takedown notice.
                 {' '}If you believe this was a mistake, you have the right to file a counter-notice
                 — we'll show you exactly which post was removed when you get there.
@@ -66,14 +66,14 @@ export default function DmcaBanner({
                 {n.profile_username && (
                   <Link
                     href={`/profile/${n.profile_username}`}
-                    className="text-xs font-semibold text-amber-200 hover:text-white underline underline-offset-2 transition-colors"
+                    className="text-sm font-semibold text-amber-200 hover:text-white underline underline-offset-2 transition-colors"
                   >
                     View your profile →
                   </Link>
                 )}
                 <Link
                   href={counterNoticeHref}
-                  className="text-xs font-semibold text-amber-300 hover:text-amber-200 underline underline-offset-2 transition-colors"
+                  className="text-sm font-semibold text-amber-300 hover:text-amber-200 underline underline-offset-2 transition-colors"
                 >
                   File a counter-notice →
                 </Link>

@@ -112,7 +112,7 @@ export default async function ChatPage({
               {otherAvatarUrl ? (
                 <Image src={otherAvatarUrl} alt={otherInitial} width={32} height={32} className="object-cover w-full h-full" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-xs font-bold text-zinc-300">
+                <div className="w-full h-full flex items-center justify-center text-sm font-bold text-zinc-300">
                   {otherInitial}
                 </div>
               )}

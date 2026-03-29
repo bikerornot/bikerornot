@@ -202,7 +202,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
                     <button
                       type="button"
                       onClick={() => removeImage(i)}
-                      className="absolute top-1 right-1 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-black"
+                      className="absolute top-1 right-1 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-black"
                     >
                       ✕
                     </button>
@@ -232,20 +232,20 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
               </div>
             </div>
             <div className="bg-zinc-800 px-3 py-2.5 space-y-0.5">
-              <p className="flex items-center gap-1.5 text-xs text-zinc-500">
+              <p className="flex items-center gap-1.5 text-sm text-zinc-500">
                 <svg className="w-3.5 h-3.5 text-red-500 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5a3 3 0 0 0-2.1 2.1C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.3 3.6-6.3 3.6z" />
                 </svg>
                 YouTube
               </p>
               <p className="text-white text-sm font-medium line-clamp-2">{ytPreview.title}</p>
-              <p className="text-zinc-400 text-xs">{ytPreview.channel}</p>
+              <p className="text-zinc-400 text-sm">{ytPreview.channel}</p>
             </div>
           </div>
         )}
 
-        {compressing && <p className="text-zinc-400 text-xs mt-2">Compressing images…</p>}
-        {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+        {compressing && <p className="text-zinc-400 text-sm mt-2">Compressing images…</p>}
+        {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
 
         {/* Action bar */}
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-orange-500/20">

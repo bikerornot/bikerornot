@@ -50,7 +50,7 @@ function ListingCard({ listing }: { listing: ListingSearchResult }) {
             </div>
           )}
           {listing.trade_considered && (
-            <div className="absolute top-2 right-2 bg-orange-500/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+            <div className="absolute top-2 right-2 bg-orange-500/90 text-white text-xs font-bold px-1.5 py-0.5 rounded">
               TRADE
             </div>
           )}
@@ -65,17 +65,17 @@ function ListingCard({ listing }: { listing: ListingSearchResult }) {
             {formatPrice(listing.price, listing.price_type)}
           </p>
           {listing.mileage != null && (
-            <p className="text-zinc-400 text-xs mt-1">{formatMileage(listing.mileage)}</p>
+            <p className="text-zinc-400 text-sm mt-1">{formatMileage(listing.mileage)}</p>
           )}
           {location && (
-            <p className="text-zinc-500 text-xs mt-0.5">
+            <p className="text-zinc-500 text-sm mt-0.5">
               {location}
               {listing.distance_miles != null && (
                 <span className="text-zinc-600"> ({Math.round(listing.distance_miles)} mi away)</span>
               )}
             </p>
           )}
-          <div className="flex items-center gap-2 mt-2 text-xs">
+          <div className="flex items-center gap-2 mt-2 text-sm">
             <div className="flex items-center gap-1.5">
               {sellerAvatarUrl ? (
                 <Image src={sellerAvatarUrl} alt="" width={16} height={16} className="rounded-full object-cover" />

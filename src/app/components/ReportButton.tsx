@@ -43,7 +43,7 @@ export default function ReportButton({ type, targetId, className }: Props) {
     <>
       <button
         onClick={handleOpen}
-        className={className ?? 'text-xs text-zinc-500 hover:text-red-400 transition-colors'}
+        className={className ?? 'text-sm text-zinc-500 hover:text-red-400 transition-colors'}
         title={label}
       >
         Report
@@ -89,7 +89,7 @@ export default function ReportButton({ type, targetId, className }: Props) {
                     <button
                       key={r.value}
                       onClick={() => setReason(r.value)}
-                      className={`text-left px-3 py-2 rounded-xl text-xs font-medium border transition-colors ${
+                      className={`text-left px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
                         reason === r.value
                           ? 'bg-orange-600 border-orange-500 text-white'
                           : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-500'

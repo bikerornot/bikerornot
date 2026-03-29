@@ -168,7 +168,7 @@ export default function PhotosTab({ profileId, currentUserId, currentUserProfile
     return (
       <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-10 text-center">
         <p className="text-zinc-400 text-sm">No photos yet.</p>
-        <p className="text-zinc-600 text-xs mt-1">Share a post with a photo to add it here.</p>
+        <p className="text-zinc-600 text-sm mt-1">Share a post with a photo to add it here.</p>
       </div>
     )
   }
@@ -201,7 +201,7 @@ export default function PhotosTab({ profileId, currentUserId, currentUserProfile
     <div className="space-y-6">
       {postPhotos.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
+          <p className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">
             Post Photos · {postPhotos.length}
           </p>
           {renderGrid(postPhotos, 0)}
@@ -210,7 +210,7 @@ export default function PhotosTab({ profileId, currentUserId, currentUserProfile
 
       {bikePhotos.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
+          <p className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">
             Bike Photos · {bikePhotos.length}
           </p>
           {renderGrid(bikePhotos, postPhotos.length)}

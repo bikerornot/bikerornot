@@ -51,11 +51,11 @@ export default function BirthdayCard({ birthdays }: Props) {
                 <Link href={`/profile/${friend.username}`} className="hover:underline">
                   <span className="text-white text-sm font-medium">@{friend.username}</span>
                 </Link>
-                <p className="text-zinc-500 text-xs">Wish them a happy birthday!</p>
+                <p className="text-zinc-500 text-sm">Wish them a happy birthday!</p>
               </div>
               <Link
                 href={`/profile/${friend.username}`}
-                className="flex-shrink-0 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                className="flex-shrink-0 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
               >
                 View Profile
               </Link>

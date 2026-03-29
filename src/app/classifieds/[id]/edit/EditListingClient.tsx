@@ -149,7 +149,7 @@ export default function EditListingClient({ listing }: Props) {
             <BikeSelector value={bikeData} onChange={setBikeData} />
 
             <div>
-              <label className="text-zinc-400 text-xs font-medium block mb-1.5">Category</label>
+              <label className="text-zinc-400 text-sm font-medium block mb-1.5">Category</label>
               <div className="grid grid-cols-2 gap-2">
                 {categoryEntries.map(([value, label]) => (
                   <button
@@ -170,11 +170,11 @@ export default function EditListingClient({ listing }: Props) {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-zinc-400 text-xs font-medium block mb-1.5">Trim</label>
+                <label className="text-zinc-400 text-sm font-medium block mb-1.5">Trim</label>
                 <input type="text" value={bikeTrim} onChange={e => setBikeTrim(e.target.value)} placeholder="e.g. Special, Classic" className={inputClass} />
               </div>
               <div>
-                <label className="text-zinc-400 text-xs font-medium block mb-1.5">Color</label>
+                <label className="text-zinc-400 text-sm font-medium block mb-1.5">Color</label>
                 <input type="text" value={color} onChange={e => setColor(e.target.value)} placeholder="Optional" className={inputClass} />
               </div>
             </div>
@@ -198,22 +198,22 @@ export default function EditListingClient({ listing }: Props) {
                   }`}
                 >
                   <p className={`text-sm font-medium ${condition === value ? 'text-orange-400' : 'text-zinc-300'}`}>{label}</p>
-                  <p className="text-xs text-zinc-500 mt-0.5">{desc}</p>
+                  <p className="text-sm text-zinc-500 mt-0.5">{desc}</p>
                 </button>
               ))}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-zinc-400 text-xs font-medium block mb-1.5">Mileage</label>
+                <label className="text-zinc-400 text-sm font-medium block mb-1.5">Mileage</label>
                 <input type="number" value={mileage} onChange={e => setMileage(e.target.value)} placeholder="Optional" className={inputClass} />
               </div>
               <div>
-                <label className="text-zinc-400 text-xs font-medium block mb-1.5">VIN</label>
+                <label className="text-zinc-400 text-sm font-medium block mb-1.5">VIN</label>
                 <input type="text" value={vin} onChange={e => setVin(e.target.value.toUpperCase())} placeholder="Optional (17 chars)" maxLength={17} className={inputClass} />
               </div>
             </div>
             <div>
-              <label className="text-zinc-400 text-xs font-medium block mb-1.5">Modifications</label>
+              <label className="text-zinc-400 text-sm font-medium block mb-1.5">Modifications</label>
               <textarea value={modifications} onChange={e => setModifications(e.target.value)} rows={3} placeholder="Optional — describe any mods" className={inputClass + ' resize-none'} />
             </div>
           </div>
@@ -224,15 +224,15 @@ export default function EditListingClient({ listing }: Props) {
           <h2 className="text-lg font-semibold text-white mb-3">Description & Price</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-zinc-400 text-xs font-medium block mb-1.5">Title <span className="text-zinc-600">({title.length}/100)</span></label>
+              <label className="text-zinc-400 text-sm font-medium block mb-1.5">Title <span className="text-zinc-600">({title.length}/100)</span></label>
               <input type="text" value={title} onChange={e => setTitle(e.target.value)} maxLength={100} className={inputClass} />
             </div>
             <div>
-              <label className="text-zinc-400 text-xs font-medium block mb-1.5">Description</label>
+              <label className="text-zinc-400 text-sm font-medium block mb-1.5">Description</label>
               <textarea value={description} onChange={e => setDescription(e.target.value)} rows={5} maxLength={5000} placeholder="Describe your bike..." className={inputClass + ' resize-none'} />
             </div>
             <div>
-              <label className="text-zinc-400 text-xs font-medium block mb-1.5">Price Type</label>
+              <label className="text-zinc-400 text-sm font-medium block mb-1.5">Price Type</label>
               <div className="flex gap-2">
                 {(['fixed', 'obo'] as PriceType[]).map(pt => (
                   <button
@@ -250,7 +250,7 @@ export default function EditListingClient({ listing }: Props) {
             </div>
             {(
               <div>
-                <label className="text-zinc-400 text-xs font-medium block mb-1.5">Price ($)</label>
+                <label className="text-zinc-400 text-sm font-medium block mb-1.5">Price ($)</label>
                 <input type="number" value={price} onChange={e => setPrice(e.target.value)} placeholder="0" className={inputClass} />
               </div>
             )}
@@ -273,7 +273,7 @@ export default function EditListingClient({ listing }: Props) {
                 )}
                 <button
                   onClick={() => handleDeleteImage(img.id)}
-                  className="absolute top-1 right-1 w-5 h-5 bg-black/70 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-1 right-1 w-5 h-5 bg-black/70 text-white rounded-full text-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   ✕
                 </button>
@@ -285,7 +285,7 @@ export default function EditListingClient({ listing }: Props) {
                 <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
                 <button
                   onClick={() => setNewFiles(prev => prev.filter((_, j) => j !== i))}
-                  className="absolute top-1 right-1 w-5 h-5 bg-black/70 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-1 right-1 w-5 h-5 bg-black/70 text-white rounded-full text-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   ✕
                 </button>
@@ -302,7 +302,7 @@ export default function EditListingClient({ listing }: Props) {
               />
             </label>
           </div>
-          <p className="text-zinc-600 text-xs">{existingImages.length + newFiles.length} / 24 photos</p>
+          <p className="text-zinc-600 text-sm">{existingImages.length + newFiles.length} / 24 photos</p>
         </section>
 
         {/* Location */}
@@ -310,7 +310,7 @@ export default function EditListingClient({ listing }: Props) {
           <h2 className="text-lg font-semibold text-white mb-3">Location</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-zinc-400 text-xs font-medium block mb-1.5">Zip Code</label>
+              <label className="text-zinc-400 text-sm font-medium block mb-1.5">Zip Code</label>
               <input type="text" value={zipCode} onChange={e => setZipCode(e.target.value)} maxLength={10} className={inputClass} />
             </div>
             <label className="flex items-center gap-2 cursor-pointer">

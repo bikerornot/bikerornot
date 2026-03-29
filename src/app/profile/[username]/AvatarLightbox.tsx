@@ -131,7 +131,7 @@ export default function AvatarLightbox({ avatarUrl, firstInitial, isOwnProfile }
                   onChange={handleFileChange}
                 />
                 {error && (
-                  <p className="text-red-400 text-xs mt-2">{error}</p>
+                  <p className="text-red-400 text-sm mt-2">{error}</p>
                 )}
               </div>
             )}

@@ -99,7 +99,7 @@ export default function BikePhotoGallery({ bikeId, initialPhotos, isOwnGarage }:
             />
           </>
         )}
-        {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+        {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
       </div>
     )
   }
@@ -122,7 +122,7 @@ export default function BikePhotoGallery({ bikeId, initialPhotos, isOwnGarage }:
             {!selectedPhoto.is_primary && (
               <button
                 onClick={handleSetPrimary}
-                className="bg-black/60 hover:bg-black/80 text-white rounded-full px-3 h-9 flex items-center gap-1.5 transition-colors text-xs font-medium"
+                className="bg-black/60 hover:bg-black/80 text-white rounded-full px-3 h-9 flex items-center gap-1.5 transition-colors text-sm font-medium"
               >
                 <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -201,7 +201,7 @@ export default function BikePhotoGallery({ bikeId, initialPhotos, isOwnGarage }:
         onChange={handleUpload}
       />
 
-      {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+      {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
     </div>
   )
 }

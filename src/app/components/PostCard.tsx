@@ -136,12 +136,12 @@ function YouTubeEmbed({ videoId }: { videoId: string }) {
       )}
       {meta && (
         <div className="bg-zinc-800 px-3 py-2.5 space-y-0.5">
-          <p className="flex items-center gap-1.5 text-xs text-zinc-500">
+          <p className="flex items-center gap-1.5 text-sm text-zinc-500">
             {YT_ICON}
             YouTube
           </p>
           <p className="text-white text-sm font-medium line-clamp-2">{meta.title}</p>
-          <p className="text-zinc-400 text-xs">{meta.channel}</p>
+          <p className="text-zinc-400 text-sm">{meta.channel}</p>
         </div>
       )}
     </div>
@@ -150,10 +150,10 @@ function YouTubeEmbed({ videoId }: { videoId: string }) {
 
 function formatTimeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
-  if (diff < 60) return `${diff}s ago`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`
+  if (diff < 60) return 'just now'
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hr ago`
+  if (diff < 604800) return `${Math.floor(diff / 86400)} day${Math.floor(diff / 86400) !== 1 ? 's' : ''} ago`
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
@@ -171,7 +171,7 @@ function SharedPostEmbed({ post }: { post: Omit<Post, 'shared_post'> }) {
             {avatarUrl ? (
               <Image src={avatarUrl} alt={author?.username ?? ''} width={28} height={28} className="object-cover w-full h-full" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-zinc-400 text-xs font-bold">
+              <div className="w-full h-full flex items-center justify-center text-zinc-400 text-sm font-bold">
                 {(author?.first_name?.[0] ?? '?').toUpperCase()}
               </div>
             )}
@@ -181,7 +181,7 @@ function SharedPostEmbed({ post }: { post: Omit<Post, 'shared_post'> }) {
           {author?.username ?? 'Unknown'}
           {author?.phone_verified_at && <VerifiedBadge className="w-3.5 h-3.5" />}
         </Link>
-        <span className="text-zinc-500 text-xs">· {formatTimeAgo(post.created_at)}</span>
+        <span className="text-zinc-500 text-sm">· {formatTimeAgo(post.created_at)}</span>
       </div>
       {post.content && (() => {
         const ytVideo = extractYouTubeId(post.content)
@@ -308,17 +308,17 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
         </Link>
 
         <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 leading-relaxed">
             <Link
               href={`/profile/${author?.username}`}
-              className="font-semibold text-white hover:underline text-base sm:text-sm inline-flex items-center gap-1"
+              className="font-bold text-white hover:underline text-lg sm:text-base inline-flex items-center gap-1"
             >
               @{displayName}
               {author?.phone_verified_at && <VerifiedBadge />}
             </Link>
             {post.group && (
               <>
-                <span className="text-zinc-500 text-xs">posted in</span>
+                <span className="text-zinc-500 text-sm">posted in</span>
                 <Link
                   href={`/groups/${post.group.slug}`}
                   className="font-semibold text-orange-400 hover:text-orange-300 text-sm hover:underline"
@@ -327,9 +327,9 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
                 </Link>
               </>
             )}
-            <span className="text-zinc-600 text-xs">·</span>
-            <span className="text-zinc-500 text-xs">{formatTimeAgo(post.created_at)}</span>
-            {wasEdited && <><span className="text-zinc-600 text-xs">·</span><span className="text-zinc-600 text-xs">Edited</span></>}
+            <span className="text-zinc-600 text-sm">·</span>
+            <span className="text-zinc-500 text-sm">{formatTimeAgo(post.created_at)}</span>
+            {wasEdited && <><span className="text-zinc-600 text-sm">·</span><span className="text-zinc-600 text-sm">Edited</span></>}
           </div>
         </div>
 
@@ -344,7 +344,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
           {canEdit && !editing && (
             <button
               onClick={() => { setEditContent(displayContent ?? ''); setEditing(true); setEditError('') }}
-              className="text-zinc-600 hover:text-orange-400 transition-colors text-xs p-1"
+              className="text-zinc-600 hover:text-orange-400 transition-colors text-sm p-1"
               title="Edit post"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
@@ -355,7 +355,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
           {(currentUserId === post.author_id || (wallOwnerId && currentUserId === wallOwnerId)) && (
             <button
               onClick={handleDelete}
-              className="text-zinc-600 hover:text-red-400 transition-colors text-xs p-1"
+              className="text-zinc-600 hover:text-red-400 transition-colors text-sm p-1"
               title="Delete post"
             >
               ✕
@@ -375,7 +375,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
             className="w-full bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:border-orange-500 transition-colors resize-none"
             autoFocus
           />
-          {editError && <p className="text-red-400 text-xs">{editError}</p>}
+          {editError && <p className="text-red-400 text-sm">{editError}</p>}
           <div className="flex items-center gap-2">
             <button
               onClick={handleEdit}

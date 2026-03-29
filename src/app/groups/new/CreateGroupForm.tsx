@@ -138,7 +138,7 @@ export default function CreateGroupForm() {
             </button>
           ))}
         </div>
-        <p className="text-zinc-600 text-xs mt-1.5">
+        <p className="text-zinc-600 text-sm mt-1.5">
           {privacy === 'public'
             ? 'Anyone can see and join this group instantly.'
             : 'Anyone can see the group, but joining requires approval.'}

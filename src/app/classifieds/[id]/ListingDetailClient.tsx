@@ -162,7 +162,7 @@ export default function ListingDetailClient({ listing, currentUserId }: Props) {
             />
             {/* Image counter */}
             {images.length > 1 && (
-              <span className="absolute bottom-3 right-3 bg-black/70 text-white text-xs font-medium px-2.5 py-1 rounded-full">
+              <span className="absolute bottom-3 right-3 bg-black/70 text-white text-sm font-medium px-2.5 py-1 rounded-full">
                 {activeImage + 1} / {images.length}
               </span>
             )}
@@ -222,7 +222,7 @@ export default function ListingDetailClient({ listing, currentUserId }: Props) {
             {formatPrice(listing.price, listing.price_type)}
           </p>
           {listing.trade_considered && (
-            <span className="text-xs font-medium bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">
+            <span className="text-sm font-medium bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">
               Open to Trades
             </span>
           )}
@@ -270,7 +270,7 @@ export default function ListingDetailClient({ listing, currentUserId }: Props) {
         </button>
 
         {shareMsg && (
-          <span className="text-xs text-green-400 font-medium">{shareMsg}</span>
+          <span className="text-sm text-green-400 font-medium">{shareMsg}</span>
         )}
 
         {currentUserId && !isOwn && (
@@ -285,22 +285,22 @@ export default function ListingDetailClient({ listing, currentUserId }: Props) {
       {/* Spec grid */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Mileage</p>
+          <p className="text-sm text-zinc-500 uppercase tracking-wider mb-1">Mileage</p>
           <p className="text-base font-semibold text-white">{formatMileage(listing.mileage)}</p>
         </div>
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Condition</p>
+          <p className="text-sm text-zinc-500 uppercase tracking-wider mb-1">Condition</p>
           <p className="text-base font-semibold text-white">{LISTING_CONDITIONS[listing.condition].label}</p>
         </div>
         {listing.color && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Color</p>
+            <p className="text-sm text-zinc-500 uppercase tracking-wider mb-1">Color</p>
             <p className="text-base font-semibold text-white">{listing.color}</p>
           </div>
         )}
         {listing.vin && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3">
-            <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">VIN</p>
+            <p className="text-sm text-zinc-500 uppercase tracking-wider mb-1">VIN</p>
             <p className="text-base font-semibold text-white font-mono text-sm">{listing.vin}</p>
           </div>
         )}
@@ -323,7 +323,7 @@ export default function ListingDetailClient({ listing, currentUserId }: Props) {
       )}
 
       {/* Listing meta */}
-      <div className="flex items-center gap-4 text-xs text-zinc-500 mb-6">
+      <div className="flex items-center gap-4 text-sm text-zinc-500 mb-6">
         {listing.published_at && (
           <span>Posted {timeAgo(listing.published_at)}</span>
         )}
@@ -358,7 +358,7 @@ export default function ListingDetailClient({ listing, currentUserId }: Props) {
               </Link>
               {listing.seller_verified && <VerifiedBadge />}
             </div>
-            <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5">
+            <div className="flex items-center gap-2 text-sm text-zinc-500 mt-0.5">
               <span>Member since {memberSinceYear}</span>
               {listing.seller_listings_sold > 0 && (
                 <>

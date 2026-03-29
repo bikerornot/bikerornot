@@ -388,7 +388,7 @@ export default function CreateListingWizard({ eligibility, garageBikes, userZipC
               <div key={i} className="aspect-square relative rounded-lg overflow-hidden bg-zinc-800">
                 <img src={url} alt="" className="w-full h-full object-cover" />
                 {i === 0 && (
-                  <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-center text-[10px] text-white py-0.5">
+                  <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-center text-xs text-white py-0.5">
                     Cover
                   </span>
                 )}
@@ -614,7 +614,7 @@ function StepBike({
       {mode === 'garage' && form.userBikeId && (
         <div className="mt-4 space-y-3">
           <div className="bg-zinc-800 rounded-xl px-4 py-3">
-            <p className="text-zinc-400 text-xs font-medium mb-1">Selected Bike</p>
+            <p className="text-zinc-400 text-sm font-medium mb-1">Selected Bike</p>
             <p className="text-white text-lg font-semibold">
               {[form.year, form.make, form.model].filter(Boolean).join(' ')}
             </p>
@@ -760,7 +760,7 @@ function StepCondition({
           className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl px-4 py-2.5 text-base placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 font-mono"
         />
         {form.vin.length > 0 && form.vin.length !== 17 && (
-          <p className="text-zinc-500 text-xs mt-1">{form.vin.length}/17 characters</p>
+          <p className="text-zinc-500 text-sm mt-1">{form.vin.length}/17 characters</p>
         )}
       </div>
 
@@ -807,7 +807,7 @@ function StepDescription({
           onChange={e => update('title', e.target.value)}
           className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl px-4 py-2.5 text-base placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
         />
-        <p className={`text-xs mt-1 ${form.title.length > 90 ? 'text-orange-400' : 'text-zinc-500'}`}>
+        <p className={`text-sm mt-1 ${form.title.length > 90 ? 'text-orange-400' : 'text-zinc-500'}`}>
           {form.title.length}/100
         </p>
       </div>
@@ -826,7 +826,7 @@ function StepDescription({
           className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl px-4 py-2.5 text-base placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 resize-none"
         />
         {form.description.length > 0 && (
-          <p className={`text-xs mt-1 ${form.description.length > 4800 ? 'text-orange-400' : 'text-zinc-500'}`}>
+          <p className={`text-sm mt-1 ${form.description.length > 4800 ? 'text-orange-400' : 'text-zinc-500'}`}>
             {form.description.length}/5000
           </p>
         )}
@@ -870,7 +870,7 @@ function StepDescription({
             className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl px-4 py-2.5 text-base placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
           />
           {form.price && Number(form.price) > 0 && (
-            <p className="text-zinc-500 text-xs mt-1">${Number(form.price).toLocaleString()}</p>
+            <p className="text-zinc-500 text-sm mt-1">${Number(form.price).toLocaleString()}</p>
           )}
         </div>
       )}
@@ -919,7 +919,7 @@ function StepPhotos({
       {/* Show garage photo if available */}
       {garagePhotoUrl && (
         <div className="mb-4">
-          <p className="text-zinc-400 text-xs font-medium mb-2">From your garage</p>
+          <p className="text-zinc-400 text-sm font-medium mb-2">From your garage</p>
           <div className="inline-block relative">
             <div className="w-24 h-24 rounded-lg overflow-hidden bg-zinc-800">
               <img src={getImageUrl('bikes', garagePhotoUrl)} alt="" className="w-full h-full object-cover" />
@@ -928,7 +928,7 @@ function StepPhotos({
               Cover
             </span>
           </div>
-          <p className="text-zinc-500 text-xs mt-1">This photo will be included automatically. Add more below.</p>
+          <p className="text-zinc-500 text-sm mt-1">This photo will be included automatically. Add more below.</p>
         </div>
       )}
 
@@ -969,7 +969,7 @@ function StepPhotos({
             <div key={i} className="aspect-square relative rounded-lg overflow-hidden bg-zinc-800 group">
               <img src={url} alt="" className="w-full h-full object-cover" />
               {i === 0 && (
-                <span className="absolute top-0 left-0 bg-orange-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-br-lg">
+                <span className="absolute top-0 left-0 bg-orange-500 text-white text-xs font-semibold px-1.5 py-0.5 rounded-br-lg">
                   Cover
                 </span>
               )}

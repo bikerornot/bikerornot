@@ -22,10 +22,10 @@ interface Props {
 
 function formatTimeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
-  if (diff < 60) return `${diff}s`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h`
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d`
+  if (diff < 60) return 'just now'
+  if (diff < 3600) return `${Math.floor(diff / 60)} min`
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hr`
+  if (diff < 604800) return `${Math.floor(diff / 86400)} day${Math.floor(diff / 86400) !== 1 ? 's' : ''}`
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
@@ -79,7 +79,7 @@ function ReplyItem({
               className="object-cover w-full h-full"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-zinc-400 text-xs font-bold">
+            <div className="w-full h-full flex items-center justify-center text-zinc-400 text-sm font-bold">
               {(author?.first_name?.[0] ?? '?').toUpperCase()}
             </div>
           )}
@@ -89,14 +89,14 @@ function ReplyItem({
         <div className="bg-zinc-800 rounded-xl px-3 py-1.5">
           <Link
             href={`/profile/${author?.username}`}
-            className="font-semibold text-white text-sm hover:underline"
+            className="font-bold text-white text-base hover:underline"
           >
             {displayName}
           </Link>
           <p className="text-zinc-200 text-sm mt-0.5 whitespace-pre-wrap">{renderContent(reply.content)}</p>
         </div>
         <div className="flex items-center gap-2 mt-0.5 pl-1">
-          <span className="text-zinc-500 text-xs">{formatTimeAgo(reply.created_at)}</span>
+          <span className="text-zinc-500 text-sm">{formatTimeAgo(reply.created_at)}</span>
           {currentUserId && (
             <button
               onClick={handleLike}
@@ -228,7 +228,7 @@ export default function CommentItem({
         <div className="bg-zinc-800 rounded-xl px-3 py-2">
           <Link
             href={`/profile/${author?.username}`}
-            className="font-semibold text-white text-sm hover:underline"
+            className="font-bold text-white text-base hover:underline"
           >
             {displayName}
           </Link>
@@ -236,7 +236,7 @@ export default function CommentItem({
         </div>
 
         <div className="flex items-center gap-3 mt-1 pl-1">
-          <span className="text-zinc-500 text-xs">{formatTimeAgo(comment.created_at)}</span>
+          <span className="text-zinc-500 text-sm">{formatTimeAgo(comment.created_at)}</span>
           {currentUserId && (
             <button
               onClick={handleLike}
@@ -287,7 +287,7 @@ export default function CommentItem({
                   className="object-cover w-full h-full"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-zinc-400 text-xs font-bold">
+                <div className="w-full h-full flex items-center justify-center text-zinc-400 text-sm font-bold">
                   {(currentUserProfile?.first_name?.[0] ?? '?').toUpperCase()}
                 </div>
               )}

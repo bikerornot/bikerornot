@@ -47,7 +47,7 @@ export default function ProfilePhotoUpload({ userId }: { userId: string }) {
         aria-label="Change profile photo"
         className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center rounded-full cursor-pointer disabled:cursor-wait"
       >
-        <span className="text-white text-xs font-medium text-center leading-tight px-1">
+        <span className="text-white text-sm font-medium text-center leading-tight px-1">
           {uploading ? 'Uploading…' : 'Change photo'}
         </span>
       </button>
@@ -59,7 +59,7 @@ export default function ProfilePhotoUpload({ userId }: { userId: string }) {
         onChange={handleFileChange}
       />
       {error && (
-        <p className="absolute -bottom-6 left-0 right-0 text-center text-red-400 text-xs">
+        <p className="absolute -bottom-6 left-0 right-0 text-center text-red-400 text-sm">
           {error}
         </p>
       )}

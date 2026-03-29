@@ -13,10 +13,10 @@ import type { Notification } from '@/lib/supabase/types'
 
 function formatTimeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
-  if (diff < 60) return `${diff}s`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h`
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d`
+  if (diff < 60) return 'just now'
+  if (diff < 3600) return `${Math.floor(diff / 60)} min`
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hr`
+  if (diff < 604800) return `${Math.floor(diff / 86400)} day${Math.floor(diff / 86400) !== 1 ? 's' : ''}`
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
@@ -244,7 +244,7 @@ export default function NotificationBell({ userId, username }: Props) {
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="text-xs text-zinc-500 hover:text-orange-400 transition-colors"
+                className="text-sm text-zinc-500 hover:text-orange-400 transition-colors"
               >
                 Mark all read
               </button>
@@ -255,7 +255,7 @@ export default function NotificationBell({ userId, username }: Props) {
             {/* ── Friend requests section ── */}
             {pendingRequests.length > 0 && (
               <div>
-                <p className="px-4 pt-3 pb-1 text-[11px] font-semibold text-orange-400 uppercase tracking-wider">
+                <p className="px-4 pt-3 pb-1 text-xs font-semibold text-orange-400 uppercase tracking-wider">
                   Friend Requests
                 </p>
                 {pendingRequests.map((n) => (
@@ -271,21 +271,21 @@ export default function NotificationBell({ userId, username }: Props) {
                           <span className="font-semibold text-white">@{n.actor?.username}</span>
                           {' '}wants to be your friend
                         </p>
-                        <p className="text-zinc-500 text-xs mt-0.5">{formatTimeAgo(n.created_at)} · View profile</p>
+                        <p className="text-zinc-500 text-sm mt-0.5">{formatTimeAgo(n.created_at)} · View profile</p>
                       </div>
                     </Link>
                     <div className="flex gap-2 mt-2.5">
                       <button
                         onClick={() => handleAccept(n)}
                         disabled={actingOn === n.id}
-                        className="flex-1 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white text-xs font-semibold py-1.5 rounded-lg transition-colors"
+                        className="flex-1 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white text-sm font-semibold py-1.5 rounded-lg transition-colors"
                       >
                         {actingOn === n.id ? '…' : 'Accept'}
                       </button>
                       <button
                         onClick={() => handleDecline(n)}
                         disabled={actingOn === n.id}
-                        className="flex-1 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-zinc-200 text-xs font-semibold py-1.5 rounded-lg transition-colors"
+                        className="flex-1 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-zinc-200 text-sm font-semibold py-1.5 rounded-lg transition-colors"
                       >
                         Decline
                       </button>
@@ -298,7 +298,7 @@ export default function NotificationBell({ userId, username }: Props) {
             {/* ── Group invites section ── */}
             {pendingGroupInvites.length > 0 && (
               <div>
-                <p className="px-4 pt-3 pb-1 text-[11px] font-semibold text-orange-400 uppercase tracking-wider">
+                <p className="px-4 pt-3 pb-1 text-xs font-semibold text-orange-400 uppercase tracking-wider">
                   Group Invites
                 </p>
                 {pendingGroupInvites.map((n) => (
@@ -311,21 +311,21 @@ export default function NotificationBell({ userId, username }: Props) {
                           {' '}invited you to{' '}
                           <span className="font-semibold text-white">{n.group?.name ?? 'a group'}</span>
                         </p>
-                        <p className="text-zinc-500 text-xs mt-0.5">{formatTimeAgo(n.created_at)}</p>
+                        <p className="text-zinc-500 text-sm mt-0.5">{formatTimeAgo(n.created_at)}</p>
                       </div>
                     </div>
                     <div className="flex gap-2 mt-2.5">
                       <button
                         onClick={() => handleGroupInviteResponse(n, true)}
                         disabled={actingOn === n.id}
-                        className="flex-1 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white text-xs font-semibold py-1.5 rounded-lg transition-colors"
+                        className="flex-1 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 text-white text-sm font-semibold py-1.5 rounded-lg transition-colors"
                       >
                         {actingOn === n.id ? '...' : 'Join'}
                       </button>
                       <button
                         onClick={() => handleGroupInviteResponse(n, false)}
                         disabled={actingOn === n.id}
-                        className="flex-1 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-zinc-200 text-xs font-semibold py-1.5 rounded-lg transition-colors"
+                        className="flex-1 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-zinc-200 text-sm font-semibold py-1.5 rounded-lg transition-colors"
                       >
                         Decline
                       </button>
@@ -339,7 +339,7 @@ export default function NotificationBell({ userId, username }: Props) {
             {otherNotifications.length > 0 && (
               <div>
                 {(pendingRequests.length > 0 || pendingGroupInvites.length > 0) && (
-                  <p className="px-4 pt-3 pb-1 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                  <p className="px-4 pt-3 pb-1 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                     Recent
                   </p>
                 )}
@@ -357,7 +357,7 @@ export default function NotificationBell({ userId, username }: Props) {
                         <p className="text-zinc-200 text-sm leading-snug">
                           {notificationMessage(n)}
                         </p>
-                        <p className="text-zinc-500 text-xs mt-0.5">{formatTimeAgo(n.created_at)}</p>
+                        <p className="text-zinc-500 text-sm mt-0.5">{formatTimeAgo(n.created_at)}</p>
                       </div>
                       {!n.read_at && (
                         <div className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 mt-2" />

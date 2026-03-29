@@ -183,7 +183,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
             }`}
           >
             <p className={`font-bold text-lg ${type === 'event' ? 'text-orange-400' : 'text-white'}`}>Event</p>
-            <p className="text-xs text-zinc-500 mt-0.5">Rally, meetup, show, bike night</p>
+            <p className="text-sm text-zinc-500 mt-0.5">Rally, meetup, show, bike night</p>
           </button>
           <button
             type="button"
@@ -195,7 +195,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
             }`}
           >
             <p className={`font-bold text-lg ${type === 'ride' ? 'text-orange-400' : 'text-white'}`}>Ride</p>
-            <p className="text-xs text-zinc-500 mt-0.5">Group ride with start and end</p>
+            <p className="text-sm text-zinc-500 mt-0.5">Group ride with start and end</p>
           </button>
         </div>
       </div>
@@ -222,7 +222,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="w-full h-32 rounded-xl border-2 border-dashed border-zinc-700 hover:border-orange-500 text-zinc-500 hover:text-orange-400 transition-colors flex flex-col items-center justify-center gap-1.5 text-xs"
+              className="w-full h-32 rounded-xl border-2 border-dashed border-zinc-700 hover:border-orange-500 text-zinc-500 hover:text-orange-400 transition-colors flex flex-col items-center justify-center gap-1.5 text-sm"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
@@ -259,7 +259,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
             <button
               type="button"
               onClick={() => flyerRef.current?.click()}
-              className="w-full h-32 rounded-xl border-2 border-dashed border-zinc-700 hover:border-orange-500 text-zinc-500 hover:text-orange-400 transition-colors flex flex-col items-center justify-center gap-1.5 text-xs"
+              className="w-full h-32 rounded-xl border-2 border-dashed border-zinc-700 hover:border-orange-500 text-zinc-500 hover:text-orange-400 transition-colors flex flex-col items-center justify-center gap-1.5 text-sm"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -423,7 +423,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
                 <button
                   type="button"
                   onClick={() => removeStop(idx)}
-                  className="text-zinc-500 hover:text-red-400 text-xs transition-colors"
+                  className="text-zinc-500 hover:text-red-400 text-sm transition-colors"
                 >
                   Remove
                 </button>

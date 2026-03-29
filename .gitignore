@@ -37,6 +37,9 @@ build_*.txt
 # env files (can opt-in for committing if needed)
 .env*
 
+# google analytics credentials
+ga-credentials.json
+
 # vercel
 .vercel
 

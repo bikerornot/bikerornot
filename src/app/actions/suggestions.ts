@@ -23,6 +23,7 @@ export interface RiderSuggestion {
   distance_miles: number | null
   riding_style: string[]
   mutual_friend_count: number
+  bike: string | null
 }
 
 export interface MutualFriend {
@@ -124,7 +125,6 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
   const myLat = me?.latitude
   const myLon = me?.longitude
   const myState = me?.state
-  const myStyles = new Set(me?.riding_style ?? [])
 
   // Exclude known connections (cap at 500 to stay within URL limits)
   const excludeArr = Array.from(excludeIds).slice(0, 500)
@@ -218,10 +218,6 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
       ? acc.accepted / acc.total
       : 0.5
 
-    // Riding style overlap count
-    const theirStyles: string[] = p.riding_style ?? []
-    const styleOverlap = theirStyles.filter((s: string) => myStyles.has(s)).length
-
     // Same state bonus
     const sameState = myState && p.state && myState === p.state
 
@@ -231,7 +227,6 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
     const score =
       mutuals * 15 +             // Mutual friends — strongest acceptance signal
       (sameState ? 10 : 0) +     // Same state — geographic relevance
-      styleOverlap * 8 +         // Riding style overlap — shared interests
       Math.min(actions, 50) +    // Recent activity — proves they're engaged
       acceptanceRate * 20 +      // Acceptance rate — likely to accept
       proximityBonus +           // Proximity — closer riders are more relevant
@@ -251,6 +246,21 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
     ;[topCandidates[i], topCandidates[j]] = [topCandidates[j], topCandidates[i]]
   }
 
+  // Fetch primary bike for top candidates
+  const topIds = topCandidates.map((p: any) => p.id)
+  const bikeMap: Record<string, string> = {}
+  if (topIds.length > 0) {
+    const { data: bikes } = await admin
+      .from('user_bikes')
+      .select('user_id, year, make, model')
+      .in('user_id', topIds)
+    for (const b of bikes ?? []) {
+      if (!bikeMap[b.user_id]) {
+        bikeMap[b.user_id] = `${b.year} ${b.make} ${b.model}`
+      }
+    }
+  }
+
   const riders: RiderSuggestion[] = topCandidates.map((p: any) => ({
     id: p.id,
     username: p.username,
@@ -262,6 +272,7 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
     distance_miles: p._dist != null && p._dist < 9999 ? Math.round(p._dist) : null,
     riding_style: p.riding_style ?? [],
     mutual_friend_count: p._mutuals,
+    bike: bikeMap[p.id] ?? null,
   }))
 
   return { riders, friendCount }

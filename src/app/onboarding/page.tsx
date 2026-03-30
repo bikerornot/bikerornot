@@ -486,7 +486,7 @@ export default function OnboardingPage() {
         if (typeof window !== 'undefined' && (window as any).fbq) {
           ;(window as any).fbq('track', 'CompleteRegistration')
         }
-        router.push('/feed')
+        router.push('/welcome')
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
@@ -505,7 +505,7 @@ export default function OnboardingPage() {
       if (typeof window !== 'undefined' && (window as any).fbq) {
         ;(window as any).fbq('track', 'CompleteRegistration')
       }
-      router.push('/feed')
+      router.push('/welcome')
     } catch {
       setError('Something went wrong. Please try again.')
     }

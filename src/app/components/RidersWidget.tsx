@@ -206,9 +206,6 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
                   {location && (
                     <p className="text-zinc-500 text-sm truncate leading-tight mt-0.5">{location}</p>
                   )}
-                  {bikeInfo && (
-                    <p className="text-orange-400/80 text-sm leading-tight truncate mt-0.5">{bikeInfo}</p>
-                  )}
                   {rider.mutual_friend_count > 0 && (
                     <p className="text-zinc-500 text-sm leading-tight mt-0.5">
                       {rider.mutual_friend_count} mutual

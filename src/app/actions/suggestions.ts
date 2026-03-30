@@ -132,7 +132,7 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
   // Fetch recently active profiles — ordered by last_seen_at so we get engaged users first
   let query = admin
     .from('profiles')
-    .select('id, username, first_name, last_name, profile_photo_url, city, state, latitude, longitude, riding_style')
+    .select('id, username, first_name, last_name, profile_photo_url, city, state, latitude, longitude, riding_style, last_seen_at')
     .eq('status', 'active')
     .eq('onboarding_complete', true)
     .is('deactivated_at', null)
@@ -224,12 +224,17 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
     // Proximity bonus: 20 pts at 0 miles, tapering to 0 at 1000 miles
     const proximityBonus = dist != null ? Math.max(0, 20 - dist / 50) : 0
 
+    // Online presence bonus — online users respond faster to friend requests
+    const lastSeenMs = p.last_seen_at ? Date.now() - new Date(p.last_seen_at).getTime() : Infinity
+    const onlineBonus = lastSeenMs < 5 * 60 * 1000 ? 25 : lastSeenMs < 30 * 60 * 1000 ? 10 : 0
+
     const score =
       mutuals * 15 +             // Mutual friends — strongest acceptance signal
       (sameState ? 10 : 0) +     // Same state — geographic relevance
       Math.min(actions, 50) +    // Recent activity — proves they're engaged
       acceptanceRate * 20 +      // Acceptance rate — likely to accept
       proximityBonus +           // Proximity — closer riders are more relevant
+      onlineBonus +              // Online now (+25) or recently (+10) — faster response
       totalFriends * 0.5         // Light friend count bonus — socially connected
 
     return { ...p, _score: score, _dist: dist, _mutuals: mutuals }

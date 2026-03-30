@@ -198,18 +198,18 @@ export default function GroupsClient({ initialGroups, currentUserId, userLat, us
       </div>
 
       {/* Search + Sort row */}
-      <div className="flex gap-2 mb-5">
+      <div className="flex gap-2 mb-5 min-w-0">
         <input
           type="text"
           placeholder="Search groups..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+          className="min-w-0 flex-1 bg-zinc-900 border border-zinc-800 text-white placeholder-zinc-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-orange-500 transition-colors"
         />
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortBy)}
-          className="bg-zinc-900 border border-zinc-800 text-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-orange-500 transition-colors"
+          className="flex-shrink-0 bg-zinc-900 border border-zinc-800 text-white rounded-xl px-2 py-2.5 text-sm focus:outline-none focus:border-orange-500 transition-colors"
         >
           <option value="newest">Newest</option>
           <option value="most_members">Most Members</option>

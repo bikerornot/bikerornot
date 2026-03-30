@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { banUser } from '@/app/actions/admin'
-import { dismissFlag, reviewFlag, type ContentFlag } from '@/app/actions/scam-scan'
+import { dismissFlag, reviewFlag, getFlagConversationMessages, scanConversation, type ContentFlag, type FlagConversationMessage, type ConversationScanResult } from '@/app/actions/scam-scan'
 
 const STATUS_FILTER = ['all', 'pending', 'reviewed', 'dismissed'] as const
 type StatusFilter = (typeof STATUS_FILTER)[number]
@@ -43,6 +43,37 @@ export default function FlagsClient({ initialFlags }: { initialFlags: ContentFla
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [expandedConvos, setExpandedConvos] = useState<Record<string, FlagConversationMessage[]>>({})
+  const [loadingConvo, setLoadingConvo] = useState<string | null>(null)
+  const [scanResults, setScanResults] = useState<Record<string, ConversationScanResult>>({})
+  const [scanningId, setScanningId] = useState<string | null>(null)
+
+  async function toggleConversation(flagId: string, conversationId: string) {
+    if (expandedConvos[flagId]) {
+      setExpandedConvos((prev) => { const next = { ...prev }; delete next[flagId]; return next })
+      return
+    }
+    setLoadingConvo(flagId)
+    try {
+      const messages = await getFlagConversationMessages(conversationId)
+      setExpandedConvos((prev) => ({ ...prev, [flagId]: messages }))
+    } finally {
+      setLoadingConvo(null)
+    }
+  }
+
+  async function handleScanConversation(flagId: string, conversationId: string) {
+    setScanningId(flagId)
+    try {
+      const result = await scanConversation(conversationId)
+      console.log('Scan result:', result)
+      setScanResults((prev) => ({ ...prev, [flagId]: result }))
+    } catch (err) {
+      console.error('Scan error:', err)
+    } finally {
+      setScanningId(null)
+    }
+  }
 
   const visible = flags.filter((f) => {
     if (statusFilter !== 'all' && f.status !== statusFilter) return false
@@ -200,10 +231,90 @@ export default function FlagsClient({ initialFlags }: { initialFlags: ContentFla
                 <p className="text-xs text-zinc-500 mb-2 italic">AI: "{flag.reason}"</p>
               )}
 
-              {/* Message content */}
-              <div className="bg-zinc-800 rounded-lg px-4 py-3 text-sm text-white break-words mb-4">
+              {/* Flagged content */}
+              <div className="bg-zinc-800 rounded-lg px-4 py-3 text-sm text-white break-words mb-3">
                 {flag.content}
               </div>
+
+              {/* Full conversation toggle — DM flags only */}
+              {flag.flag_type === 'message' && flag.conversation_id && (
+                <div className="mb-4">
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => toggleConversation(flag.id, flag.conversation_id!)}
+                      disabled={loadingConvo === flag.id}
+                      className="text-xs font-medium text-orange-400 hover:text-orange-300 transition-colors"
+                    >
+                      {loadingConvo === flag.id
+                        ? 'Loading...'
+                        : expandedConvos[flag.id]
+                        ? 'Hide Messages'
+                        : 'View Full Conversation'}
+                    </button>
+                    {!scanResults[flag.id] && (
+                      <button
+                        onClick={() => handleScanConversation(flag.id, flag.conversation_id!)}
+                        disabled={scanningId === flag.id}
+                        className="text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                      >
+                        {scanningId === flag.id ? 'Scanning...' : 'AI Scan Conversation'}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* AI scan result */}
+                  {scanResults[flag.id] && (
+                    <div className="mt-2 bg-zinc-800/50 border border-zinc-700 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <ScoreBadge score={scanResults[flag.id].score} />
+                        <span className="text-xs text-zinc-400">Conversation Scan</span>
+                      </div>
+                      <p className="text-sm text-zinc-300">{scanResults[flag.id].summary}</p>
+                      {scanResults[flag.id].patterns.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {scanResults[flag.id].patterns.map((p, i) => (
+                            <span key={i} className="text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full">
+                              {p}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {expandedConvos[flag.id] && (
+                    <div className="mt-2 bg-zinc-800/50 border border-zinc-700 rounded-lg max-h-80 overflow-y-auto">
+                      {expandedConvos[flag.id].length === 0 ? (
+                        <p className="text-zinc-500 text-xs p-3 text-center">No messages found</p>
+                      ) : (
+                        <div className="divide-y divide-zinc-700/50">
+                          {expandedConvos[flag.id].map((msg) => {
+                            const isSuspicious = scanResults[flag.id]?.suspiciousMessageIds.includes(msg.id)
+                            return (
+                            <div
+                              key={msg.id}
+                              className={`px-3 py-2 ${isSuspicious ? 'bg-red-500/10 border-l-2 border-red-500' : msg.sender_id === flag.sender_id ? 'bg-red-500/5' : ''}`}
+                            >
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className={`text-xs font-semibold ${msg.sender_id === flag.sender_id ? 'text-red-400' : 'text-zinc-300'}`}>
+                                  @{msg.sender_username ?? 'unknown'}
+                                </span>
+                                <span className="text-zinc-600 text-xs">
+                                  {new Date(msg.created_at).toLocaleString('en-US', {
+                                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                                  })}
+                                </span>
+                              </div>
+                              <p className="text-sm text-zinc-300 break-words">{msg.content}</p>
+                            </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Actions */}
               {flag.status === 'pending' && (

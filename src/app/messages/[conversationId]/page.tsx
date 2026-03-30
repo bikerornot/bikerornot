@@ -14,6 +14,7 @@ import LastSeenTracker from '@/app/components/LastSeenTracker'
 import MessagesLink from '@/app/components/MessagesLink'
 import BottomNav from '@/app/components/BottomNav'
 import VerifiedBadge from '@/app/components/VerifiedBadge'
+import OnlineIndicator from '@/app/components/OnlineIndicator'
 import ContentMenu from '@/app/components/ContentMenu'
 import type { Profile } from '@/lib/supabase/types'
 
@@ -117,9 +118,10 @@ export default async function ChatPage({
                 </div>
               )}
             </div>
-            <span className="text-white font-semibold text-sm group-hover:text-orange-400 transition-colors truncate inline-flex items-center gap-1">
+            <span className="text-white font-semibold text-sm group-hover:text-orange-400 transition-colors truncate inline-flex items-center gap-1.5">
               @{otherUser.username}
               {otherUser.phone_verified_at && <VerifiedBadge className="w-3.5 h-3.5 flex-shrink-0" />}
+              <OnlineIndicator userId={otherUser.id} initialLastSeen={otherUser.last_seen_at ?? null} />
             </span>
           </Link>
 

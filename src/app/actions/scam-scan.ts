@@ -139,6 +139,7 @@ export interface ContentFlag {
   message_id: string | null
   comment_id: string | null
   post_id: string | null
+  conversation_id: string | null
   flag_type: 'message' | 'comment'
   sender_id: string
   content: string
@@ -199,6 +200,7 @@ export async function getFlaggedContent(): Promise<ContentFlag[]> {
       message_id: flag.message_id,
       comment_id: flag.comment_id,
       post_id: flag.post_id,
+      conversation_id: flag.message?.conversation_id ?? null,
       flag_type: flag.flag_type ?? 'message',
       sender_id: flag.sender_id,
       content: flag.content,
@@ -210,6 +212,116 @@ export async function getFlaggedContent(): Promise<ContentFlag[]> {
       recipient,
     } as ContentFlag
   })
+}
+
+export interface FlagConversationMessage {
+  id: string
+  sender_id: string
+  sender_username: string | null
+  content: string
+  created_at: string
+}
+
+export async function getFlagConversationMessages(conversationId: string): Promise<FlagConversationMessage[]> {
+  await requireAdminOrMod()
+  const admin = getAdmin()
+
+  const { data } = await admin
+    .from('messages')
+    .select('id, sender_id, content, created_at, sender:profiles!sender_id(username)')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: true })
+    .limit(100)
+
+  return (data ?? []).map((m: any) => ({
+    id: m.id,
+    sender_id: m.sender_id,
+    sender_username: m.sender?.username ?? null,
+    content: m.content,
+    created_at: m.created_at,
+  }))
+}
+
+export interface ConversationScanResult {
+  score: number
+  patterns: string[]
+  summary: string
+  suspiciousMessageIds: string[]
+}
+
+export async function scanConversation(conversationId: string): Promise<ConversationScanResult> {
+  await requireAdminOrMod()
+  const admin = getAdmin()
+
+  const { data: messages } = await admin
+    .from('messages')
+    .select('id, sender_id, content, created_at, sender:profiles!sender_id(username)')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: true })
+    .limit(100)
+
+  if (!messages?.length) {
+    return { score: 0, patterns: [], summary: 'No messages to analyze', suspiciousMessageIds: [] }
+  }
+
+  // Format conversation for AI analysis
+  const transcript = messages.map((m: any) =>
+    `[${new Date(m.created_at).toLocaleString()}] @${m.sender?.username ?? 'unknown'}: ${m.content}`
+  ).join('\n')
+
+  const openai = getOpenAI()
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'system',
+        content: `You are a scam detection system for a motorcycle enthusiast social network. Analyze this FULL conversation between two users and assess the overall scam likelihood.
+
+Look for these patterns across the conversation arc:
+${SCAM_PATTERNS}
+- Grooming behavior that escalates over multiple messages
+- Building false trust before making requests
+- Trying to move conversation to another platform (WhatsApp, Hangouts, email)
+- Inconsistent stories or claims
+
+Normal motorcycle conversation (rides, bikes, gear, meetups, routes, events) scores 0.0.
+Consider the FULL context — a single suspicious message in an otherwise normal conversation is less concerning than a pattern of escalating manipulation.
+
+Reply ONLY with valid JSON:
+{
+  "score": 0.0,
+  "patterns": ["pattern1", "pattern2"],
+  "summary": "2-3 sentence assessment",
+  "suspicious_indices": [0, 3, 7]
+}
+
+Where suspicious_indices are 0-based indices of the most suspicious messages in the conversation.`,
+      },
+      { role: 'user', content: transcript },
+    ],
+    max_tokens: 500,
+    temperature: 0,
+    response_format: { type: 'json_object' },
+  })
+
+  const text = response.choices[0]?.message?.content ?? '{}'
+  const parsed = JSON.parse(text) as {
+    score?: number
+    patterns?: string[]
+    summary?: string
+    suspicious_indices?: number[]
+  }
+
+  const suspiciousIds = (parsed.suspicious_indices ?? [])
+    .filter((i) => i >= 0 && i < messages.length)
+    .map((i) => messages[i].id)
+
+  return {
+    score: typeof parsed.score === 'number' ? parsed.score : 0,
+    patterns: parsed.patterns ?? [],
+    summary: parsed.summary ?? '',
+    suspiciousMessageIds: suspiciousIds,
+  }
 }
 
 export async function dismissFlag(flagId: string): Promise<void> {

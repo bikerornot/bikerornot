@@ -92,12 +92,12 @@ export default function MessagesClient({
       <p className="text-zinc-600 text-xs mb-4">{messages.length} messages shown</p>
 
       <div className="space-y-2">
-        {messages.map((msg) => {
+        {messages.map((msg, idx) => {
           const sender = msg.sender
           const recipient = msg.recipient
 
           return (
-            <div key={msg.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+            <div key={`${msg.id}-${idx}`} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
               <div className="flex gap-3">
                 {sender ? (
                   <Avatar user={sender} />

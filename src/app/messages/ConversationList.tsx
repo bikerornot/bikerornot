@@ -75,6 +75,9 @@ export default function ConversationList({ initialConversations, currentUserId }
           : null
         const initials = (c.other_user.username?.[0] ?? '?').toUpperCase()
         const hasUnread = c.unread_count > 0
+        const isOnline = c.other_user.last_seen_at
+          ? Date.now() - new Date(c.other_user.last_seen_at).getTime() < 5 * 60 * 1000
+          : false
 
         return (
           <Link
@@ -93,9 +96,10 @@ export default function ConversationList({ initialConversations, currentUserId }
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
-                <span className={`text-base truncate flex items-center gap-1 ${hasUnread ? 'text-white font-semibold' : 'text-zinc-300'}`}>
+                <span className={`text-base truncate flex items-center gap-1.5 ${hasUnread ? 'text-white font-semibold' : 'text-zinc-300'}`}>
                   @{c.other_user.username}
                   {c.other_user.phone_verified_at && <VerifiedBadge className="w-3.5 h-3.5" />}
+                  {isOnline && <span className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0" />}
                 </span>
                 <span className="text-sm text-zinc-500 flex-shrink-0">
                   {formatTimeAgo(c.last_message_at)}

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { getConversationThread, type AdminThreadMessage } from '@/app/actions/admin'
+import { scanConversation, type ConversationScanResult } from '@/app/actions/scam-scan'
 
 interface Message {
   id: string
@@ -39,6 +40,20 @@ export default function UserMessages({
   const [expandedThread, setExpandedThread] = useState<string | null>(null)
   const [threadMessages, setThreadMessages] = useState<AdminThreadMessage[]>([])
   const [threadPending, startThreadTransition] = useTransition()
+  const [scanResults, setScanResults] = useState<Record<string, ConversationScanResult>>({})
+  const [scanningId, setScanningId] = useState<string | null>(null)
+
+  async function handleScan(conversationId: string) {
+    setScanningId(conversationId)
+    try {
+      const result = await scanConversation(conversationId)
+      setScanResults((prev) => ({ ...prev, [conversationId]: result }))
+    } catch (err) {
+      console.error('Scan error:', err)
+    } finally {
+      setScanningId(null)
+    }
+  }
 
   function toggleThread(conversationId: string) {
     if (expandedThread === conversationId) {
@@ -85,18 +100,61 @@ export default function UserMessages({
               {/* Expandable thread */}
               {expandedThread === m.conversation_id && (
                 <div className="mt-2 pt-2 border-t border-zinc-800">
-                  <p className="text-zinc-500 text-xs font-medium mb-2">Last 10 messages in this conversation</p>
+                  <div className="flex items-center gap-3 mb-2">
+                    <p className="text-zinc-500 text-xs font-medium">Last 10 messages in this conversation</p>
+                    {!scanResults[m.conversation_id] && (
+                      <button
+                        onClick={() => handleScan(m.conversation_id)}
+                        disabled={scanningId === m.conversation_id}
+                        className="text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                      >
+                        {scanningId === m.conversation_id ? 'Scanning...' : 'AI Scan Conversation'}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* AI scan result */}
+                  {scanResults[m.conversation_id] && (
+                    <div className="mb-3 bg-zinc-800/50 border border-zinc-700 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded border ${
+                          scanResults[m.conversation_id].score >= 0.85
+                            ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                            : scanResults[m.conversation_id].score >= 0.5
+                            ? 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+                            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                        }`}>
+                          {Math.round(scanResults[m.conversation_id].score * 100)}%
+                        </span>
+                        <span className="text-xs text-zinc-400">Conversation Scan</span>
+                      </div>
+                      <p className="text-sm text-zinc-300">{scanResults[m.conversation_id].summary}</p>
+                      {scanResults[m.conversation_id].patterns.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {scanResults[m.conversation_id].patterns.map((p, i) => (
+                            <span key={i} className="text-xs bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full">
+                              {p}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {threadPending ? (
                     <p className="text-zinc-600 text-xs">Loading thread…</p>
                   ) : threadMessages.length === 0 ? (
                     <p className="text-zinc-600 text-xs">No messages found.</p>
                   ) : (
                     <div className="space-y-1.5">
-                      {threadMessages.map((tm) => (
+                      {threadMessages.map((tm) => {
+                        const isSuspicious = scanResults[m.conversation_id]?.suspiciousMessageIds.includes(tm.id)
+                        return (
                         <div
                           key={tm.id}
                           className={`text-xs leading-relaxed rounded-lg p-2 ${
-                            tm.id === m.id
+                            isSuspicious
+                              ? 'bg-red-500/10 border border-red-500/30'
+                              : tm.id === m.id
                               ? 'bg-orange-500/10 border border-orange-500/20'
                               : 'bg-zinc-800/50'
                           }`}
@@ -113,7 +171,8 @@ export default function UserMessages({
                           <span className="text-zinc-600 ml-2">{formatTimestamp(tm.created_at)}</span>
                           <p className="text-zinc-300 mt-0.5 break-words">{tm.content}</p>
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>

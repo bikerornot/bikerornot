@@ -20,25 +20,38 @@ function formatTimeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-function notificationMessage(n: Notification): string {
+function notificationMessage(n: Notification) {
   const actor = n.actor?.username ?? 'Someone'
+  const actorLink = n.actor?.username ? (
+    <Link href={`/profile/${n.actor.username}`} className="font-semibold text-white hover:text-orange-400" onClick={(e) => e.stopPropagation()}>@{actor}</Link>
+  ) : <span className="font-semibold text-white">@{actor}</span>
+
+  const postHref = n.post_id ? `/posts/${n.post_id}` : null
+  const eventHref = n.event?.slug ? `/events/${n.event.slug}` : null
+  const groupHref = n.group?.slug ? `/groups/${n.group.slug}` : null
+
+  function contentLink(text: string, href: string | null) {
+    if (!href) return <span>{text}</span>
+    return <Link href={href} className="hover:text-orange-400 transition-colors" onClick={(e) => e.stopPropagation()}>{text}</Link>
+  }
+
   switch (n.type) {
-    case 'friend_request':  return `@${actor} sent you a friend request`
-    case 'friend_accepted': return `@${actor} accepted your friend request`
-    case 'post_like':       return `@${actor} liked your post`
-    case 'post_comment':    return `@${actor} commented on your post`
-    case 'comment_reply':   return `@${actor} replied to your comment`
-    case 'comment_like':    return `@${actor} liked your comment`
-    case 'group_invite':    return `@${actor} invited you to join ${n.group?.name ?? 'a group'}`
-    case 'wall_post':       return `@${actor} posted on your wall`
-    case 'mention':         return `@${actor} mentioned you in a post`
-    case 'dmca_takedown':   return `Content you posted was removed following a copyright complaint`
-    case 'event_invite':    return `@${actor} invited you to ${n.event?.title ?? 'an event'}`
-    case 'event_rsvp':      return `@${actor} is going to your event ${n.event?.title ?? ''}`
-    case 'event_cancelled': return `${n.event?.title ?? 'An event'} has been cancelled`
-    case 'event_update':    return `${n.event?.title ?? 'An event'} has been updated`
-    case 'event_reminder':  return `Reminder: ${n.event?.title ?? 'An event'} starts soon`
-    default:                return `Notification from @${actor}`
+    case 'friend_request':  return <>{actorLink} sent you a friend request</>
+    case 'friend_accepted': return <>{actorLink} accepted your friend request</>
+    case 'post_like':       return <>{actorLink} {contentLink('liked your post', postHref)}</>
+    case 'post_comment':    return <>{actorLink} {contentLink('commented on your post', postHref)}</>
+    case 'comment_reply':   return <>{actorLink} {contentLink('replied to your comment', postHref)}</>
+    case 'comment_like':    return <>{actorLink} {contentLink('liked your comment', postHref)}</>
+    case 'group_invite':    return <>{actorLink} {contentLink(`invited you to join ${n.group?.name ?? 'a group'}`, groupHref)}</>
+    case 'wall_post':       return <>{actorLink} {contentLink('posted on your wall', postHref)}</>
+    case 'mention':         return <>{actorLink} {contentLink('mentioned you in a post', postHref)}</>
+    case 'dmca_takedown':   return <>Content you posted was removed following a copyright complaint</>
+    case 'event_invite':    return <>{actorLink} {contentLink(`invited you to ${n.event?.title ?? 'an event'}`, eventHref)}</>
+    case 'event_rsvp':      return <>{actorLink} {contentLink(`is going to your event ${n.event?.title ?? ''}`, eventHref)}</>
+    case 'event_cancelled': return <>{contentLink(`${n.event?.title ?? 'An event'} has been cancelled`, eventHref)}</>
+    case 'event_update':    return <>{contentLink(`${n.event?.title ?? 'An event'} has been updated`, eventHref)}</>
+    case 'event_reminder':  return <>Reminder: {contentLink(`${n.event?.title ?? 'An event'} starts soon`, eventHref)}</>
+    default:                return <>Notification from {actorLink}</>
   }
 }
 

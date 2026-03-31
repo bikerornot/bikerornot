@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Comment, Profile } from '@/lib/supabase/types'
 import { getImageUrl } from '@/lib/supabase/image'
-import { likeComment, unlikeComment, deleteComment, createComment } from '@/app/actions/comments'
+import { likeComment, unlikeComment, deleteComment, hideComment, unhideComment, createComment } from '@/app/actions/comments'
 import ContentMenu from './ContentMenu'
 import { renderContent } from '@/lib/render-content'
 import MentionDropdown, { useMention } from './MentionDropdown'
@@ -13,6 +13,7 @@ import MentionDropdown, { useMention } from './MentionDropdown'
 interface Props {
   comment: Comment
   currentUserId?: string
+  postAuthorId?: string
   replies?: Comment[]
   postId?: string
   currentUserProfile?: Profile | null
@@ -32,15 +33,39 @@ function formatTimeAgo(dateStr: string): string {
 function ReplyItem({
   reply,
   currentUserId,
+  postAuthorId,
 }: {
   reply: Comment
   currentUserId?: string
+  postAuthorId?: string
 }) {
   const [liked, setLiked] = useState(reply.is_liked_by_me ?? false)
   const [likeCount, setLikeCount] = useState(reply.like_count ?? 0)
   const [deleted, setDeleted] = useState(false)
+  const [hidden, setHidden] = useState(!!reply.hidden_at)
+
+  const isPostAuthor = currentUserId === postAuthorId
+  const canHide = isPostAuthor && reply.author_id !== currentUserId
 
   if (deleted) return null
+
+  if (hidden && isPostAuthor) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="flex-1 bg-zinc-800/50 rounded-xl px-3 py-2 flex items-center justify-between">
+          <p className="text-zinc-500 text-sm">Reply hidden.</p>
+          <button
+            onClick={async () => { setHidden(false); await unhideComment(reply.id) }}
+            className="text-sm text-orange-400 hover:text-orange-300 font-medium transition-colors"
+          >
+            Undo
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (hidden && reply.author_id !== currentUserId) return null
 
   const author = reply.author
   const avatarUrl = author?.profile_photo_url
@@ -120,6 +145,7 @@ function ReplyItem({
               reportType="comment"
               reportTargetId={reply.id}
               blockUserId={reply.author_id}
+              onHide={canHide ? async () => { setHidden(true); await hideComment(reply.id) } : undefined}
             />
           ) : null}
         </div>
@@ -131,6 +157,7 @@ function ReplyItem({
 export default function CommentItem({
   comment,
   currentUserId,
+  postAuthorId,
   replies,
   postId,
   currentUserProfile,
@@ -139,6 +166,7 @@ export default function CommentItem({
   const [liked, setLiked] = useState(comment.is_liked_by_me ?? false)
   const [likeCount, setLikeCount] = useState(comment.like_count ?? 0)
   const [deleted, setDeleted] = useState(false)
+  const [hidden, setHidden] = useState(!!comment.hidden_at)
   const [showReplyInput, setShowReplyInput] = useState(false)
   const [replyText, setReplyText] = useState('')
   const [submittingReply, setSubmittingReply] = useState(false)
@@ -159,7 +187,30 @@ export default function CommentItem({
 
   const replyMention = useMention(replyText, replyCursorPos, handleReplyMentionSelect)
 
+  const isPostAuthor = currentUserId === postAuthorId
+  const canHide = isPostAuthor && comment.author_id !== currentUserId
+
   if (deleted) return null
+
+  // Hidden comment — only post author sees this placeholder
+  if (hidden && isPostAuthor) {
+    return (
+      <div className="flex items-center gap-3 py-3 border-t border-zinc-800 first:border-t-0">
+        <div className="flex-1 bg-zinc-800/50 rounded-xl px-4 py-3 flex items-center justify-between">
+          <p className="text-zinc-500 text-sm">This comment has been hidden.</p>
+          <button
+            onClick={handleUnhide}
+            className="text-sm text-orange-400 hover:text-orange-300 font-medium transition-colors"
+          >
+            Undo
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Hidden comment — non-post-author non-commenter shouldn't see it
+  if (hidden && comment.author_id !== currentUserId) return null
 
   const author = comment.author
   const avatarUrl = author?.profile_photo_url
@@ -187,6 +238,16 @@ export default function CommentItem({
   async function handleDelete() {
     setDeleted(true)
     await deleteComment(comment.id)
+  }
+
+  async function handleHide() {
+    setHidden(true)
+    await hideComment(comment.id)
+  }
+
+  async function handleUnhide() {
+    setHidden(false)
+    await unhideComment(comment.id)
   }
 
   async function handleReplySubmit(e: React.FormEvent) {
@@ -270,6 +331,7 @@ export default function CommentItem({
               reportType="comment"
               reportTargetId={comment.id}
               blockUserId={comment.author_id}
+              onHide={canHide ? handleHide : undefined}
             />
           ) : null}
         </div>
@@ -338,7 +400,7 @@ export default function CommentItem({
         {replies && replies.length > 0 && (
           <div className="mt-2 pl-3 border-l-2 border-zinc-800 space-y-2">
             {replies.map((reply) => (
-              <ReplyItem key={reply.id} reply={reply} currentUserId={currentUserId} />
+              <ReplyItem key={reply.id} reply={reply} currentUserId={currentUserId} postAuthorId={postAuthorId} />
             ))}
           </div>
         )}

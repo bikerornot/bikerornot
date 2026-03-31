@@ -13,11 +13,13 @@ interface Props {
   blockUserId: string
   /** Optional: override the trigger button style */
   buttonClassName?: string
+  /** Optional: hide callback — when provided, shows "Hide" as first menu option */
+  onHide?: () => void
 }
 
 type View = 'menu' | 'report' | 'report_done' | 'report_duplicate' | 'block_done'
 
-export default function ContentMenu({ reportType, reportTargetId, blockUserId, buttonClassName }: Props) {
+export default function ContentMenu({ reportType, reportTargetId, blockUserId, buttonClassName, onHide }: Props) {
   const [view, setView] = useState<View>('menu')
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState('')
@@ -82,6 +84,17 @@ export default function ContentMenu({ reportType, reportTargetId, blockUserId, b
 
         {open && (
           <div className="absolute right-0 top-full mt-1 w-36 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl z-50 overflow-hidden">
+            {onHide && (
+              <>
+                <button
+                  onClick={() => { setOpen(false); onHide() }}
+                  className="w-full text-left px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+                >
+                  Hide
+                </button>
+                <div className="border-t border-zinc-800" />
+              </>
+            )}
             <button
               onClick={startReport}
               className="w-full text-left px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"

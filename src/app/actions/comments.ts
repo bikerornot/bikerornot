@@ -197,6 +197,61 @@ export async function deleteComment(commentId: string): Promise<void> {
     .eq('comment_id', commentId)
 }
 
+export async function hideComment(commentId: string): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const admin = getServiceClient()
+
+  // Verify the current user is the post author (only post author can hide comments)
+  const { data: comment } = await admin
+    .from('comments')
+    .select('post_id')
+    .eq('id', commentId)
+    .single()
+  if (!comment) throw new Error('Comment not found')
+
+  const { data: post } = await admin
+    .from('posts')
+    .select('author_id')
+    .eq('id', comment.post_id)
+    .single()
+  if (!post || post.author_id !== user.id) throw new Error('Not authorized')
+
+  await admin
+    .from('comments')
+    .update({ hidden_at: new Date().toISOString() })
+    .eq('id', commentId)
+}
+
+export async function unhideComment(commentId: string): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const admin = getServiceClient()
+
+  const { data: comment } = await admin
+    .from('comments')
+    .select('post_id')
+    .eq('id', commentId)
+    .single()
+  if (!comment) throw new Error('Comment not found')
+
+  const { data: post } = await admin
+    .from('posts')
+    .select('author_id')
+    .eq('id', comment.post_id)
+    .single()
+  if (!post || post.author_id !== user.id) throw new Error('Not authorized')
+
+  await admin
+    .from('comments')
+    .update({ hidden_at: null })
+    .eq('id', commentId)
+}
+
 export async function likeComment(commentId: string): Promise<void> {
   const supabase = await createClient()
   const {

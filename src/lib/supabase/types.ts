@@ -193,6 +193,7 @@ export interface Comment {
   parent_comment_id: string | null
   created_at: string
   deleted_at: string | null
+  hidden_at?: string | null
   author?: Profile
   like_count?: number
   is_liked_by_me?: boolean

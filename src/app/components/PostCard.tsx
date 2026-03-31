@@ -509,6 +509,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
         <div className="px-4 pb-4 border-t border-zinc-800 pt-3">
           <CommentSection
             postId={post.id}
+            postAuthorId={post.author_id}
             currentUserId={currentUserId}
             currentUserProfile={currentUserProfile}
             blockedUserIds={blockedUserIds}

@@ -12,12 +12,13 @@ import MentionDropdown, { useMention } from './MentionDropdown'
 
 interface Props {
   postId: string
+  postAuthorId?: string
   currentUserId?: string
   currentUserProfile?: Profile | null
   blockedUserIds?: string[]
 }
 
-export default function CommentSection({ postId, currentUserId, currentUserProfile, blockedUserIds = [] }: Props) {
+export default function CommentSection({ postId, postAuthorId, currentUserId, currentUserProfile, blockedUserIds = [] }: Props) {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
   const [text, setText] = useState('')
@@ -161,6 +162,7 @@ export default function CommentSection({ postId, currentUserId, currentUserProfi
           key={c.id}
           comment={c}
           currentUserId={currentUserId}
+          postAuthorId={postAuthorId}
           replies={replyMap.get(c.id) ?? []}
           postId={postId}
           currentUserProfile={currentUserProfile}

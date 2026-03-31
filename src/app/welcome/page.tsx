@@ -44,12 +44,24 @@ export default async function WelcomePage() {
   // Get user's first bike if they added one during onboarding
   const { data: bikes } = await admin
     .from('user_bikes')
-    .select('year, make, model')
+    .select('id, year, make, model')
     .eq('user_id', user.id)
     .limit(1)
 
   const bike = bikes?.[0] ?? null
   const bikeString = bike ? `${bike.year} ${bike.make} ${bike.model}` : null
+
+  // Fetch bike photo if available
+  let bikePhotoPath: string | null = null
+  if (bike) {
+    const { data: photos } = await admin
+      .from('bike_photos')
+      .select('storage_path')
+      .eq('bike_id', bike.id)
+      .eq('is_primary', true)
+      .limit(1)
+    bikePhotoPath = photos?.[0]?.storage_path ?? null
+  }
 
   return (
     <WelcomeClient
@@ -57,6 +69,7 @@ export default async function WelcomePage() {
       city={profile.city}
       state={profile.state}
       bikeString={bikeString}
+      bikePhotoPath={bikePhotoPath}
       riders={riders}
       currentUserId={user.id}
     />

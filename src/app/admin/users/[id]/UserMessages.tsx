@@ -42,6 +42,8 @@ export default function UserMessages({
   const [threadPending, startThreadTransition] = useTransition()
   const [scanResults, setScanResults] = useState<Record<string, ConversationScanResult>>({})
   const [scanningId, setScanningId] = useState<string | null>(null)
+  const [scanningAll, setScanningAll] = useState(false)
+  const [scanAllProgress, setScanAllProgress] = useState('')
 
   async function handleScan(conversationId: string) {
     setScanningId(conversationId)
@@ -53,6 +55,24 @@ export default function UserMessages({
     } finally {
       setScanningId(null)
     }
+  }
+
+  async function handleScanAll() {
+    setScanningAll(true)
+    const uniqueConvos = [...new Set(messages.map((m) => m.conversation_id))]
+    for (let i = 0; i < uniqueConvos.length; i++) {
+      const convoId = uniqueConvos[i]
+      if (scanResults[convoId]) continue
+      setScanAllProgress(`Scanning ${i + 1} of ${uniqueConvos.length}...`)
+      try {
+        const result = await scanConversation(convoId)
+        setScanResults((prev) => ({ ...prev, [convoId]: result }))
+      } catch {
+        // Continue to next conversation
+      }
+    }
+    setScanAllProgress('')
+    setScanningAll(false)
   }
 
   function toggleThread(conversationId: string) {
@@ -70,10 +90,44 @@ export default function UserMessages({
 
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
+      <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between gap-2">
         <h2 className="text-white font-semibold text-sm">Sent Messages</h2>
-        <span className="text-zinc-600 text-xs">{messages.length} shown (last 50)</span>
+        <div className="flex items-center gap-3">
+          {scanningAll && <span className="text-zinc-500 text-xs">{scanAllProgress}</span>}
+          {messages.length > 0 && (
+            <button
+              onClick={handleScanAll}
+              disabled={scanningAll}
+              className="text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-50"
+            >
+              {scanningAll ? 'Scanning...' : 'AI Scan All'}
+            </button>
+          )}
+          <span className="text-zinc-600 text-xs">{messages.length} shown</span>
+        </div>
       </div>
+      {/* Scan summary — show highest risk after scanning */}
+      {Object.keys(scanResults).length > 0 && (
+        <div className="px-5 py-3 border-b border-zinc-800 bg-zinc-800/30">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-zinc-400 text-xs font-medium">Scan Results:</span>
+            {[...new Set(messages.map((m) => m.conversation_id))].map((convoId) => {
+              const result = scanResults[convoId]
+              if (!result) return null
+              const pct = Math.round(result.score * 100)
+              const color = result.score >= 0.85 ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                : result.score >= 0.5 ? 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+                : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+              const recipient = messages.find((m) => m.conversation_id === convoId)?.recipient_username
+              return (
+                <span key={convoId} className={`text-xs font-bold px-2 py-0.5 rounded border ${color}`}>
+                  {recipient ? `@${recipient}` : 'DM'}: {pct}%
+                </span>
+              )
+            })}
+          </div>
+        </div>
+      )}
       {messages.length === 0 ? (
         <p className="text-center text-zinc-600 text-sm py-8">No messages sent</p>
       ) : (

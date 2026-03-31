@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { createPost } from '@/app/actions/posts'
+import { createWelcomePost } from '@/app/actions/posts'
 import { sendFriendRequest } from '@/app/actions/friends'
 import { getImageUrl } from '@/lib/supabase/image'
 import type { RiderSuggestion } from '@/app/actions/suggestions'
@@ -13,11 +13,12 @@ interface Props {
   city: string | null
   state: string | null
   bikeString: string | null
+  bikePhotoPath: string | null
   riders: RiderSuggestion[]
   currentUserId: string
 }
 
-export default function WelcomeClient({ firstName, city, state, bikeString, riders, currentUserId }: Props) {
+export default function WelcomeClient({ firstName, city, state, bikeString, bikePhotoPath, riders, currentUserId }: Props) {
   const router = useRouter()
   const [step, setStep] = useState<'post' | 'friends'>('post')
   const [postContent, setPostContent] = useState('')
@@ -44,9 +45,7 @@ export default function WelcomeClient({ firstName, city, state, bikeString, ride
     submittingRef.current = true
     setPosting(true)
     try {
-      const formData = new FormData()
-      formData.append('content', postContent.trim())
-      await createPost(formData)
+      await createWelcomePost(postContent.trim(), bikePhotoPath)
       setStep('friends')
     } catch {
       // Silently continue to friends step even if post fails
@@ -137,6 +136,21 @@ export default function WelcomeClient({ firstName, city, state, bikeString, ride
               maxLength={5000}
               className="w-full bg-zinc-900 border border-zinc-700 text-white placeholder-zinc-500 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-orange-500 transition-colors resize-none"
             />
+
+            {/* Bike photo preview */}
+            {bikePhotoPath && (
+              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+                <p className="text-zinc-400 text-sm mb-2">Your bike photo will be included:</p>
+                <div className="relative w-full aspect-[16/9] rounded-lg overflow-hidden bg-zinc-800">
+                  <Image
+                    src={getImageUrl('bikes', bikePhotoPath)}
+                    alt="Your bike"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+            )}
 
             <button
               onClick={handlePost}

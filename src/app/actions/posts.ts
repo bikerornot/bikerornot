@@ -185,6 +185,49 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
   return { postId: post.id }
 }
 
+export async function createWelcomePost(content: string, bikePhotoPath: string | null): Promise<{ postId: string } | { error: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+  if (!content.trim()) return { error: 'Post cannot be empty' }
+
+  const admin = getServiceClient()
+
+  const { data: post, error: postError } = await admin
+    .from('posts')
+    .insert({ author_id: user.id, content: content.trim() })
+    .select()
+    .single()
+
+  if (postError) return { error: postError.message }
+
+  // Copy bike photo from bikes bucket to posts bucket as a post image
+  if (bikePhotoPath) {
+    try {
+      const { data: fileData } = await admin.storage.from('bikes').download(bikePhotoPath)
+      if (fileData) {
+        const bytes = await fileData.arrayBuffer()
+        const ext = bikePhotoPath.split('.').pop() ?? 'jpg'
+        const postImagePath = `${user.id}/${post.id}/0.${ext}`
+        await admin.storage.from('posts').upload(postImagePath, bytes, {
+          contentType: `image/${ext === 'png' ? 'png' : 'jpeg'}`,
+          upsert: true,
+        })
+        await admin.from('post_images').insert({
+          post_id: post.id,
+          storage_path: postImagePath,
+          order_index: 0,
+          reviewed_at: new Date().toISOString(),
+        })
+      }
+    } catch {
+      // Best-effort — post still created even if photo copy fails
+    }
+  }
+
+  return { postId: post.id }
+}
+
 export async function sharePost(postId: string, caption?: string): Promise<string> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

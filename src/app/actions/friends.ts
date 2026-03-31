@@ -43,9 +43,10 @@ export async function sendFriendRequest(addresseeId: string): Promise<{ error?: 
 
   if (!senderProfile) return { error: 'Profile not found' }
 
-  // Daily friend request cap — 30/day for all accounts, 5/day for new (<7 days)
+  // Daily friend request cap — 30/day for all accounts, 15/day for new (<7 days)
+  // New account limit raised from 5 to 15 to support welcome page friend blast
   const accountAgeDays = (Date.now() - new Date(senderProfile.created_at).getTime()) / 86_400_000
-  const dailyLimit = accountAgeDays < 7 ? 5 : 30
+  const dailyLimit = accountAgeDays < 7 ? 15 : 30
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
   const { count: requestsToday } = await admin

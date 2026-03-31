@@ -259,7 +259,10 @@ function StepBikes({
 
     setPhotoLoading(index)
     try {
-      const compressed = await compressImage(file, 1, 1920)
+      const [compressed] = await Promise.all([
+        compressImage(file, 1, 1920),
+        new Promise((r) => setTimeout(r, 800)), // Minimum 800ms so spinner is visible
+      ]) as [File, unknown]
       if (compressed.size > 5 * 1024 * 1024) {
         setPhotoError('Image is too large. Please choose a smaller file.')
         return

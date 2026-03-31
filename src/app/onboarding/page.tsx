@@ -229,6 +229,7 @@ function StepBikes({
   setBikePhotos: React.Dispatch<React.SetStateAction<(File | null)[]>>
 }) {
   const [photoPreviews, setPhotoPreviews] = useState<(string | null)[]>(bikes.map(() => null))
+  const [photoLoading, setPhotoLoading] = useState<number | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([])
 
@@ -256,6 +257,7 @@ function StepBikes({
     e.target.value = ''
     if (!file) return
 
+    setPhotoLoading(index)
     try {
       const compressed = await compressImage(file, 1, 1920)
       if (compressed.size > 5 * 1024 * 1024) {
@@ -268,6 +270,8 @@ function StepBikes({
       setPhotoPreviews((prev) => prev.map((p, i) => (i === index ? URL.createObjectURL(compressed) : p)))
     } catch {
       setPhotoError('Failed to process image')
+    } finally {
+      setPhotoLoading(null)
     }
   }
 
@@ -303,7 +307,17 @@ function StepBikes({
 
             {/* Photo upload area */}
             <div className="mt-3 pt-3 border-t border-zinc-700/50">
-              {photoPreviews[index] ? (
+              {photoLoading === index ? (
+                <div className="flex items-center gap-3 py-1">
+                  <div className="w-16 h-16 rounded-lg bg-zinc-700 flex-shrink-0 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-orange-400 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  </div>
+                  <p className="text-zinc-400 text-sm">Processing photo...</p>
+                </div>
+              ) : photoPreviews[index] ? (
                 <div className="flex items-center gap-3">
                   <div className="w-16 h-16 rounded-lg overflow-hidden bg-zinc-700 flex-shrink-0 relative">
                     <img

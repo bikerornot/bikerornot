@@ -89,7 +89,7 @@ export default function MessagesClient({
 
   return (
     <div>
-      <p className="text-zinc-600 text-xs mb-4">{messages.length} messages shown</p>
+      <p className="text-zinc-400 text-xs mb-4">{messages.length} messages shown</p>
 
       <div className="space-y-2">
         {messages.map((msg, idx) => {
@@ -124,11 +124,11 @@ export default function MessagesClient({
                       )}
 
                       {recipient && (
-                        <span className="text-zinc-600 text-xs">
+                        <span className="text-zinc-400 text-xs">
                           →{' '}
                           <button
                             onClick={() => toggleThread(msg.conversation_id)}
-                            className="hover:text-orange-400 transition-colors underline decoration-zinc-700 underline-offset-2 hover:decoration-orange-400"
+                            className="text-zinc-300 hover:text-orange-400 transition-colors underline decoration-zinc-600 underline-offset-2 hover:decoration-orange-400"
                             title="View last 10 messages in this conversation"
                           >
                             {recipient.username ? `@${recipient.username}` : `${recipient.first_name} ${recipient.last_name}`}
@@ -136,7 +136,7 @@ export default function MessagesClient({
                           {' · '}
                           <Link
                             href={`/admin/users/${recipient.id}`}
-                            className="hover:text-zinc-400 transition-colors"
+                            className="text-zinc-400 hover:text-zinc-300 transition-colors"
                           >
                             profile
                           </Link>
@@ -155,7 +155,7 @@ export default function MessagesClient({
                       )}
                     </div>
 
-                    <span className="text-zinc-600 text-xs whitespace-nowrap flex-shrink-0">
+                    <span className="text-zinc-400 text-xs whitespace-nowrap flex-shrink-0">
                       {formatTimestamp(msg.created_at)}
                     </span>
                   </div>
@@ -170,9 +170,9 @@ export default function MessagesClient({
                     <div className="mt-3 pt-3 border-t border-zinc-800">
                       <p className="text-zinc-500 text-xs font-medium mb-2">Last 10 messages in this conversation</p>
                       {threadPending ? (
-                        <p className="text-zinc-600 text-xs">Loading thread…</p>
+                        <p className="text-zinc-400 text-xs">Loading thread…</p>
                       ) : threadMessages.length === 0 ? (
-                        <p className="text-zinc-600 text-xs">No messages found.</p>
+                        <p className="text-zinc-400 text-xs">No messages found.</p>
                       ) : (
                         <div className="space-y-1.5">
                           {threadMessages.map((tm) => (
@@ -186,7 +186,7 @@ export default function MessagesClient({
                                   <span className="text-zinc-500 font-normal ml-1">@{tm.sender_username}</span>
                                 )}
                               </Link>
-                              <span className="text-zinc-600 ml-2">{formatTimestamp(tm.created_at)}</span>
+                              <span className="text-zinc-400 ml-2">{formatTimestamp(tm.created_at)}</span>
                               <p className="text-zinc-300 mt-0.5 break-words">{tm.content}</p>
                             </div>
                           ))}

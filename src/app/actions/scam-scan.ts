@@ -175,12 +175,20 @@ async function requireAdminOrMod() {
 export async function getFlaggedContent(): Promise<ContentFlag[]> {
   await requireAdminOrMod()
   const admin = getAdmin()
-  const { data } = await admin
-    .from('content_flags')
-    .select('*, sender:profiles!sender_id(id, username, first_name, last_name, profile_photo_url, status), message:messages!message_id(conversation_id, conversation:conversations!conversation_id(participant1_id, participant2_id, participant1:profiles!participant1_id(id, username, first_name, last_name), participant2:profiles!participant2_id(id, username, first_name, last_name)))')
-    .order('score', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(100)
+  const selectStr = '*, sender:profiles!sender_id(id, username, first_name, last_name, profile_photo_url, status), message:messages!message_id(conversation_id, conversation:conversations!conversation_id(participant1_id, participant2_id, participant1:profiles!participant1_id(id, username, first_name, last_name), participant2:profiles!participant2_id(id, username, first_name, last_name)))'
+
+  // Fetch pending flags separately to ensure they're never cut off by the limit
+  const [{ data: pending }, { data: recent }] = await Promise.all([
+    admin.from('content_flags').select(selectStr).eq('status', 'pending').order('score', { ascending: false }).limit(50),
+    admin.from('content_flags').select(selectStr).neq('status', 'pending').order('score', { ascending: false }).order('created_at', { ascending: false }).limit(50),
+  ])
+
+  // Merge and deduplicate
+  const seen = new Set<string>()
+  const data: any[] = []
+  for (const row of [...(pending ?? []), ...(recent ?? [])]) {
+    if (!seen.has(row.id)) { seen.add(row.id); data.push(row) }
+  }
 
   // Resolve recipient from conversation participants (for DM flags)
   return (data ?? []).map((flag: any) => {

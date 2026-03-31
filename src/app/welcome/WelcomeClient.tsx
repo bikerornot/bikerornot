@@ -24,6 +24,7 @@ export default function WelcomeClient({ firstName, city, state, bikeString, bike
   const [postContent, setPostContent] = useState('')
   const [posting, setPosting] = useState(false)
   const [sentIds, setSentIds] = useState<Set<string>>(new Set())
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(riders.slice(0, 10).map((r) => r.id)))
   const [sendingAll, setSendingAll] = useState(false)
   const submittingRef = useRef(false)
 
@@ -66,9 +67,17 @@ export default function WelcomeClient({ firstName, city, state, bikeString, bike
     }
   }
 
-  async function handleSendAll() {
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  async function handleSendSelected() {
     setSendingAll(true)
-    const toSend = displayRiders.filter((r) => !sentIds.has(r.id))
+    const toSend = displayRiders.filter((r) => selectedIds.has(r.id) && !sentIds.has(r.id))
     const newSent = new Set(sentIds)
     for (const r of toSend) {
       newSent.add(r.id)
@@ -80,6 +89,8 @@ export default function WelcomeClient({ firstName, city, state, bikeString, bike
     }
     setSentIds(newSent)
     setSendingAll(false)
+    // Auto-navigate to feed after sending
+    router.push('/feed')
   }
 
   function goToFeed() {
@@ -174,32 +185,62 @@ export default function WelcomeClient({ firstName, city, state, bikeString, bike
             {displayRiders.length > 0 ? (
               <>
                 <p className="text-zinc-300 text-base">
-                  Here are some riders near you. Send them a friend request to get started!
+                  We found riders near you! They're all selected — just hit the button below to connect.
                 </p>
 
-                {displayRiders.length > 1 && (
+                {/* Social proof nudge */}
+                <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-3">
+                  <p className="text-orange-400 text-sm font-medium">
+                    Members who connect with 3+ riders are 5x more likely to enjoy BikerOrNot
+                  </p>
+                </div>
+
+                <div className="flex justify-end">
                   <button
-                    onClick={handleSendAll}
-                    disabled={sendingAll || sentIds.size === displayRiders.length}
-                    className="w-full bg-orange-500/10 border border-orange-500/30 text-orange-400 font-semibold py-2.5 rounded-xl transition-colors text-sm hover:bg-orange-500/20 disabled:opacity-40"
+                    onClick={() => {
+                      if (selectedIds.size === displayRiders.length) {
+                        setSelectedIds(new Set())
+                      } else {
+                        setSelectedIds(new Set(displayRiders.map((r) => r.id)))
+                      }
+                    }}
+                    className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
                   >
-                    {sendingAll ? 'Sending...' : sentIds.size === displayRiders.length ? 'All Sent!' : `Send to All ${displayRiders.length} Riders`}
+                    {selectedIds.size === displayRiders.length ? 'Deselect all' : 'Select all'}
                   </button>
-                )}
+                </div>
 
                 <div className="space-y-2">
                   {displayRiders.map((rider) => {
                     const sent = sentIds.has(rider.id)
+                    const selected = selectedIds.has(rider.id)
                     const avatarUrl = rider.profile_photo_url
                       ? getImageUrl('avatars', rider.profile_photo_url)
                       : null
                     const loc = [rider.city, rider.state].filter(Boolean).join(', ')
 
                     return (
-                      <div
+                      <button
                         key={rider.id}
-                        className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3"
+                        onClick={() => !sent && toggleSelected(rider.id)}
+                        disabled={sent}
+                        className={`w-full flex items-center gap-3 rounded-xl px-4 py-3 transition-colors text-left ${
+                          sent
+                            ? 'bg-emerald-500/5 border border-emerald-500/20'
+                            : selected
+                            ? 'bg-orange-500/10 border border-orange-500/30'
+                            : 'bg-zinc-900 border border-zinc-800'
+                        }`}
                       >
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 ${
+                          sent ? 'bg-emerald-500 border-emerald-500' : selected ? 'bg-orange-500 border-orange-500' : 'border-zinc-600'
+                        }`}>
+                          {(sent || selected) && (
+                            <svg className="w-3 h-3 text-white" viewBox="0 0 10 10" fill="none">
+                              <path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </div>
                         <div className="w-10 h-10 rounded-full bg-zinc-700 overflow-hidden flex-shrink-0">
                           {avatarUrl ? (
                             <Image src={avatarUrl} alt="" width={40} height={40} className="object-cover w-full h-full" />
@@ -217,34 +258,40 @@ export default function WelcomeClient({ firstName, city, state, bikeString, bike
                             <p className="text-zinc-500 text-sm">{rider.mutual_friend_count} mutual</p>
                           )}
                         </div>
-                        <button
-                          onClick={() => handleSendRequest(rider.id)}
-                          disabled={sent}
-                          className={`flex-shrink-0 text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors ${
-                            sent
-                              ? 'bg-emerald-500/20 text-emerald-400'
-                              : 'bg-orange-500 hover:bg-orange-600 text-white'
-                          }`}
-                        >
-                          {sent ? 'Sent' : 'Add'}
-                        </button>
-                      </div>
+                        {sent && <span className="text-emerald-400 text-sm font-medium flex-shrink-0">Sent</span>}
+                      </button>
                     )
                   })}
                 </div>
+
+                {/* Primary CTA — send selected and go to feed */}
+                <button
+                  onClick={handleSendSelected}
+                  disabled={sendingAll}
+                  className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-bold py-4 rounded-xl transition-colors text-base"
+                >
+                  {sendingAll ? 'Sending requests...' : `Connect with ${selectedIds.size} Rider${selectedIds.size !== 1 ? 's' : ''} & Go to Feed`}
+                </button>
+
+                {/* De-emphasized skip */}
+                <button
+                  onClick={goToFeed}
+                  className="w-full text-zinc-600 hover:text-zinc-400 text-xs py-1 transition-colors"
+                >
+                  skip
+                </button>
               </>
             ) : (
-              <p className="text-zinc-400 text-sm text-center py-8">
-                We're still finding riders near you. Check back soon!
-              </p>
+              <div className="text-center py-8">
+                <p className="text-zinc-400 text-sm">We're still finding riders near you.</p>
+                <button
+                  onClick={goToFeed}
+                  className="mt-4 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-8 rounded-xl transition-colors text-base"
+                >
+                  Go to Feed
+                </button>
+              </div>
             )}
-
-            <button
-              onClick={goToFeed}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl transition-colors text-base mt-4"
-            >
-              {sentIds.size > 0 ? 'Go to My Feed' : 'Skip & Go to Feed'}
-            </button>
           </div>
         )}
       </div>

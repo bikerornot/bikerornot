@@ -20,10 +20,10 @@ function formatTimeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-function notificationMessage(n: Notification) {
+function notificationMessage(n: Notification, onLinkClick: () => void) {
   const actor = n.actor?.username ?? 'Someone'
   const actorLink = n.actor?.username ? (
-    <Link href={`/profile/${n.actor.username}`} className="font-semibold text-white hover:text-orange-400" onClick={(e) => e.stopPropagation()}>@{actor}</Link>
+    <Link href={`/profile/${n.actor.username}`} className="font-semibold text-white hover:text-orange-400" onClick={(e) => { e.stopPropagation(); onLinkClick() }}>@{actor}</Link>
   ) : <span className="font-semibold text-white">@{actor}</span>
 
   const postHref = n.post_id ? `/posts/${n.post_id}` : null
@@ -32,7 +32,7 @@ function notificationMessage(n: Notification) {
 
   function contentLink(text: string, href: string | null) {
     if (!href) return <span>{text}</span>
-    return <Link href={href} className="hover:text-orange-400 transition-colors" onClick={(e) => e.stopPropagation()}>{text}</Link>
+    return <Link href={href} className="hover:text-orange-400 transition-colors" onClick={(e) => { e.stopPropagation(); onLinkClick() }}>{text}</Link>
   }
 
   switch (n.type) {
@@ -368,7 +368,10 @@ export default function NotificationBell({ userId, username }: Props) {
                       <Avatar n={n} />
                       <div className="flex-1 min-w-0">
                         <p className="text-zinc-200 text-sm leading-snug">
-                          {notificationMessage(n)}
+                          {notificationMessage(n, () => {
+                            if (!n.read_at) { markReadOptimistically(n.id); markRead(n.id) }
+                            setOpen(false)
+                          })}
                         </p>
                         <p className="text-zinc-500 text-sm mt-0.5">{formatTimeAgo(n.created_at)}</p>
                       </div>

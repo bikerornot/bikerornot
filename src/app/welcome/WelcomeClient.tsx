@@ -16,9 +16,10 @@ interface Props {
   bikePhotoPath: string | null
   riders: RiderSuggestion[]
   currentUserId: string
+  templates: string[]
 }
 
-export default function WelcomeClient({ firstName, city, state, bikeString, bikePhotoPath, riders, currentUserId }: Props) {
+export default function WelcomeClient({ firstName, city, state, bikeString, bikePhotoPath, riders, currentUserId, templates }: Props) {
   const router = useRouter()
   const [step, setStep] = useState<'post' | 'friends'>('post')
   const [postContent, setPostContent] = useState('')
@@ -28,18 +29,7 @@ export default function WelcomeClient({ firstName, city, state, bikeString, bike
   const [sendingAll, setSendingAll] = useState(false)
   const submittingRef = useRef(false)
 
-  const location = [city, state].filter(Boolean).join(', ')
   const displayRiders = riders.slice(0, 10)
-
-  const templates = [
-    bikeString
-      ? `Hey everyone! I'm ${firstName} from ${location || 'around'}. I ride a ${bikeString}. Looking forward to connecting with fellow riders!`
-      : `Hey everyone! I'm ${firstName} from ${location || 'around'}. Just joined BikerOrNot and looking forward to meeting fellow riders!`,
-    `New here! Been riding for years and finally found a community. Let's ride!`,
-    location
-      ? `Just joined BikerOrNot! Any riders near ${location}? Let's connect!`
-      : `Just joined BikerOrNot! Looking to connect with riders. Let's ride!`,
-  ]
 
   async function handlePost() {
     if (posting || !postContent.trim() || submittingRef.current) return

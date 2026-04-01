@@ -63,6 +63,11 @@ export default async function WelcomePage() {
     bikePhotoPath = photos?.[0]?.storage_path ?? null
   }
 
+  // Build and randomize welcome post templates — show 3 of many to reduce feed repetition
+  const location = [profile.city, profile.state].filter(Boolean).join(', ')
+  const allTemplates = buildWelcomeTemplates(profile.first_name, location, bikeString)
+  const templates = pickRandom(allTemplates, 3)
+
   return (
     <WelcomeClient
       firstName={profile.first_name}
@@ -72,6 +77,48 @@ export default async function WelcomePage() {
       bikePhotoPath={bikePhotoPath}
       riders={riders}
       currentUserId={user.id}
+      templates={templates}
     />
   )
+}
+
+function buildWelcomeTemplates(firstName: string, location: string, bikeString: string | null): string[] {
+  const loc = location || 'around'
+  const templates: string[] = []
+
+  if (bikeString) {
+    templates.push(
+      `Hey everyone! I'm ${firstName} from ${loc}. I ride a ${bikeString}. Looking forward to connecting with fellow riders!`,
+      `${firstName} here, riding a ${bikeString} out of ${loc}. Stoked to find this community!`,
+      `New member alert! I'm ${firstName}, proud owner of a ${bikeString}. Who else is riding near ${loc}?`,
+    )
+  } else {
+    templates.push(
+      `Hey everyone! I'm ${firstName} from ${loc}. Just joined BikerOrNot and looking forward to meeting fellow riders!`,
+      `${firstName} here from ${loc}. Excited to connect with the riding community!`,
+      `New to BikerOrNot! I'm ${firstName} — looking to meet riders near ${loc}.`,
+    )
+  }
+
+  // Generic templates that work for everyone
+  templates.push(
+    `New here! Been riding for years and finally found a community. Let's ride!`,
+    `Just joined BikerOrNot! Any riders near ${loc}? Let's connect!`,
+    `What's up everyone! ${firstName} here. Ready to meet some fellow riders and find new roads.`,
+    `Two wheels, one community. ${firstName} from ${loc} checking in!`,
+    `Finally joined! I'm ${firstName} — always looking for new people to ride with. Hit me up!`,
+    `Hey riders! Just signed up. Can't wait to see what this community is all about.`,
+    `${firstName} from ${loc} reporting for duty. Who's riding this weekend?`,
+  )
+
+  return templates
+}
+
+function pickRandom<T>(arr: T[], count: number): T[] {
+  const shuffled = [...arr]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled.slice(0, count)
 }

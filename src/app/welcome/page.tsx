@@ -84,34 +84,24 @@ export default async function WelcomePage() {
 
 function buildWelcomeTemplates(firstName: string, location: string, bikeString: string | null): string[] {
   const loc = location || 'around'
-  const templates: string[] = []
 
   if (bikeString) {
-    templates.push(
+    return [
       `Hey everyone! I'm ${firstName} from ${loc}. I ride a ${bikeString}. Looking forward to connecting with fellow riders!`,
       `${firstName} here, riding a ${bikeString} out of ${loc}. Stoked to find this community!`,
       `New member alert! I'm ${firstName}, proud owner of a ${bikeString}. Who else is riding near ${loc}?`,
-    )
-  } else {
-    templates.push(
-      `Hey everyone! I'm ${firstName} from ${loc}. Just joined BikerOrNot and looking forward to meeting fellow riders!`,
-      `${firstName} here from ${loc}. Excited to connect with the riding community!`,
-      `New to BikerOrNot! I'm ${firstName} — looking to meet riders near ${loc}.`,
-    )
+      `Rubber side down! I'm ${firstName} from ${loc} with a ${bikeString}. Who wants to ride?`,
+      `Just joined BikerOrNot! I'm ${firstName} from ${loc} and I ride a ${bikeString}. Let's connect!`,
+    ]
   }
 
-  // Generic templates that work for everyone
-  templates.push(
-    `New here! Been riding for years and finally found a community. Let's ride!`,
-    `Just joined BikerOrNot! Any riders near ${loc}? Let's connect!`,
-    `What's up everyone! ${firstName} here. Ready to meet some fellow riders and find new roads.`,
-    `Rubber side down! ${firstName} from ${loc} just joined. Who wants to ride?`,
-    `Finally joined! I'm ${firstName} — always looking for new people to ride with. Hit me up!`,
-    `Hey riders! Just signed up. Can't wait to see what this community is all about.`,
-    `${firstName} from ${loc} reporting for duty. Who's riding this weekend?`,
-  )
-
-  return templates
+  return [
+    `Hey everyone! I'm ${firstName} from ${loc}. Just joined BikerOrNot and looking forward to meeting fellow riders!`,
+    `${firstName} here from ${loc}. Excited to connect with the riding community!`,
+    `New to BikerOrNot! I'm ${firstName} from ${loc} — looking to meet riders in my area.`,
+    `Just signed up! I'm ${firstName} from ${loc}. Any riders nearby? Let's connect!`,
+    `${firstName} from ${loc} checking in! Ready to meet some fellow riders and find new roads.`,
+  ]
 }
 
 function pickRandom<T>(arr: T[], count: number): T[] {

@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { haversine } from '@/lib/geo'
 import type { Group, GroupMember, GroupCategory, Post, Profile } from '@/lib/supabase/types'
 import { validateImageFile } from '@/lib/rate-limit'
 import { moderateImage } from '@/lib/sightengine'
@@ -899,4 +900,121 @@ export async function respondToGroupInvite(
     .eq('user_id', user.id)
     .eq('group_id', groupId)
     .eq('type', 'group_invite')
+}
+
+// ─── Suggested Groups for Feed ─────────────────────────────
+
+export interface SuggestedGroup {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  cover_photo_url: string | null
+  category: string | null
+  city: string | null
+  state: string | null
+  member_count: number
+  friends_in_group: number
+  distance_miles: number | null
+}
+
+export async function getSuggestedGroups(): Promise<SuggestedGroup[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // Fetch user profile, their group IDs, and friend IDs in parallel
+  const [
+    { data: me },
+    { data: myGroups },
+    { data: friendships },
+  ] = await Promise.all([
+    admin.from('profiles').select('latitude, longitude, state').eq('id', user.id).single(),
+    admin.from('group_members').select('group_id').eq('user_id', user.id).eq('status', 'active'),
+    admin.from('friendships').select('requester_id, addressee_id')
+      .eq('status', 'accepted')
+      .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
+  ])
+
+  const myGroupIds = new Set((myGroups ?? []).map((m) => m.group_id))
+  const friendIds = new Set<string>()
+  for (const f of friendships ?? []) {
+    friendIds.add(f.requester_id === user.id ? f.addressee_id : f.requester_id)
+  }
+
+  // Fetch all active groups the user is NOT in
+  const { data: groups } = await admin
+    .from('groups')
+    .select('id, name, slug, description, cover_photo_url, category, city, state, latitude, longitude')
+    .eq('status', 'active')
+
+  const candidates = (groups ?? []).filter((g: any) => !myGroupIds.has(g.id))
+  if (candidates.length === 0) return []
+
+  const candidateIds = candidates.map((g: any) => g.id)
+
+  // Fetch member counts and friend membership in parallel
+  const [{ data: memberCounts }, { data: friendMembers }] = await Promise.all([
+    admin.from('group_members').select('group_id')
+      .in('group_id', candidateIds).eq('status', 'active'),
+    friendIds.size > 0
+      ? admin.from('group_members').select('group_id, user_id')
+          .in('group_id', candidateIds).eq('status', 'active')
+          .in('user_id', Array.from(friendIds).slice(0, 200))
+      : Promise.resolve({ data: [] }),
+  ])
+
+  const countMap: Record<string, number> = {}
+  for (const m of memberCounts ?? []) {
+    countMap[m.group_id] = (countMap[m.group_id] ?? 0) + 1
+  }
+
+  const friendCountMap: Record<string, number> = {}
+  for (const m of friendMembers ?? []) {
+    friendCountMap[m.group_id] = (friendCountMap[m.group_id] ?? 0) + 1
+  }
+
+  const myLat = me?.latitude
+  const myLon = me?.longitude
+  const myState = me?.state
+
+  // Score each group
+  const scored = candidates.map((g: any) => {
+    const members = countMap[g.id] ?? 0
+    const friends = friendCountMap[g.id] ?? 0
+    const dist = myLat && myLon && g.latitude && g.longitude
+      ? haversine(myLat, myLon, g.latitude, g.longitude)
+      : null
+    const sameState = myState && g.state && myState === g.state
+
+    const score =
+      friends * 20 +
+      (sameState ? 15 : 0) +
+      (dist != null ? Math.max(0, 20 - dist / 50) : 0) +
+      Math.min(members, 30) * 0.5
+
+    return {
+      id: g.id,
+      name: g.name,
+      slug: g.slug,
+      description: g.description,
+      cover_photo_url: g.cover_photo_url,
+      category: g.category,
+      city: g.city,
+      state: g.state,
+      member_count: members,
+      friends_in_group: friends,
+      distance_miles: dist != null && dist < 9999 ? Math.round(dist) : null,
+      _score: score,
+    }
+  })
+
+  scored.sort((a, b) => b._score - a._score)
+
+  return scored.slice(0, 2).map(({ _score, ...g }) => g)
 }

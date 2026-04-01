@@ -93,9 +93,15 @@ export default function KpisClient() {
         <div className="space-y-6">
           {/* Traffic — from Google Analytics */}
           <Section title="Traffic" subtitle="Google Analytics">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <KpiCard label="Unique Visitors" value={formatNumber(data.visitors)} />
+              <KpiCard label="Pageviews" value={formatNumber(data.pageviews)} />
               <KpiCard label="Sessions" value={formatNumber(data.sessions)} />
+              <KpiCard
+                label="Pages / Session"
+                value={data.sessions > 0 ? (data.pageviews / data.sessions).toFixed(1) : '0'}
+                good={data.sessions > 0 && data.pageviews / data.sessions > 3}
+              />
               <KpiCard label="Bounce Rate" value={formatPercent(data.bounceRate)} muted={data.bounceRate > 0.6} />
               <KpiCard label="Avg Session" value={formatDuration(data.avgSessionDuration)} />
             </div>

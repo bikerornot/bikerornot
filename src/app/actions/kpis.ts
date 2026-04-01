@@ -27,6 +27,7 @@ export interface KpiData {
   // GA metrics
   visitors: number
   sessions: number
+  pageviews: number
   bounceRate: number
   avgSessionDuration: number
   trafficSources: GATrafficSource[]
@@ -234,7 +235,7 @@ export async function getKpiData(startDate: string, endDate: string): Promise<Kp
   ] = await Promise.all([
     getGAMetrics(startDate, endDate).catch(async (err) => {
       console.error('GA metrics failed, retrying:', err.message)
-      try { return await getGAMetrics(startDate, endDate) } catch { return { visitors: 0, sessions: 0, bounceRate: 0, avgSessionDuration: 0 } as GAMetrics }
+      try { return await getGAMetrics(startDate, endDate) } catch { return { visitors: 0, sessions: 0, pageviews: 0, bounceRate: 0, avgSessionDuration: 0 } as GAMetrics }
     }),
     getGATrafficSources(startDate, endDate).catch((): GATrafficSource[] => []),
     getGATopPages(startDate, endDate, 10).catch((): GATopPage[] => []),
@@ -421,6 +422,7 @@ export async function getKpiData(startDate: string, endDate: string): Promise<Kp
   return {
     visitors: gaMetrics.visitors,
     sessions: gaMetrics.sessions,
+    pageviews: gaMetrics.pageviews,
     bounceRate: gaMetrics.bounceRate,
     avgSessionDuration: gaMetrics.avgSessionDuration,
     trafficSources,

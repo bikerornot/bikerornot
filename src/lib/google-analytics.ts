@@ -27,6 +27,7 @@ function getClient() {
 export interface GAMetrics {
   visitors: number
   sessions: number
+  pageviews: number
   bounceRate: number
   avgSessionDuration: number
 }
@@ -41,6 +42,7 @@ export async function getGAMetrics(startDate: string, endDate: string): Promise<
     metrics: [
       { name: 'totalUsers' },
       { name: 'sessions' },
+      { name: 'screenPageViews' },
       { name: 'bounceRate' },
       { name: 'averageSessionDuration' },
     ],
@@ -50,8 +52,9 @@ export async function getGAMetrics(startDate: string, endDate: string): Promise<
   return {
     visitors: Number(row?.metricValues?.[0]?.value ?? 0),
     sessions: Number(row?.metricValues?.[1]?.value ?? 0),
-    bounceRate: Number(row?.metricValues?.[2]?.value ?? 0),
-    avgSessionDuration: Number(row?.metricValues?.[3]?.value ?? 0),
+    pageviews: Number(row?.metricValues?.[2]?.value ?? 0),
+    bounceRate: Number(row?.metricValues?.[3]?.value ?? 0),
+    avgSessionDuration: Number(row?.metricValues?.[4]?.value ?? 0),
   }
 }
 

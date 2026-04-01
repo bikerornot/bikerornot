@@ -314,7 +314,7 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
               <Link href="/feed" className="text-base font-bold text-white">BikerOrNot</Link>
               <span className="ml-2 text-orange-400 text-xs font-semibold">Admin</span>
             </div>
-            <Link href="/admin/online" className="flex items-center gap-1.5 mt-0.5">
+            <Link href="/admin/online" className="flex items-center gap-1.5 mt-2">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
               <span className="text-xs text-zinc-400">
                 <span className="text-emerald-400 font-semibold">{activeUsers}</span> online

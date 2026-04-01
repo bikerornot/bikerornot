@@ -149,6 +149,7 @@ export default function FriendsTab({ profileId, isOwnProfile, currentUserId }: P
   const [mutualFriendships, setMutualFriendships] = useState<Map<string, Set<string>>>(new Map())
   const [loading, setLoading] = useState(true)
   const [subTab, setSubTab] = useState<SubTab>('all')
+  const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set())
 
   const showMutualTab = !isOwnProfile && currentUserId
 
@@ -299,8 +300,6 @@ export default function FriendsTab({ profileId, isOwnProfile, currentUserId }: P
     () => friends.filter(f => mutualFriendIds.has(f.id)),
     [friends, mutualFriendIds]
   )
-
-  const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set())
 
   async function handleAddFriend(friendId: string) {
     setRequestedIds(prev => new Set(prev).add(friendId))

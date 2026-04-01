@@ -19,7 +19,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     .from('posts')
     .select('author:profiles!author_id(username)')
     .eq('id', id)
-    .single()
+    .is('deleted_at', null)
+    .maybeSingle()
   const username = (data?.author as { username?: string } | null)?.username ?? 'Unknown'
   return { title: `@${username}'s post — BikerOrNot` }
 }

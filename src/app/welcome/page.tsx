@@ -105,7 +105,7 @@ function buildWelcomeTemplates(firstName: string, location: string, bikeString: 
     `New here! Been riding for years and finally found a community. Let's ride!`,
     `Just joined BikerOrNot! Any riders near ${loc}? Let's connect!`,
     `What's up everyone! ${firstName} here. Ready to meet some fellow riders and find new roads.`,
-    `Two wheels, one community. ${firstName} from ${loc} checking in!`,
+    `Rubber side down! ${firstName} from ${loc} just joined. Who wants to ride?`,
     `Finally joined! I'm ${firstName} — always looking for new people to ride with. Hit me up!`,
     `Hey riders! Just signed up. Can't wait to see what this community is all about.`,
     `${firstName} from ${loc} reporting for duty. Who's riding this weekend?`,

@@ -84,7 +84,7 @@ export default function SuggestedGroupsCard({ currentUserId }: Props) {
           const joined = joinedIds.has(group.id)
           const joining = joiningIds.has(group.id)
           const coverUrl = group.cover_photo_url
-            ? getImageUrl('groups', group.cover_photo_url)
+            ? getImageUrl('covers', group.cover_photo_url)
             : null
           const location = [group.city, group.state].filter(Boolean).join(', ')
 

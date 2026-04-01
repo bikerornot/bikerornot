@@ -232,9 +232,10 @@ export async function getKpiData(startDate: string, endDate: string): Promise<Kp
     dailySessions,
     { data: postsPerUserRows },
   ] = await Promise.all([
-    getGAMetrics(startDate, endDate).catch((): GAMetrics => ({
-      visitors: 0, sessions: 0, bounceRate: 0, avgSessionDuration: 0,
-    })),
+    getGAMetrics(startDate, endDate).catch(async (err) => {
+      console.error('GA metrics failed, retrying:', err.message)
+      try { return await getGAMetrics(startDate, endDate) } catch { return { visitors: 0, sessions: 0, bounceRate: 0, avgSessionDuration: 0 } as GAMetrics }
+    }),
     getGATrafficSources(startDate, endDate).catch((): GATrafficSource[] => []),
     getGATopPages(startDate, endDate, 10).catch((): GATopPage[] => []),
     getGADeviceBreakdown(startDate, endDate).catch((): GADeviceBreakdown[] => []),

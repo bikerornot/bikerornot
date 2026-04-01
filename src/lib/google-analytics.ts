@@ -3,15 +3,23 @@ import path from 'path'
 
 const propertyId = process.env.GA_PROPERTY_ID
 const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS
+const credentialsJson = process.env.GOOGLE_CREDENTIALS_JSON
 
 let client: BetaAnalyticsDataClient | null = null
 
 function getClient() {
   if (!client) {
-    const keyFile = credentialsPath?.startsWith('/')
-      ? credentialsPath
-      : path.resolve(process.cwd(), credentialsPath ?? './ga-credentials.json')
-    client = new BetaAnalyticsDataClient({ keyFilename: keyFile })
+    if (credentialsJson) {
+      // Vercel: credentials as JSON string in env var
+      const credentials = JSON.parse(credentialsJson)
+      client = new BetaAnalyticsDataClient({ credentials })
+    } else {
+      // Local: credentials file
+      const keyFile = credentialsPath?.startsWith('/')
+        ? credentialsPath
+        : path.resolve(process.cwd(), credentialsPath ?? './ga-credentials.json')
+      client = new BetaAnalyticsDataClient({ keyFilename: keyFile })
+    }
   }
   return client
 }

@@ -31,16 +31,6 @@ const navItems = [
     ),
   },
   {
-    href: '/admin/reports',
-    label: 'Reports',
-    exact: false,
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" />
-      </svg>
-    ),
-  },
-  {
     href: '/admin/users',
     label: 'Users',
     exact: false,
@@ -81,27 +71,6 @@ const navItems = [
     icon: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ),
-  },
-  {
-    href: '/admin/flags',
-    label: 'AI Flags',
-    exact: false,
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-      </svg>
-    ),
-  },
-  {
-    href: '/admin/watchlist',
-    label: 'Watchlist',
-    exact: false,
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
       </svg>
     ),
   },
@@ -162,6 +131,8 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
   const pathname = usePathname()
   const [activeUsers, setActiveUsers] = useState(initialActiveUsers)
   const [menuOpen, setMenuOpen] = useState(false)
+  const isSafetyPage = pathname.startsWith('/admin/safety') || pathname.startsWith('/admin/reports') || pathname.startsWith('/admin/flags') || pathname.startsWith('/admin/watchlist')
+  const [safetyOpen, setSafetyOpen] = useState(isSafetyPage)
   const [adsEnabled, setAdsEnabled] = useState(initialAdsEnabled)
   const [adsToggling, setAdsToggling] = useState(false)
 
@@ -212,12 +183,70 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5">
+          {/* Safety Center — collapsible group */}
+          {(() => {
+            const safetyBadge = (pendingReports || 0) + (pendingFlags || 0) + (watchlistCount || 0)
+            const safetySubItems = [
+              { href: '/admin/safety', label: 'Overview', badge: 0 },
+              { href: '/admin/reports', label: 'Reports', badge: pendingReports },
+              { href: '/admin/flags', label: 'AI Flags', badge: pendingFlags },
+              { href: '/admin/watchlist', label: 'Watchlist', badge: watchlistCount },
+            ]
+            return (
+              <div>
+                <button
+                  onClick={() => setSafetyOpen(!safetyOpen)}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isSafetyPage ? 'bg-orange-500/15 text-orange-400' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                  }`}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                    </svg>
+                    Safety Center
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    {safetyBadge > 0 && (
+                      <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
+                        {safetyBadge > 99 ? '99+' : safetyBadge}
+                      </span>
+                    )}
+                    <svg className={`w-3.5 h-3.5 text-zinc-500 transition-transform ${safetyOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </span>
+                </button>
+                {safetyOpen && (
+                  <div className="ml-4 mt-0.5 space-y-0.5">
+                    {safetySubItems.map((sub) => {
+                      const subActive = sub.href === '/admin/safety' ? pathname === sub.href : pathname.startsWith(sub.href)
+                      return (
+                        <Link
+                          key={sub.href}
+                          href={sub.href}
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            subActive ? 'bg-orange-500/10 text-orange-400' : 'text-zinc-500 hover:text-white hover:bg-zinc-800/50'
+                          }`}
+                        >
+                          {sub.label}
+                          {sub.badge > 0 && (
+                            <span className="bg-orange-500/80 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
+                              {sub.badge > 99 ? '99+' : sub.badge}
+                            </span>
+                          )}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
           {navItems.map((item) => {
             const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
-            const badge = item.href === '/admin/reports' && pendingReports > 0 ? pendingReports
-              : item.href === '/admin/dmca' && pendingDmca > 0 ? pendingDmca
-              : item.href === '/admin/flags' && pendingFlags > 0 ? pendingFlags
-              : item.href === '/admin/watchlist' && watchlistCount > 0 ? watchlistCount
+            const badge = item.href === '/admin/dmca' && pendingDmca > 0 ? pendingDmca
               : null
 
             return (

@@ -1664,3 +1664,108 @@ export async function getDailyCommentCounts(
 
   return result
 }
+
+// ─── Safety Center Overview ────────────────────────────────
+
+export interface SafetyOverview {
+  bannedToday: number
+  bannedThisWeek: number
+  pendingReports: number
+  pendingFlags: number
+  watchlistCount: number
+  autoBansThisWeek: number
+  recentAutoBans: { id: string; username: string | null; ban_reason: string | null; updated_at: string }[]
+  highScoreFlags: { id: string; sender_id: string; sender_username: string | null; score: number; content: string; flag_type: string; created_at: string }[]
+  hotReports: { reported_type: string; target_id: string; reporter_count: number; reason: string }[]
+  highRiskSignups: { id: string; username: string | null; first_name: string; last_name: string; gender: string | null; created_at: string; country: string | null; profile_photo_url: string | null; date_of_birth: string | null }[]
+  recentBans: { id: string; username: string | null; ban_reason: string | null; updated_at: string; status: string }[]
+}
+
+export async function getSafetyOverview(): Promise<SafetyOverview> {
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  const now = new Date()
+  const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0)
+  const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString()
+  const dayAgo = new Date(now.getTime() - 86400000).toISOString()
+
+  const [
+    { count: bannedToday },
+    { count: bannedThisWeek },
+    { count: pendingReports },
+    { count: pendingFlags },
+    { count: watchlistCount },
+    { count: autoBansThisWeek },
+    { data: recentAutoBans },
+    { data: highScoreFlags },
+    { data: hotReportsRaw },
+    { data: highRiskSignups },
+    { data: recentBans },
+  ] = await Promise.all([
+    admin.from('profiles').select('*', { count: 'exact', head: true })
+      .eq('status', 'banned').gte('updated_at', todayStart.toISOString()),
+    admin.from('profiles').select('*', { count: 'exact', head: true })
+      .eq('status', 'banned').gte('updated_at', weekAgo),
+    admin.from('content_reports').select('*', { count: 'exact', head: true })
+      .eq('status', 'pending'),
+    admin.from('content_flags').select('*', { count: 'exact', head: true })
+      .eq('status', 'pending'),
+    admin.from('admin_watchlist').select('*', { count: 'exact', head: true }),
+    admin.from('profiles').select('*', { count: 'exact', head: true })
+      .eq('status', 'banned').ilike('ban_reason', '%auto%').gte('updated_at', weekAgo),
+    admin.from('profiles')
+      .select('id, username, ban_reason, updated_at')
+      .eq('status', 'banned').ilike('ban_reason', '%auto%')
+      .gte('updated_at', dayAgo)
+      .order('updated_at', { ascending: false }).limit(10),
+    admin.from('content_flags')
+      .select('id, sender_id, content, score, flag_type, created_at, sender:profiles!sender_id(username)')
+      .eq('status', 'pending').gte('score', 0.7)
+      .order('score', { ascending: false }).limit(10),
+    admin.from('content_reports')
+      .select('reported_type, target_id, reason')
+      .eq('status', 'pending'),
+    admin.from('profiles')
+      .select('id, username, first_name, last_name, gender, created_at, country, profile_photo_url, date_of_birth')
+      .eq('status', 'active').eq('onboarding_complete', true)
+      .gte('created_at', dayAgo)
+      .is('phone_verified_at', null)
+      .eq('gender', 'female')
+      .order('created_at', { ascending: false }).limit(20),
+    admin.from('profiles')
+      .select('id, username, ban_reason, updated_at, status')
+      .eq('status', 'banned')
+      .order('updated_at', { ascending: false }).limit(10),
+  ])
+
+  const reportMap: Record<string, { reported_type: string; target_id: string; count: number; reason: string }> = {}
+  for (const r of hotReportsRaw ?? []) {
+    const key = `${r.reported_type}:${r.target_id}`
+    if (!reportMap[key]) reportMap[key] = { reported_type: r.reported_type, target_id: r.target_id, count: 0, reason: r.reason }
+    reportMap[key].count++
+  }
+  const hotReports = Object.values(reportMap).filter((r) => r.count >= 2).sort((a, b) => b.count - a.count).slice(0, 10)
+
+  const riskSignups = (highRiskSignups ?? []).filter((p: any) => {
+    if (!p.date_of_birth) return true
+    const age = (Date.now() - new Date(p.date_of_birth).getTime()) / (365.25 * 86400000)
+    return age < 35
+  }).slice(0, 10)
+
+  return {
+    bannedToday: bannedToday ?? 0,
+    bannedThisWeek: bannedThisWeek ?? 0,
+    pendingReports: pendingReports ?? 0,
+    pendingFlags: pendingFlags ?? 0,
+    watchlistCount: watchlistCount ?? 0,
+    autoBansThisWeek: autoBansThisWeek ?? 0,
+    recentAutoBans: (recentAutoBans ?? []) as any,
+    highScoreFlags: (highScoreFlags ?? []).map((f: any) => ({
+      ...f, sender_username: f.sender?.username ?? null,
+    })),
+    hotReports: hotReports.map((r) => ({ ...r, reporter_count: r.count })),
+    highRiskSignups: riskSignups as any,
+    recentBans: (recentBans ?? []) as any,
+  }
+}

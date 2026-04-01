@@ -121,7 +121,7 @@ export default function SuggestedGroupsCard({ currentUserId }: Props) {
                     {group.name}
                   </Link>
 
-                  <div className="flex flex-wrap gap-x-2 mt-0.5 text-xs text-zinc-500">
+                  <div className="flex flex-wrap gap-x-2 mt-0.5 text-sm text-zinc-400">
                     <span>{group.member_count} member{group.member_count !== 1 ? 's' : ''}</span>
                     {location && <span>{location}</span>}
                     {group.distance_miles != null && (
@@ -130,13 +130,13 @@ export default function SuggestedGroupsCard({ currentUserId }: Props) {
                   </div>
 
                   {group.friends_in_group > 0 && (
-                    <p className="text-xs text-orange-400 mt-0.5">
+                    <p className="text-sm text-orange-400 mt-0.5">
                       {group.friends_in_group} friend{group.friends_in_group !== 1 ? 's' : ''} in this group
                     </p>
                   )}
 
                   {group.description && (
-                    <p className="text-xs text-zinc-500 mt-1 line-clamp-1">{group.description}</p>
+                    <p className="text-sm text-zinc-400 mt-1 line-clamp-1">{group.description}</p>
                   )}
                 </div>
 

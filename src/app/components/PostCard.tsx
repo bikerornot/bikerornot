@@ -318,10 +318,10 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
             </Link>
             {post.group && (
               <>
-                <span className="text-zinc-500 text-sm">posted in</span>
+                <span className="text-zinc-400 text-base sm:text-sm">posted in</span>
                 <Link
                   href={`/groups/${post.group.slug}`}
-                  className="font-semibold text-orange-400 hover:text-orange-300 text-sm hover:underline"
+                  className="font-semibold text-orange-400 hover:text-orange-300 text-base sm:text-sm hover:underline"
                 >
                   {post.group.name}
                 </Link>

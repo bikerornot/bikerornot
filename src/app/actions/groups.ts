@@ -1016,20 +1016,13 @@ export async function getSuggestedGroups(): Promise<SuggestedGroup[]> {
 
   scored.sort((a, b) => b._score - a._score)
 
-  // Take top 2 scored groups; if fewer scored well, fill with random picks
-  const top = scored.filter((g) => g._score > 0).slice(0, 2)
-
-  if (top.length >= 2) return top.map(({ _score, ...g }) => g)
-
-  // Fill remaining slots with random groups for discovery
-  const topIds = new Set(top.map((g) => g.id))
-  const rest = scored.filter((g) => !topIds.has(g.id))
-  for (let i = rest.length - 1; i > 0; i--) {
+  // Shuffle all candidates for variety, then sort top-scored to the front
+  for (let i = scored.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[rest[i], rest[j]] = [rest[j], rest[i]]
+    ;[scored[i], scored[j]] = [scored[j], scored[i]]
   }
-  const filler = rest.slice(0, 2 - top.length)
-  const result = [...top, ...filler]
+  // Stable-ish sort: high scorers first, but ties are randomized from the shuffle
+  scored.sort((a, b) => b._score - a._score)
 
-  return result.map(({ _score, ...g }) => g)
+  return scored.slice(0, 10).map(({ _score, ...g }) => g)
 }

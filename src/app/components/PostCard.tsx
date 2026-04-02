@@ -60,7 +60,7 @@ function renderGroupJoinPost(text: string, groupSlug?: string | null) {
         )}
       </span>
       {description && (
-        <p className="text-zinc-500 text-sm mt-1 leading-snug">{description}</p>
+        <p className="text-zinc-300 text-base mt-1 leading-snug">{description}</p>
       )}
     </div>
   )

@@ -53,7 +53,7 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
   function scrollBy(dir: 'left' | 'right') {
     const el = scrollRef.current
     if (!el) return
-    const amount = dir === 'left' ? -280 : 280
+    const amount = dir === 'left' ? -360 : 360
     el.scrollBy({ left: amount, behavior: 'smooth' })
   }
 
@@ -163,13 +163,13 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
             <div
               key={rider.id}
               className={`flex-shrink-0 bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden flex flex-col ${
-                isCompact ? 'w-28' : 'w-32'
+                isCompact ? 'w-40' : 'w-44'
               }`}
             >
               {/* Photo */}
               <div className="relative">
                 <Link href={`/profile/${rider.username}`} className="block">
-                  <div className={`relative bg-zinc-700 ${isCompact ? 'h-28' : 'h-32'}`}>
+                  <div className={`relative bg-zinc-700 ${isCompact ? 'h-36' : 'h-40'}`}>
                     {photo ? (
                       <Image
                         src={photo}
@@ -200,14 +200,14 @@ export default function RidersWidget({ initialRiders, friendCount }: Props) {
               {/* Info */}
               <div className="px-2 pt-2 pb-2.5 flex flex-col gap-1.5 flex-1">
                 <div>
-                  <p className="text-zinc-400 text-sm font-medium leading-tight truncate">
+                  <p className="text-white text-base font-semibold leading-tight truncate">
                     @{rider.username ?? 'unknown'}
                   </p>
                   {location && (
-                    <p className="text-zinc-500 text-sm truncate leading-tight mt-0.5">{location}</p>
+                    <p className="text-zinc-300 text-sm truncate leading-tight mt-0.5">{location}</p>
                   )}
                   {rider.mutual_friend_count > 0 && (
-                    <p className="text-zinc-500 text-sm leading-tight mt-0.5">
+                    <p className="text-orange-400 text-sm leading-tight mt-0.5">
                       {rider.mutual_friend_count} mutual
                     </p>
                   )}

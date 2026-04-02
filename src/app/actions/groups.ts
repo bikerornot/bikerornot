@@ -1014,15 +1014,13 @@ export async function getSuggestedGroups(): Promise<SuggestedGroup[]> {
     }
   })
 
+  // Take top 10 by score, then shuffle so order is random each load
   scored.sort((a, b) => b._score - a._score)
-
-  // Shuffle all candidates for variety, then sort top-scored to the front
-  for (let i = scored.length - 1; i > 0; i--) {
+  const top = scored.slice(0, 10)
+  for (let i = top.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[scored[i], scored[j]] = [scored[j], scored[i]]
+    ;[top[i], top[j]] = [top[j], top[i]]
   }
-  // Stable-ish sort: high scorers first, but ties are randomized from the shuffle
-  scored.sort((a, b) => b._score - a._score)
 
-  return scored.slice(0, 10).map(({ _score, ...g }) => g)
+  return top.map(({ _score, ...g }) => g)
 }

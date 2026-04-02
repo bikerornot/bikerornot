@@ -17,6 +17,8 @@ export interface BikeMatchUser {
   city: string | null
   state: string | null
   bike_photo_url: string | null
+  bike_year: number | null
+  bike_id: string | null
 }
 
 export interface BikeMatchResult {
@@ -67,7 +69,7 @@ export async function getMotorcycleMatches(): Promise<BikeMatchResult | null> {
   const bikeMatchPromises = uniqueBikes.map((bike) =>
     admin
       .from('user_bikes')
-      .select('user_id, photo_url')
+      .select('id, user_id, year, photo_url')
       .neq('user_id', user.id)
       .ilike('make', bike.make)
       .ilike('model', bike.model)
@@ -80,16 +82,16 @@ export async function getMotorcycleMatches(): Promise<BikeMatchResult | null> {
 
   // Find the bike with the most eligible matches
   let bestBike: { make: string; model: string } | null = null
-  let bestMatchEntries: { user_id: string; photo_url: string }[] = []
+  let bestMatchEntries: { user_id: string; photo_url: string; year: number | null; bike_id: string }[] = []
 
   for (const { bike, matches } of bikeResults) {
     const seenUsers = new Set<string>()
-    const entries: { user_id: string; photo_url: string }[] = []
+    const entries: { user_id: string; photo_url: string; year: number | null; bike_id: string }[] = []
 
     for (const m of matches) {
       if (!excludeIds.has(m.user_id) && !seenUsers.has(m.user_id) && m.photo_url) {
         seenUsers.add(m.user_id)
-        entries.push({ user_id: m.user_id, photo_url: m.photo_url })
+        entries.push({ user_id: m.user_id, photo_url: m.photo_url, year: m.year ?? null, bike_id: m.id })
       }
     }
 
@@ -104,6 +106,8 @@ export async function getMotorcycleMatches(): Promise<BikeMatchResult | null> {
   // Fetch profiles for the top 20 matches
   const matchUserIds = bestMatchEntries.slice(0, 20).map((e) => e.user_id)
   const bikePhotoMap = new Map(bestMatchEntries.map((e) => [e.user_id, e.photo_url]))
+  const bikeYearMap = new Map(bestMatchEntries.map((e) => [e.user_id, e.year]))
+  const bikeIdMap = new Map(bestMatchEntries.map((e) => [e.user_id, e.bike_id]))
 
   const { data: profiles } = await admin
     .from('profiles')
@@ -119,6 +123,8 @@ export async function getMotorcycleMatches(): Promise<BikeMatchResult | null> {
     city: p.city,
     state: p.state,
     bike_photo_url: bikePhotoMap.get(p.id) ?? null,
+    bike_year: bikeYearMap.get(p.id) ?? null,
+    bike_id: bikeIdMap.get(p.id) ?? null,
   })).filter((m) => m.bike_photo_url)
 
   if (matches.length === 0) return null

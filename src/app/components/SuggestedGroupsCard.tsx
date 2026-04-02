@@ -90,8 +90,8 @@ export default function SuggestedGroupsCard({ currentUserId }: Props) {
 
           return (
             <div key={group.id} className="px-4 py-3">
+              {/* Top row: image + text */}
               <div className="flex gap-3">
-                {/* Cover photo or placeholder */}
                 <Link href={`/groups/${group.slug}`} className="flex-shrink-0">
                   <div className="w-16 h-16 rounded-lg bg-zinc-800 overflow-hidden">
                     {coverUrl ? (
@@ -112,11 +112,10 @@ export default function SuggestedGroupsCard({ currentUserId }: Props) {
                   </div>
                 </Link>
 
-                {/* Group info */}
                 <div className="flex-1 min-w-0">
                   <Link
                     href={`/groups/${group.slug}`}
-                    className="text-sm font-semibold text-white hover:text-orange-400 transition-colors line-clamp-1"
+                    className="text-base font-bold text-white hover:text-orange-400 transition-colors line-clamp-1"
                   >
                     {group.name}
                   </Link>
@@ -134,29 +133,28 @@ export default function SuggestedGroupsCard({ currentUserId }: Props) {
                       {group.friends_in_group} friend{group.friends_in_group !== 1 ? 's' : ''} in this group
                     </p>
                   )}
-
-                  {group.description && (
-                    <p className="text-base text-zinc-300 mt-1 line-clamp-2">{group.description}</p>
-                  )}
-                </div>
-
-                {/* Join button */}
-                <div className="flex-shrink-0 flex items-center">
-                  <button
-                    onClick={() => !joined && !joining && handleJoin(group.id)}
-                    disabled={joined || joining}
-                    className={`text-sm font-semibold px-4 py-1.5 rounded-full transition-colors ${
-                      joined
-                        ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
-                        : joining
-                        ? 'bg-zinc-700 text-zinc-400 cursor-default'
-                        : 'bg-orange-500 hover:bg-orange-600 text-white'
-                    }`}
-                  >
-                    {joined ? 'Joined' : joining ? '...' : 'Join'}
-                  </button>
                 </div>
               </div>
+
+              {/* Description — full width below image row */}
+              {group.description && (
+                <p className="text-base text-zinc-300 mt-2 line-clamp-2">{group.description}</p>
+              )}
+
+              {/* Join button — full width below */}
+              <button
+                onClick={() => !joined && !joining && handleJoin(group.id)}
+                disabled={joined || joining}
+                className={`w-full text-sm font-semibold py-2 rounded-lg transition-colors mt-3 ${
+                  joined
+                    ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
+                    : joining
+                    ? 'bg-zinc-700 text-zinc-400 cursor-default'
+                    : 'bg-orange-500 hover:bg-orange-600 text-white'
+                }`}
+              >
+                {joined ? 'Joined' : joining ? '...' : 'Join Group'}
+              </button>
             </div>
           )
         })}

@@ -215,6 +215,7 @@ export default function CommentSection({ postId, postAuthorId, currentUserId, cu
               placeholder="Write a comment…"
               disabled={submitting}
               rows={1}
+              maxLength={1000}
               className="flex-1 bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-1.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none overflow-hidden"
             />
             {mention.visible && (

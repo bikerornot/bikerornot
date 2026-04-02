@@ -177,9 +177,15 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
               onSelect={(e) => setCursorPos((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
               placeholder={bikeId ? "Share something about this ride…" : "Share something with the crew…"}
               rows={3}
+              maxLength={5000}
               disabled={submitting}
               className="w-full bg-transparent text-white placeholder-zinc-500 focus:outline-none text-base resize-none"
             />
+            {content.length > 4500 && (
+              <p className={`text-xs mt-1 ${content.length >= 5000 ? 'text-red-400' : 'text-zinc-500'}`}>
+                {content.length}/5000
+              </p>
+            )}
             {mention.visible && (
               <MentionDropdown
                 suggestions={mention.suggestions}

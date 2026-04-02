@@ -133,8 +133,8 @@ export default function BikeMatchCard({ currentUserId }: Props) {
               )}
             </div>
           </Link>
-          <p className="text-base text-white leading-snug">
-            <Link href={`/profile/${currentUser.username}`} className="font-semibold text-white hover:underline">
+          <p className="text-base text-zinc-300 leading-snug">
+            <Link href={`/profile/${currentUser.username}`} className="font-bold text-white hover:underline text-lg sm:text-base">
               @{currentUser.username ?? 'unknown'}
             </Link>
             {location ? ` from ${location}` : ''} rides a {bikeLabel}

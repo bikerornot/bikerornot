@@ -136,7 +136,7 @@ export default function SuggestedGroupsCard({ currentUserId }: Props) {
                   )}
 
                   {group.description && (
-                    <p className="text-sm text-zinc-400 mt-1 line-clamp-1">{group.description}</p>
+                    <p className="text-base text-zinc-300 mt-1 line-clamp-2">{group.description}</p>
                   )}
                 </div>
 

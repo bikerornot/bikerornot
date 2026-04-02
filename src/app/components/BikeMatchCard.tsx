@@ -182,7 +182,7 @@ export default function BikeMatchCard({ currentUserId }: Props) {
                       </div>
                     )}
                     {/* Profile avatar overlay */}
-                    <Link href={`/profile/${rider.username}`} className="absolute bottom-2 left-2 z-10">
+                    <Link href={`/profile/${rider.username}`} className="absolute top-2 left-2 z-10">
                       <div className="w-8 h-8 rounded-full bg-zinc-700 border-2 border-zinc-900 overflow-hidden shadow-lg">
                         {avatarSrc ? (
                           <Image src={avatarSrc} alt={rider.username ?? ''} width={32} height={32} className="object-cover w-full h-full" />

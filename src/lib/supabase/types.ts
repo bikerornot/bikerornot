@@ -40,6 +40,7 @@ export interface Profile {
   email_comments: boolean
   show_real_name: boolean
   show_birthday: boolean
+  show_online_status: boolean
   phone_number: string | null
   phone_verified_at: string | null
   phone_verification_required: boolean

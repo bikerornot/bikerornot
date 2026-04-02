@@ -121,7 +121,7 @@ export default async function ChatPage({
             <span className="text-white font-semibold text-sm group-hover:text-orange-400 transition-colors truncate inline-flex items-center gap-1.5">
               @{otherUser.username}
               {otherUser.phone_verified_at && <VerifiedBadge className="w-3.5 h-3.5 flex-shrink-0" />}
-              <OnlineIndicator userId={otherUser.id} initialLastSeen={otherUser.last_seen_at ?? null} />
+              <OnlineIndicator userId={otherUser.id} initialLastSeen={otherUser.last_seen_at ?? null} initialShowOnline={otherUser.show_online_status ?? true} />
             </span>
           </Link>
 

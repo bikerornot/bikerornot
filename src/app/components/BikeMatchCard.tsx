@@ -156,6 +156,7 @@ export default function BikeMatchCard({ currentUserId }: Props) {
           {visibleUsers.map((rider) => {
             const status = statuses[rider.id] ?? 'idle'
             const bikePhotoSrc = rider.bike_photo_url ? getImageUrl('bikes', rider.bike_photo_url) : null
+            const avatarSrc = rider.profile_photo_url ? getImageUrl('avatars', rider.profile_photo_url) : null
             const yearLabel = rider.bike_year ? `${rider.bike_year} ${bikeLabel}` : bikeLabel
             const garageUrl = `/profile/${rider.username}?tab=Garage`
 
@@ -180,6 +181,18 @@ export default function BikeMatchCard({ currentUserId }: Props) {
                         🏍️
                       </div>
                     )}
+                    {/* Profile avatar overlay */}
+                    <Link href={`/profile/${rider.username}`} className="absolute bottom-2 left-2 z-10">
+                      <div className="w-8 h-8 rounded-full bg-zinc-700 border-2 border-zinc-900 overflow-hidden shadow-lg">
+                        {avatarSrc ? (
+                          <Image src={avatarSrc} alt={rider.username ?? ''} width={32} height={32} className="object-cover w-full h-full" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-xs">
+                            {rider.username?.[0]?.toUpperCase() ?? '?'}
+                          </div>
+                        )}
+                      </div>
+                    </Link>
                   </div>
                 </Link>
 

@@ -8,7 +8,9 @@ import PostComposer from '@/app/components/PostComposer'
 import AdCard from '@/app/components/AdCard'
 import BikeMatchCard from '@/app/components/BikeMatchCard'
 import SuggestedGroupsCard from '@/app/components/SuggestedGroupsCard'
+import RidersWidget from '@/app/components/RidersWidget'
 import { getNextAd, type AdData } from '@/app/actions/ads'
+import type { RiderSuggestion } from '@/app/actions/suggestions'
 
 const PAGE_SIZE = 10
 
@@ -17,9 +19,11 @@ interface Props {
   currentUserProfile: Profile
   userGroupIds?: string[]
   blockedUserIds?: string[]
+  initialRiders?: RiderSuggestion[]
+  friendCount?: number
 }
 
-export default function FeedClient({ currentUserId, currentUserProfile, userGroupIds = [], blockedUserIds = [] }: Props) {
+export default function FeedClient({ currentUserId, currentUserProfile, userGroupIds = [], blockedUserIds = [], initialRiders = [], friendCount = 0 }: Props) {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -218,7 +222,12 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
             currentUserProfile={currentUserProfile}
             blockedUserIds={blockedUserIds}
           />
-          {idx === 0 && ad && (
+          {idx === 0 && initialRiders.length > 0 && (
+            <div className="mt-2 sm:mt-4">
+              <RidersWidget initialRiders={initialRiders} friendCount={friendCount} />
+            </div>
+          )}
+          {idx === Math.min(1, posts.length - 1) && ad && (
             <div className="mt-2 sm:mt-4">
               <AdCard ad={ad} onDismiss={() => setAd(null)} />
             </div>

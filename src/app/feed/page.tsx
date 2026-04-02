@@ -12,7 +12,6 @@ import NotificationBell from '@/app/components/NotificationBell'
 import LastSeenTracker from '@/app/components/LastSeenTracker'
 import MessagesLink from '@/app/components/MessagesLink'
 import BottomNav from '@/app/components/BottomNav'
-import RidersWidget from '@/app/components/RidersWidget'
 import DmcaBanner from '@/app/components/DmcaBanner'
 import SiteBanner from '@/app/components/SiteBanner'
 import { getActiveBanners } from '@/app/actions/banners'
@@ -132,13 +131,12 @@ export default async function FeedPage() {
             profile_username: profile.username,
           }))}
         />
-        <RidersWidget initialRiders={nearbyRiders} friendCount={friendCount} />
         {friendBirthdays.length > 0 && (
           <div className="mb-2 sm:mb-4">
             <BirthdayCard birthdays={friendBirthdays} />
           </div>
         )}
-        <FeedClient currentUserId={user.id} currentUserProfile={profile} userGroupIds={userGroupIds} blockedUserIds={Array.from(blockedIds)} />
+        <FeedClient currentUserId={user.id} currentUserProfile={profile} userGroupIds={userGroupIds} blockedUserIds={Array.from(blockedIds)} initialRiders={nearbyRiders} friendCount={friendCount} />
       </div>
       <BottomNav />
     </div>

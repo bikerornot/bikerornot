@@ -165,9 +165,9 @@ export default function BikeMatchCard({ currentUserId }: Props) {
                 key={rider.id}
                 className="flex-shrink-0 w-56 bg-zinc-800 border border-zinc-700 rounded-xl overflow-hidden flex flex-col"
               >
-                {/* Bike photo — links to garage */}
-                <Link href={garageUrl} className="block">
-                  <div className="relative h-36 bg-zinc-700">
+                {/* Bike photo + avatar overlay */}
+                <div className="relative h-36 bg-zinc-700">
+                  <Link href={garageUrl} className="block absolute inset-0">
                     {bikePhotoSrc ? (
                       <Image
                         src={bikePhotoSrc}
@@ -181,20 +181,19 @@ export default function BikeMatchCard({ currentUserId }: Props) {
                         🏍️
                       </div>
                     )}
-                    {/* Profile avatar overlay */}
-                    <Link href={`/profile/${rider.username}`} className="absolute top-2 left-2 z-10">
-                      <div className="w-8 h-8 rounded-full bg-zinc-700 border-2 border-zinc-900 overflow-hidden shadow-lg">
-                        {avatarSrc ? (
-                          <Image src={avatarSrc} alt={rider.username ?? ''} width={32} height={32} className="object-cover w-full h-full" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-xs">
-                            {rider.username?.[0]?.toUpperCase() ?? '?'}
-                          </div>
-                        )}
-                      </div>
-                    </Link>
-                  </div>
-                </Link>
+                  </Link>
+                  <Link href={`/profile/${rider.username}`} className="absolute top-2 left-2 z-10">
+                    <div className="w-8 h-8 rounded-full bg-zinc-700 border-2 border-zinc-900 overflow-hidden shadow-lg">
+                      {avatarSrc ? (
+                        <Image src={avatarSrc} alt={rider.username ?? ''} width={32} height={32} className="object-cover w-full h-full" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-xs">
+                          {rider.username?.[0]?.toUpperCase() ?? '?'}
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                </div>
 
                 {/* Info */}
                 <div className="px-3 pt-2 pb-3 flex flex-col gap-1.5 flex-1">

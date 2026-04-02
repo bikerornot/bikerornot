@@ -78,8 +78,8 @@ export default function AdCard({ ad, onDismiss, preview }: Props) {
       {/* Advertiser name + Sponsored label + menu */}
       <div className="flex items-center justify-between px-4 pt-3 pb-1">
         <div className="leading-tight">
-          {ad.advertiserName && <p className="text-white text-sm font-semibold">{ad.advertiserName}</p>}
-          <span className="text-xs text-zinc-500 font-medium">Sponsored</span>
+          {ad.advertiserName && <p className="text-white text-lg font-bold">{ad.advertiserName}</p>}
+          <span className="text-sm text-zinc-400 font-medium">Sponsored</span>
         </div>
         <div ref={menuRef} className="relative">
           <button
@@ -132,8 +132,8 @@ export default function AdCard({ ad, onDismiss, preview }: Props) {
       {/* Headline + description + CTA (below image) */}
       <div className="px-4 py-3 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-white font-semibold text-base">{ad.headline}</p>
-          {ad.description && <p className="text-zinc-400 text-sm mt-0.5">{ad.description}</p>}
+          <p className="text-white font-semibold text-lg">{ad.headline}</p>
+          {ad.description && <p className="text-zinc-300 text-base mt-0.5">{ad.description}</p>}
         </div>
         <a
           href={clickUrl}

@@ -57,7 +57,7 @@ export default async function NewEventPage({
         <CreateEventForm
           userGroups={userGroups}
           preselectedGroupId={groupId}
-          initialType={(initialType === 'ride' ? 'ride' : 'event') as 'ride' | 'event'}
+          initialType={initialType === 'ride' ? 'ride' : initialType === 'event' ? 'event' : undefined}
         />
       </div>
     </div>

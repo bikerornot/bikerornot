@@ -173,7 +173,7 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
     <div className="space-y-4">
       {/* Header row */}
       <div className="flex items-center justify-between px-4 sm:px-0">
-        <h1 className="text-xl font-bold text-white">Events & Rides</h1>
+        <h1 className="text-xl font-bold text-white">Rides and Events</h1>
         <Link
           href="/events/new"
           className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
@@ -188,7 +188,7 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search events and rides..."
+          placeholder="Search rides and events..."
           className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
         />
         <div className="flex gap-2">
@@ -277,7 +277,7 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
       {/* Recent events — always shown to fill the page */}
       {recentEvents.length > 0 && (
         <div className="space-y-3 mt-6 px-4 sm:px-0">
-          <h2 className="text-base font-semibold text-white">Recent Events</h2>
+          <h2 className="text-base font-semibold text-white">Upcoming Rides and Events</h2>
           <div className="space-y-2 sm:space-y-3">
             {recentEvents
               .filter((e) => !filtered.some((f) => f.id === e.id))

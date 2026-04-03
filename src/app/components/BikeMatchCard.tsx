@@ -196,15 +196,15 @@ export default function BikeMatchCard({ currentUserId }: Props) {
                 </div>
 
                 {/* Info */}
-                <div className="px-3 pt-2 pb-3 flex flex-col gap-1.5 flex-1">
-                  <Link href={garageUrl} className="text-white font-semibold text-sm leading-tight hover:text-orange-400 transition-colors">
+                <div className="px-2 pt-2 pb-2.5 flex flex-col gap-1.5 flex-1">
+                  <Link href={garageUrl} className="text-white text-base font-semibold leading-tight truncate hover:text-orange-400 transition-colors">
                     {yearLabel}
                   </Link>
-                  <Link href={`/profile/${rider.username}`} className="text-zinc-400 text-sm hover:text-orange-400 transition-colors">
+                  <Link href={`/profile/${rider.username}`} className="text-zinc-300 text-sm leading-tight truncate hover:text-orange-400 transition-colors">
                     @{rider.username ?? 'unknown'}
                   </Link>
                   {(rider.city || rider.state) && (
-                    <p className="text-zinc-500 text-sm">{[rider.city, rider.state].filter(Boolean).join(', ')}</p>
+                    <p className="text-zinc-300 text-sm leading-tight truncate">{[rider.city, rider.state].filter(Boolean).join(', ')}</p>
                   )}
 
                   {/* Add Friend button */}

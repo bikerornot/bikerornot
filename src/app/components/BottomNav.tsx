@@ -36,7 +36,7 @@ const TABS = [
   },
   {
     href: '/events',
-    label: 'Events',
+    label: 'Rides',
     match: (p: string) => p.startsWith('/events'),
     icon: (
       <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>

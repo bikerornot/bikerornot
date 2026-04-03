@@ -11,7 +11,7 @@ import { getEvents, getRecentEvents } from '@/app/actions/events'
 import EventsClient from './EventsClient'
 
 export const dynamic = 'force-dynamic'
-export const metadata = { title: 'Rides and Events — BikerOrNot' }
+export const metadata = { title: 'Rides & Events — BikerOrNot' }
 
 export default async function EventsPage() {
   const supabase = await createClient()

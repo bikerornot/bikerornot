@@ -171,15 +171,33 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
 
   return (
     <div className="space-y-4">
-      {/* Header row */}
-      <div className="flex items-center justify-between px-4 sm:px-0">
+      {/* Hero — creation-first */}
+      <div className="px-4 sm:px-0">
         <h1 className="text-xl font-bold text-white">Rides & Events</h1>
-        <Link
-          href="/events/new"
-          className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
-        >
-          Create
-        </Link>
+        <p className="text-zinc-400 text-base mt-1">Share a ride or event with the community</p>
+
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <Link
+            href="/events/new?type=ride"
+            className="py-5 px-4 rounded-xl border-2 border-zinc-700 bg-zinc-800 hover:border-orange-500 hover:bg-orange-500/10 text-center transition-colors"
+          >
+            <svg className="w-8 h-8 mx-auto text-orange-400 mb-2" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.8-2.2-5-5-5-1.09 0-2.09.35-2.91.93L14.4 9.03h5.04zM5 17c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3zm14 0c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z" />
+            </svg>
+            <p className="font-bold text-lg text-white">Create a Ride</p>
+            <p className="text-sm text-zinc-400 mt-0.5">Group ride, poker run, tour</p>
+          </Link>
+          <Link
+            href="/events/new?type=event"
+            className="py-5 px-4 rounded-xl border-2 border-zinc-700 bg-zinc-800 hover:border-orange-500 hover:bg-orange-500/10 text-center transition-colors"
+          >
+            <svg className="w-8 h-8 mx-auto text-orange-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+            </svg>
+            <p className="font-bold text-lg text-white">Create an Event</p>
+            <p className="text-sm text-zinc-400 mt-0.5">Rally, meetup, bike night</p>
+          </Link>
+        </div>
       </div>
 
       {/* Search + Location */}
@@ -260,31 +278,32 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
         </select>
       </div>
 
-      {/* Event list */}
-      {filtered.length === 0 ? (
+      {/* Upcoming Rides & Events */}
+      <div className="px-4 sm:px-0">
+        <h2 className="text-base font-semibold text-white mb-3">Upcoming Rides & Events</h2>
+      </div>
+
+      {filtered.length === 0 && recentEvents.filter((e) => !filtered.some((f) => f.id === e.id)).length === 0 ? (
         <div className="text-center py-12 px-4">
-          <p className="text-zinc-500 text-sm">No upcoming events match your filters</p>
-          <p className="text-zinc-600 text-sm mt-1">Try adjusting your filters or create one!</p>
+          <p className="text-zinc-400 text-base">No rides or events yet in your area</p>
+          <p className="text-zinc-500 text-sm mt-1 mb-4">Be the first to post one!</p>
+          <Link
+            href="/events/new"
+            className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors"
+          >
+            Create a Ride or Event
+          </Link>
         </div>
       ) : (
         <div className="space-y-2 sm:space-y-3">
           {filtered.map((event) => (
             <EventCard key={event.id} event={event} />
           ))}
-        </div>
-      )}
-
-      {/* Recent events — always shown to fill the page */}
-      {recentEvents.length > 0 && (
-        <div className="space-y-3 mt-6 px-4 sm:px-0">
-          <h2 className="text-base font-semibold text-white">Upcoming Rides & Events</h2>
-          <div className="space-y-2 sm:space-y-3">
-            {recentEvents
-              .filter((e) => !filtered.some((f) => f.id === e.id))
-              .map((event) => (
-                <EventCard key={event.id} event={event} />
-              ))}
-          </div>
+          {recentEvents
+            .filter((e) => !filtered.some((f) => f.id === e.id))
+            .map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
         </div>
       )}
     </div>

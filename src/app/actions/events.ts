@@ -1235,7 +1235,8 @@ export async function searchEvents(filters: EventSearchFilters): Promise<EventDe
       e.description?.toLowerCase().includes(term) ||
       e.venue_name?.toLowerCase().includes(term) ||
       e.city?.toLowerCase().includes(term) ||
-      e.state?.toLowerCase().includes(term)
+      e.state?.toLowerCase().includes(term) ||
+      e.zip_code?.toLowerCase().includes(term)
     )
   }
 

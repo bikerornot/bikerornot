@@ -170,7 +170,7 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
   ]
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Hero — creation-first */}
       <div className="px-4 sm:px-0">
         <h1 className="text-xl font-bold text-white">Rides & Events</h1>
@@ -200,8 +200,10 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
         </div>
       </div>
 
-      {/* Search + Location */}
-      <div className="space-y-2 px-4 sm:px-0">
+      {/* Search section */}
+      <div className="px-4 sm:px-0">
+        <h2 className="text-base font-semibold text-white mb-3">Find Rides & Events</h2>
+        <div className="space-y-2">
         <input
           type="text"
           value={search}
@@ -233,6 +235,7 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
         {geoLoading && (
           <p className="text-zinc-500 text-sm">Looking up location...</p>
         )}
+        </div>
       </div>
 
       {/* Type tabs */}
@@ -252,7 +255,7 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
         ))}
       </div>
 
-      {/* Date filters + sort */}
+      {/* Date filters */}
       <div className="flex items-center gap-2 px-4 sm:px-0 overflow-x-auto scrollbar-hide">
         {DATE_FILTERS.map((d) => (
           <button
@@ -267,6 +270,11 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
             {d.label}
           </button>
         ))}
+      </div>
+
+      {/* Upcoming Rides & Events heading + sort */}
+      <div className="flex items-center justify-between px-4 sm:px-0">
+        <h2 className="text-base font-semibold text-white">Upcoming Rides & Events</h2>
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as SortType)}
@@ -276,11 +284,6 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
           {searchLat && <option value="nearest">Nearest</option>}
           <option value="popular">Most Popular</option>
         </select>
-      </div>
-
-      {/* Upcoming Rides & Events */}
-      <div className="px-4 sm:px-0">
-        <h2 className="text-base font-semibold text-white mb-3">Upcoming Rides & Events</h2>
       </div>
 
       {filtered.length === 0 && recentEvents.filter((e) => !filtered.some((f) => f.id === e.id)).length === 0 ? (

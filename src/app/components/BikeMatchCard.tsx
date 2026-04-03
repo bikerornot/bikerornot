@@ -203,6 +203,9 @@ export default function BikeMatchCard({ currentUserId }: Props) {
                   <Link href={`/profile/${rider.username}`} className="text-zinc-400 text-sm hover:text-orange-400 transition-colors">
                     @{rider.username ?? 'unknown'}
                   </Link>
+                  {(rider.city || rider.state) && (
+                    <p className="text-zinc-500 text-sm">{[rider.city, rider.state].filter(Boolean).join(', ')}</p>
+                  )}
 
                   {/* Add Friend button */}
                   <button

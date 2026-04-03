@@ -171,354 +171,384 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
     }
   }
 
+  const isRide = type === 'ride'
+  const isEvent = type === 'event'
+  const inputClass = "w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Type selector */}
-      <div>
-        <label className="block text-xl font-bold text-white mb-3">What are you creating?</label>
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => { setType('ride'); setCategory('') }}
-            className={`py-5 px-4 rounded-xl border-2 text-center transition-colors ${
-              type === 'ride'
-                ? 'border-orange-500 bg-orange-500/10'
-                : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'
-            }`}
-          >
-            <p className={`font-bold text-xl ${type === 'ride' ? 'text-orange-400' : 'text-white'}`}>Ride</p>
-            <p className="text-base text-zinc-400 mt-1">Group ride with start and end</p>
-          </button>
-          <button
-            type="button"
-            onClick={() => { setType('event'); setCategory('') }}
-            className={`py-5 px-4 rounded-xl border-2 text-center transition-colors ${
-              type === 'event'
-                ? 'border-orange-500 bg-orange-500/10'
-                : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'
-            }`}
-          >
-            <p className={`font-bold text-xl ${type === 'event' ? 'text-orange-400' : 'text-white'}`}>Event</p>
-            <p className="text-base text-zinc-400 mt-1">Rally, meetup, show, bike night</p>
-          </button>
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Type selector — only show if no type preselected */}
+      {!initialType && (
+        <div>
+          <label className="block text-xl font-bold text-white mb-3">What are you creating?</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => { setType('ride'); setCategory('') }}
+              className={`py-5 px-4 rounded-xl border-2 text-center transition-colors ${
+                isRide
+                  ? 'border-orange-500 bg-orange-500/10'
+                  : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'
+              }`}
+            >
+              <p className={`font-bold text-xl ${isRide ? 'text-orange-400' : 'text-white'}`}>Ride</p>
+              <p className="text-base text-zinc-400 mt-1">Group ride with start and end</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setType('event'); setCategory('') }}
+              className={`py-5 px-4 rounded-xl border-2 text-center transition-colors ${
+                isEvent
+                  ? 'border-orange-500 bg-orange-500/10'
+                  : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'
+              }`}
+            >
+              <p className={`font-bold text-xl ${isEvent ? 'text-orange-400' : 'text-white'}`}>Event</p>
+              <p className="text-base text-zinc-400 mt-1">Rally, meetup, show, bike night</p>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {type && <>
-      {/* Cover photo + Flyer side by side */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Cover photo */}
+
+      {/* ── Section 1: The Basics ──────────────────────────────── */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold text-white">
+          {isRide ? 'Name Your Ride' : 'Name Your Event'}
+        </h2>
+
         <div>
-          <label className="block text-base font-medium text-zinc-300 sm:text-sm mb-2">Cover Photo <span className="text-zinc-500 font-normal">(optional)</span></label>
-          {coverPreview ? (
-            <div className="relative h-32 rounded-xl overflow-hidden bg-zinc-800">
-              <Image src={coverPreview} alt="Cover preview" fill className="object-cover" />
-              <button
-                type="button"
-                onClick={removeCover}
-                className="absolute top-1.5 right-1.5 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-black"
-              >
-                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="w-full h-32 rounded-xl border-2 border-dashed border-zinc-700 hover:border-orange-500 text-zinc-500 hover:text-orange-400 transition-colors flex flex-col items-center justify-center gap-1.5 text-sm"
-            >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
-              </svg>
-              <span>Add cover photo</span>
-            </button>
-          )}
+          <label className="block text-base font-medium text-zinc-300 mb-1.5">
+            {isRide ? 'What do you want to call this ride?' : 'What\'s the event called?'}
+          </label>
           <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={handleCoverSelect}
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={isRide ? 'Saturday Morning Ride' : 'Bike Night at The Pub'}
+            maxLength={150}
+            className={inputClass}
           />
         </div>
 
-        {/* Flyer image */}
         <div>
-          <label className="block text-base font-medium text-zinc-300 sm:text-sm mb-2">Event Flyer <span className="text-zinc-500 font-normal">(optional)</span></label>
-          {flyerPreview ? (
-            <div className="relative h-32 rounded-xl overflow-hidden bg-zinc-800">
-              <img src={flyerPreview} alt="Flyer preview" className="w-full h-full object-cover" />
-              <button
-                type="button"
-                onClick={removeFlyer}
-                className="absolute top-1.5 right-1.5 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-black"
-              >
-                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => flyerRef.current?.click()}
-              className="w-full h-32 rounded-xl border-2 border-dashed border-zinc-700 hover:border-orange-500 text-zinc-500 hover:text-orange-400 transition-colors flex flex-col items-center justify-center gap-1.5 text-sm"
-            >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-              </svg>
-              <span>Upload flyer</span>
-            </button>
-          )}
-          <input
-            ref={flyerRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={handleFlyerSelect}
-          />
+          <label className="block text-base font-medium text-zinc-300 mb-1.5">Category</label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as EventCategory | '')}
+            className={inputClass}
+          >
+            <option value="">Select category</option>
+            {(isRide ? RIDE_CATEGORIES : EVENT_CATEGORIES).map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Title */}
-      <div>
-        <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Title</label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={type === 'ride' ? 'Saturday Morning Ride' : 'Bike Night at The Pub'}
-          maxLength={150}
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-        />
-      </div>
+      {/* ── Section 2: When ────────────────────────────────────── */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold text-white">
+          {isRide ? 'When Do You Roll Out?' : 'When Is It?'}
+        </h2>
 
-      {/* Category */}
-      <div>
-        <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Category</label>
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value as EventCategory | '')}
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
-        >
-          <option value="">Select category</option>
-          {(type === 'ride' ? RIDE_CATEGORIES : EVENT_CATEGORIES).map((c) => (
-            <option key={c.value} value={c.value}>{c.label}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Description */}
-      <div>
-        <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Description</label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Tell riders what to expect..."
-          rows={4}
-          maxLength={5000}
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500 resize-none"
-        />
-      </div>
-
-      {/* Date & Time */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Start Date & Time</label>
+          <label className="block text-base font-medium text-zinc-300 mb-1.5">Start Date & Time</label>
           <input
             type="datetime-local"
             value={startsAt}
             onChange={(e) => setStartsAt(e.target.value)}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+            className={inputClass}
           />
         </div>
         <div>
-          <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">End Date & Time (optional)</label>
+          <label className="block text-base font-medium text-zinc-300 mb-1.5">End Date & Time <span className="text-zinc-500 font-normal">(optional)</span></label>
           <input
             type="datetime-local"
             value={endsAt}
             onChange={(e) => setEndsAt(e.target.value)}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+            className={inputClass}
           />
         </div>
-      </div>
-
-      {/* Recurrence */}
-      <div>
-        <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Repeat</label>
-        <select
-          value={recurrence}
-          onChange={(e) => setRecurrence(e.target.value as RecurrenceRule | '')}
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white focus:outline-none focus:ring-1 focus:ring-orange-500"
-        >
-          {RECURRENCE_OPTIONS.map((r) => (
-            <option key={r.value} value={r.value}>{r.label}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Location — Event venue */}
-      {type === 'event' && (
-        <>
-          <div>
-            <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Venue Name (optional)</label>
-            <input
-              type="text"
-              value={venueName}
-              onChange={(e) => setVenueName(e.target.value)}
-              placeholder="The Iron Horse Saloon"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-            />
-          </div>
-          <div>
-            <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Address <span className="text-orange-400">*</span></label>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="1068 N US Hwy 1, Ormond Beach, FL"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-            />
-          </div>
-          <div>
-            <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Zip Code <span className="text-orange-400">*</span></label>
-            <input
-              type="text"
-              value={zipCode}
-              onChange={(e) => setZipCode(e.target.value)}
-              placeholder="32174"
-              maxLength={5}
-              inputMode="numeric"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-            />
-          </div>
-        </>
-      )}
-
-      {/* Location — Ride start/end/stops */}
-      {type === 'ride' && (
-        <>
-          <div className="border border-zinc-800 rounded-xl p-4 space-y-3">
-            <p className="text-sm font-medium text-zinc-300">Start Location</p>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Street address"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-            />
-            <input
-              type="text"
-              value={zipCode}
-              onChange={(e) => setZipCode(e.target.value)}
-              placeholder="Zip code (city &amp; state auto-filled)"
-              maxLength={5}
-              inputMode="numeric"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-            />
-          </div>
-
-          {/* Stops */}
-          {stops.map((stop, idx) => (
-            <div key={idx} className="border border-zinc-800 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-zinc-300">Stop {idx + 1}</p>
-                <button
-                  type="button"
-                  onClick={() => removeStop(idx)}
-                  className="text-zinc-500 hover:text-red-400 text-sm transition-colors"
-                >
-                  Remove
-                </button>
-              </div>
-              <input
-                type="text"
-                value={stop.label}
-                onChange={(e) => updateStop(idx, 'label', e.target.value)}
-                placeholder="Label (e.g. Lunch stop)"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-              />
-              <input
-                type="text"
-                value={stop.address}
-                onChange={(e) => updateStop(idx, 'address', e.target.value)}
-                placeholder="Street address"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-              />
-              <input
-                type="text"
-                value={stop.zip_code}
-                onChange={(e) => updateStop(idx, 'zip_code', e.target.value)}
-                placeholder="Zip code (city &amp; state auto-filled)"
-                maxLength={5}
-                inputMode="numeric"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-              />
-            </div>
-          ))}
-
-          <button
-            type="button"
-            onClick={addStop}
-            className="text-orange-400 hover:text-orange-300 text-sm font-medium transition-colors"
-          >
-            + Add a stop
-          </button>
-
-          <div className="border border-zinc-800 rounded-xl p-4 space-y-3">
-            <p className="text-sm font-medium text-zinc-300">End Location</p>
-            <input
-              type="text"
-              value={endAddress}
-              onChange={(e) => setEndAddress(e.target.value)}
-              placeholder="Street address"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-            />
-            <input
-              type="text"
-              value={endZipCode}
-              onChange={(e) => setEndZipCode(e.target.value)}
-              placeholder="Zip code (city &amp; state auto-filled)"
-              maxLength={5}
-              inputMode="numeric"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-            />
-          </div>
-        </>
-      )}
-
-      {/* Max attendees */}
-      <div>
-        <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Max Attendees (optional)</label>
-        <input
-          type="number"
-          value={maxAttendees}
-          onChange={(e) => setMaxAttendees(e.target.value)}
-          placeholder="Leave blank for unlimited"
-          min={1}
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-        />
-      </div>
-
-      {/* Group (optional) */}
-      {userGroups.length > 0 && (
         <div>
-          <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Post to a Group (optional)</label>
+          <label className="block text-base font-medium text-zinc-300 mb-1.5">Does this repeat?</label>
           <select
-            value={groupId}
-            onChange={(e) => setGroupId(e.target.value)}
-            disabled={!!preselectedGroupId}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-base text-white focus:outline-none focus:ring-1 focus:ring-orange-500 disabled:opacity-60"
+            value={recurrence}
+            onChange={(e) => setRecurrence(e.target.value as RecurrenceRule | '')}
+            className={inputClass}
           >
-            <option value="">No group — standalone event</option>
-            {userGroups.map((g) => (
-              <option key={g.id} value={g.id}>{g.name}</option>
+            {RECURRENCE_OPTIONS.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
             ))}
           </select>
         </div>
-      )}
+      </div>
+
+      {/* ── Section 3: Where ───────────────────────────────────── */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold text-white">
+          {isRide ? 'Route Details' : 'Where Is It?'}
+        </h2>
+
+        {isEvent && (
+          <>
+            <div>
+              <label className="block text-base font-medium text-zinc-300 mb-1.5">Venue Name <span className="text-zinc-500 font-normal">(optional)</span></label>
+              <input
+                type="text"
+                value={venueName}
+                onChange={(e) => setVenueName(e.target.value)}
+                placeholder="The Iron Horse Saloon"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-base font-medium text-zinc-300 mb-1.5">Address</label>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="1068 N US Hwy 1, Ormond Beach, FL"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-base font-medium text-zinc-300 mb-1.5">Zip Code</label>
+              <input
+                type="text"
+                value={zipCode}
+                onChange={(e) => setZipCode(e.target.value)}
+                placeholder="32174"
+                maxLength={5}
+                inputMode="numeric"
+                className={inputClass}
+              />
+            </div>
+          </>
+        )}
+
+        {isRide && (
+          <>
+            {/* Start */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold flex-shrink-0">A</span>
+                <p className="text-base font-semibold text-white">Where does the ride start?</p>
+              </div>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Street address or meeting point"
+                className={inputClass}
+              />
+              <input
+                type="text"
+                value={zipCode}
+                onChange={(e) => setZipCode(e.target.value)}
+                placeholder="Zip code"
+                maxLength={5}
+                inputMode="numeric"
+                className={inputClass}
+              />
+            </div>
+
+            {/* Stops */}
+            {stops.map((stop, idx) => (
+              <div key={idx} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center text-xs font-bold flex-shrink-0">{idx + 1}</span>
+                    <p className="text-base font-semibold text-white">Stop {idx + 1}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeStop(idx)}
+                    className="text-zinc-500 hover:text-red-400 text-sm font-medium transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={stop.label}
+                  onChange={(e) => updateStop(idx, 'label', e.target.value)}
+                  placeholder="What's this stop? (e.g. Lunch break)"
+                  className={inputClass}
+                />
+                <input
+                  type="text"
+                  value={stop.address}
+                  onChange={(e) => updateStop(idx, 'address', e.target.value)}
+                  placeholder="Street address"
+                  className={inputClass}
+                />
+                <input
+                  type="text"
+                  value={stop.zip_code}
+                  onChange={(e) => updateStop(idx, 'zip_code', e.target.value)}
+                  placeholder="Zip code"
+                  maxLength={5}
+                  inputMode="numeric"
+                  className={inputClass}
+                />
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={addStop}
+              className="flex items-center gap-2 text-orange-400 hover:text-orange-300 text-base font-medium transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Add a stop along the way
+            </button>
+
+            {/* End */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center text-xs font-bold flex-shrink-0">B</span>
+                <p className="text-base font-semibold text-white">Where does the ride end? <span className="text-zinc-500 font-normal">(optional)</span></p>
+              </div>
+              <input
+                type="text"
+                value={endAddress}
+                onChange={(e) => setEndAddress(e.target.value)}
+                placeholder="Street address or destination"
+                className={inputClass}
+              />
+              <input
+                type="text"
+                value={endZipCode}
+                onChange={(e) => setEndZipCode(e.target.value)}
+                placeholder="Zip code"
+                maxLength={5}
+                inputMode="numeric"
+                className={inputClass}
+              />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── Section 4: Details ─────────────────────────────────── */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold text-white">Details</h2>
+
+        <div>
+          <label className="block text-base font-medium text-zinc-300 mb-1.5">
+            {isRide ? 'Tell riders what to expect' : 'Describe the event'}
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={isRide ? 'Route details, pace, experience level, what to bring...' : 'What can attendees expect? Any special info...'}
+            rows={4}
+            maxLength={5000}
+            className={inputClass + ' resize-none'}
+          />
+        </div>
+
+        <div>
+          <label className="block text-base font-medium text-zinc-300 mb-1.5">Max Riders <span className="text-zinc-500 font-normal">(optional)</span></label>
+          <input
+            type="number"
+            value={maxAttendees}
+            onChange={(e) => setMaxAttendees(e.target.value)}
+            placeholder="Leave blank for unlimited"
+            min={1}
+            className={inputClass}
+          />
+        </div>
+
+        {userGroups.length > 0 && (
+          <div>
+            <label className="block text-base font-medium text-zinc-300 mb-1.5">Post to a Group <span className="text-zinc-500 font-normal">(optional)</span></label>
+            <select
+              value={groupId}
+              onChange={(e) => setGroupId(e.target.value)}
+              disabled={!!preselectedGroupId}
+              className={inputClass + ' disabled:opacity-60'}
+            >
+              <option value="">No group — standalone {isRide ? 'ride' : 'event'}</option>
+              {userGroups.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* ── Section 5: Photos (optional) ───────────────────────── */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold text-white">Photos <span className="text-zinc-500 font-normal text-base">(optional)</span></h2>
+        <p className="text-zinc-400 text-sm -mt-2">Add a cover photo or flyer to make your {isRide ? 'ride' : 'event'} stand out.</p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-sm font-medium text-zinc-400 mb-2">Cover Photo</p>
+            {coverPreview ? (
+              <div className="relative h-36 rounded-xl overflow-hidden bg-zinc-800">
+                <Image src={coverPreview} alt="Cover preview" fill className="object-cover" />
+                <button
+                  type="button"
+                  onClick={removeCover}
+                  className="absolute top-1.5 right-1.5 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-black"
+                >
+                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="w-full h-36 rounded-xl border-2 border-dashed border-zinc-700 hover:border-orange-500 text-zinc-500 hover:text-orange-400 transition-colors flex flex-col items-center justify-center gap-2 text-base"
+              >
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
+                </svg>
+                <span>Add photo</span>
+              </button>
+            )}
+            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleCoverSelect} />
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-zinc-400 mb-2">Flyer</p>
+            {flyerPreview ? (
+              <div className="relative h-36 rounded-xl overflow-hidden bg-zinc-800">
+                <img src={flyerPreview} alt="Flyer preview" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={removeFlyer}
+                  className="absolute top-1.5 right-1.5 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-black"
+                >
+                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => flyerRef.current?.click()}
+                className="w-full h-36 rounded-xl border-2 border-dashed border-zinc-700 hover:border-orange-500 text-zinc-500 hover:text-orange-400 transition-colors flex flex-col items-center justify-center gap-2 text-base"
+              >
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+                <span>Add flyer</span>
+              </button>
+            )}
+            <input ref={flyerRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFlyerSelect} />
+          </div>
+        </div>
+      </div>
 
       {/* Error */}
       {error && (
@@ -529,9 +559,9 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
       <button
         type="submit"
         disabled={submitting || !type || !title.trim() || !startsAt || !address.trim() || !zipCode.trim()}
-        className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white font-semibold py-3 rounded-xl transition-colors text-base"
+        className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white font-bold py-4 rounded-xl transition-colors text-lg"
       >
-        {submitting ? 'Creating...' : type === 'ride' ? 'Create Ride' : 'Create Event'}
+        {submitting ? 'Creating...' : isRide ? 'Create Ride' : 'Create Event'}
       </button>
       </>}
     </form>

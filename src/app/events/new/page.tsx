@@ -50,7 +50,9 @@ export default async function NewEventPage({
               <path d="M19 12H5M12 5l-7 7 7 7" />
             </svg>
           </Link>
-          <h1 className="text-lg font-bold text-white">Create Event or Ride</h1>
+          <h1 className="text-lg font-bold text-white">
+            {initialType === 'ride' ? 'Create a Ride' : initialType === 'event' ? 'Create an Event' : 'Create a Ride or Event'}
+          </h1>
         </div>
       </header>
       <div className="max-w-2xl mx-auto px-4 py-6">

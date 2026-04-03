@@ -39,7 +39,7 @@ interface Props {
 
 export default function CreateEventForm({ userGroups, preselectedGroupId, initialType }: Props) {
   const router = useRouter()
-  const [type, setType] = useState<EventType>(initialType ?? 'event')
+  const [type, setType] = useState<EventType | ''>(initialType ?? '')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState<EventCategory | ''>('')
@@ -140,7 +140,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!title.trim() || !startsAt || !address.trim() || !zipCode.trim()) return
+    if (!type || !title.trim() || !startsAt || !address.trim() || !zipCode.trim()) return
     if (submittingRef.current) return
     submittingRef.current = true
 
@@ -175,40 +175,41 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* Type selector */}
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-2">What are you creating?</label>
+        <label className="block text-xl font-bold text-white mb-3">What are you creating?</label>
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={() => { setType('event'); setCategory('') }}
-            className={`py-4 rounded-xl border-2 text-center transition-colors ${
-              type === 'event'
-                ? 'border-orange-500 bg-orange-500/10'
-                : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'
-            }`}
-          >
-            <p className={`font-bold text-lg ${type === 'event' ? 'text-orange-400' : 'text-white'}`}>Event</p>
-            <p className="text-sm text-zinc-500 mt-0.5">Rally, meetup, show, bike night</p>
-          </button>
-          <button
-            type="button"
             onClick={() => { setType('ride'); setCategory('') }}
-            className={`py-4 rounded-xl border-2 text-center transition-colors ${
+            className={`py-5 px-4 rounded-xl border-2 text-center transition-colors ${
               type === 'ride'
                 ? 'border-orange-500 bg-orange-500/10'
                 : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'
             }`}
           >
-            <p className={`font-bold text-lg ${type === 'ride' ? 'text-orange-400' : 'text-white'}`}>Ride</p>
-            <p className="text-sm text-zinc-500 mt-0.5">Group ride with start and end</p>
+            <p className={`font-bold text-xl ${type === 'ride' ? 'text-orange-400' : 'text-white'}`}>Ride</p>
+            <p className="text-base text-zinc-400 mt-1">Group ride with start and end</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setType('event'); setCategory('') }}
+            className={`py-5 px-4 rounded-xl border-2 text-center transition-colors ${
+              type === 'event'
+                ? 'border-orange-500 bg-orange-500/10'
+                : 'border-zinc-700 bg-zinc-800 hover:border-zinc-600'
+            }`}
+          >
+            <p className={`font-bold text-xl ${type === 'event' ? 'text-orange-400' : 'text-white'}`}>Event</p>
+            <p className="text-base text-zinc-400 mt-1">Rally, meetup, show, bike night</p>
           </button>
         </div>
       </div>
 
+      {type && <>
       {/* Cover photo + Flyer side by side */}
       <div className="grid grid-cols-2 gap-3">
         {/* Cover photo */}
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">Cover Photo</label>
+          <label className="block text-base font-medium text-zinc-300 sm:text-sm mb-2">Cover Photo <span className="text-zinc-500 font-normal">(optional)</span></label>
           {coverPreview ? (
             <div className="relative h-32 rounded-xl overflow-hidden bg-zinc-800">
               <Image src={coverPreview} alt="Cover preview" fill className="object-cover" />
@@ -245,7 +246,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
 
         {/* Flyer image */}
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">Event Flyer</label>
+          <label className="block text-base font-medium text-zinc-300 sm:text-sm mb-2">Event Flyer <span className="text-zinc-500 font-normal">(optional)</span></label>
           {flyerPreview ? (
             <div className="relative h-32 rounded-xl overflow-hidden bg-zinc-800">
               <img src={flyerPreview} alt="Flyer preview" className="w-full h-full object-cover" />
@@ -283,7 +284,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
 
       {/* Title */}
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1">Title</label>
+        <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Title</label>
         <input
           type="text"
           value={title}
@@ -296,7 +297,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
 
       {/* Category */}
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1">Category</label>
+        <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Category</label>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value as EventCategory | '')}
@@ -311,7 +312,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
 
       {/* Description */}
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1">Description</label>
+        <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Description</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -325,7 +326,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
       {/* Date & Time */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Start Date & Time</label>
+          <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Start Date & Time</label>
           <input
             type="datetime-local"
             value={startsAt}
@@ -334,7 +335,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">End Date & Time (optional)</label>
+          <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">End Date & Time (optional)</label>
           <input
             type="datetime-local"
             value={endsAt}
@@ -346,7 +347,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
 
       {/* Recurrence */}
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1">Repeat</label>
+        <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Repeat</label>
         <select
           value={recurrence}
           onChange={(e) => setRecurrence(e.target.value as RecurrenceRule | '')}
@@ -362,7 +363,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
       {type === 'event' && (
         <>
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Venue Name (optional)</label>
+            <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Venue Name (optional)</label>
             <input
               type="text"
               value={venueName}
@@ -372,7 +373,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Address <span className="text-orange-400">*</span></label>
+            <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Address <span className="text-orange-400">*</span></label>
             <input
               type="text"
               value={address}
@@ -382,7 +383,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1">Zip Code <span className="text-orange-400">*</span></label>
+            <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Zip Code <span className="text-orange-400">*</span></label>
             <input
               type="text"
               value={zipCode}
@@ -490,7 +491,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
 
       {/* Max attendees */}
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1">Max Attendees (optional)</label>
+        <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Max Attendees (optional)</label>
         <input
           type="number"
           value={maxAttendees}
@@ -504,7 +505,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
       {/* Group (optional) */}
       {userGroups.length > 0 && (
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Post to a Group (optional)</label>
+          <label className="block text-base sm:text-sm font-medium text-zinc-300 mb-1">Post to a Group (optional)</label>
           <select
             value={groupId}
             onChange={(e) => setGroupId(e.target.value)}
@@ -527,11 +528,12 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
       {/* Submit */}
       <button
         type="submit"
-        disabled={submitting || !title.trim() || !startsAt || !address.trim() || !zipCode.trim()}
+        disabled={submitting || !type || !title.trim() || !startsAt || !address.trim() || !zipCode.trim()}
         className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white font-semibold py-3 rounded-xl transition-colors text-base"
       >
         {submitting ? 'Creating...' : type === 'ride' ? 'Create Ride' : 'Create Event'}
       </button>
+      </>}
     </form>
   )
 }

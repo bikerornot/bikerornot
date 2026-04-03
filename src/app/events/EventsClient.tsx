@@ -201,7 +201,7 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
       </div>
 
       {/* Search section */}
-      <div className="px-4 sm:px-0">
+      <div className="px-4 sm:px-0 mt-4">
         <h2 className="text-base font-semibold text-white mb-3">Find Rides & Events</h2>
         <div className="space-y-2">
         <input

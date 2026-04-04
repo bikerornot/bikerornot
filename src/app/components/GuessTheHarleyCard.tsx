@@ -152,7 +152,7 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
           </div>
 
           {/* Answer buttons */}
-          <div className="px-4 py-3 space-y-2">
+          <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
             {state.round.options.map((option, idx) => {
               let btnClass = 'w-full text-left px-4 py-3 rounded-xl text-base font-medium transition-colors border '
 

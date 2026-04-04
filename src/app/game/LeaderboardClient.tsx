@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getImageUrl } from '@/lib/supabase/image'
@@ -13,11 +12,9 @@ interface Props {
 }
 
 export default function LeaderboardClient({ myStats, leaderboard, currentUserId }: Props) {
-  const [tab, setTab] = useState<'all' | 'accuracy'>('all')
-
-  const sorted = tab === 'accuracy'
-    ? [...leaderboard].filter((e) => e.totalGames >= 10).sort((a, b) => b.accuracyPercent - a.accuracyPercent)
-    : leaderboard
+  const sorted = [...leaderboard]
+    .filter((e) => e.totalGames >= 10)
+    .sort((a, b) => b.accuracyPercent - a.accuracyPercent)
 
   const myRank = sorted.findIndex((e) => e.userId === currentUserId) + 1
 
@@ -72,26 +69,6 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
             You're ranked <span className="text-orange-400 font-semibold">#{myRank}</span> on the leaderboard
           </p>
         )}
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1.5">
-        <button
-          onClick={() => setTab('all')}
-          className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-            tab === 'all' ? 'bg-orange-500 text-white' : 'bg-zinc-800 text-zinc-400 hover:text-white'
-          }`}
-        >
-          Most Correct
-        </button>
-        <button
-          onClick={() => setTab('accuracy')}
-          className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-            tab === 'accuracy' ? 'bg-orange-500 text-white' : 'bg-zinc-800 text-zinc-400 hover:text-white'
-          }`}
-        >
-          Best Accuracy
-        </button>
       </div>
 
       {/* Top 3 podium */}
@@ -167,8 +144,8 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
         )}
       </div>
 
-      {tab === 'accuracy' && sorted.length > 0 && (
-        <p className="text-xs text-zinc-600 text-center">Minimum 10 games to qualify for accuracy ranking</p>
+      {sorted.length > 0 && (
+        <p className="text-xs text-zinc-600 text-center">Minimum 10 games to qualify for the leaderboard</p>
       )}
     </div>
   )

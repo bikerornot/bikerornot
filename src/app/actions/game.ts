@@ -329,35 +329,28 @@ export async function getLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
   await requireAuth()
   const admin = getServiceClient()
 
-  const { data } = await admin
-    .from('game_answers')
-    .select('user_id')
-
-  if (!data || data.length === 0) return []
-
-  // Aggregate by user
-  const userMap: Record<string, { correct: number; total: number }> = {}
-  for (const a of data as any[]) {
-    if (!userMap[a.user_id]) userMap[a.user_id] = { correct: 0, total: 0 }
-    userMap[a.user_id].total++
-  }
-
-  // Need is_correct too — refetch with that field
   const { data: fullData } = await admin
     .from('game_answers')
     .select('user_id, is_correct')
 
+  if (!fullData || fullData.length === 0) return []
+
   const stats: Record<string, { correct: number; total: number }> = {}
-  for (const a of fullData ?? []) {
+  for (const a of fullData) {
     if (!stats[a.user_id]) stats[a.user_id] = { correct: 0, total: 0 }
     stats[a.user_id].total++
     if (a.is_correct) stats[a.user_id].correct++
   }
 
-  // Sort by correct count, take top N
+  // Filter to 10+ games, sort by accuracy
   const ranked = Object.entries(stats)
     .map(([userId, s]) => ({ userId, ...s }))
-    .sort((a, b) => b.correct - a.correct)
+    .filter((s) => s.total >= 10)
+    .sort((a, b) => {
+      const accA = a.total > 0 ? a.correct / a.total : 0
+      const accB = b.total > 0 ? b.correct / b.total : 0
+      return accB - accA || b.correct - a.correct
+    })
     .slice(0, limit)
 
   if (ranked.length === 0) return []

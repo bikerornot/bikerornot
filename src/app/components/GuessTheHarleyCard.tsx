@@ -130,11 +130,6 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
               className="object-cover"
               sizes="(max-width: 640px) 100vw, 640px"
             />
-            {state.status === 'playing' && (
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-4 pb-3 pt-8">
-                <p className="text-white text-lg font-bold">What year and model is this Harley?</p>
-              </div>
-            )}
             {state.status === 'answered' && (
               <div className={`absolute inset-x-0 bottom-0 px-4 pb-3 pt-8 bg-gradient-to-t ${
                 state.isCorrect ? 'from-emerald-900/80' : 'from-red-900/80'
@@ -191,7 +186,7 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
                 onClick={handlePlayAgain}
                 className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"
               >
-                Play Again
+                Next &rsaquo;
               </button>
               <Link
                 href="/game"

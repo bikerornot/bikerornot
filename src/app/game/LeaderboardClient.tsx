@@ -134,8 +134,8 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
 
                   {/* Score */}
                   <div className="text-right flex-shrink-0">
-                    <p className="text-base font-bold text-white">{entry.correctCount} correct</p>
-                    <p className="text-sm text-zinc-400">{entry.accuracyPercent}%</p>
+                    <p className="text-base font-bold text-orange-400">{entry.accuracyPercent}%</p>
+                    <p className="text-sm text-zinc-400">{entry.totalGames} played</p>
                   </div>
                 </div>
               )
@@ -176,8 +176,8 @@ function PodiumCard({ entry, rank }: { entry: LeaderboardEntry; rank: number }) 
       <p className="text-sm text-zinc-300 group-hover:text-orange-400 transition-colors truncate max-w-[80px] text-center">
         @{entry.username ?? '?'}
       </p>
-      <p className="text-base font-bold text-white">{entry.correctCount} correct</p>
-      <p className="text-sm text-zinc-400">{entry.accuracyPercent}%</p>
+      <p className="text-base font-bold text-orange-400">{entry.accuracyPercent}%</p>
+      <p className="text-sm text-zinc-400">{entry.totalGames} played</p>
     </Link>
   )
 }

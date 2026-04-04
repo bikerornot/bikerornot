@@ -40,26 +40,26 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
 
       {/* My Stats */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Your Stats</h2>
+        <h2 className="text-base font-semibold text-zinc-300 uppercase tracking-wider mb-3">Your Stats</h2>
         {myStats.totalPlayed === 0 ? (
           <p className="text-zinc-500 text-sm">You haven't played yet. Find the game in your feed!</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
               <p className="text-2xl font-bold text-white">{myStats.totalPlayed}</p>
-              <p className="text-xs text-zinc-500 mt-0.5">Games Played</p>
+              <p className="text-sm text-zinc-400 mt-0.5">Games Played</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-emerald-400">{myStats.accuracyPercent}%</p>
-              <p className="text-xs text-zinc-500 mt-0.5">Accuracy</p>
+              <p className="text-sm text-zinc-400 mt-0.5">Accuracy</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-orange-400">{myStats.currentStreak}</p>
-              <p className="text-xs text-zinc-500 mt-0.5">Current Streak</p>
+              <p className="text-sm text-zinc-400 mt-0.5">Current Streak</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-zinc-300">{myStats.bestStreak}</p>
-              <p className="text-xs text-zinc-500 mt-0.5">Best Streak</p>
+              <p className="text-sm text-zinc-400 mt-0.5">Best Streak</p>
             </div>
           </div>
         )}
@@ -83,6 +83,7 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
       )}
 
       {/* Leaderboard list */}
+      <h2 className="text-lg font-bold text-white">Leaderboard</h2>
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
         {sorted.length === 0 ? (
           <div className="p-8 text-center">
@@ -103,17 +104,17 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
                   className={`flex items-center gap-3 px-4 py-3 ${isMe ? 'bg-orange-500/5' : ''}`}
                 >
                   {/* Rank */}
-                  <div className={`w-7 text-center font-bold text-sm flex-shrink-0 ${
-                    rank === 1 ? 'text-yellow-400' : rank === 2 ? 'text-zinc-400' : rank === 3 ? 'text-amber-600' : 'text-zinc-600'
+                  <div className={`w-7 text-center font-bold text-base flex-shrink-0 ${
+                    rank === 1 ? 'text-yellow-400' : rank === 2 ? 'text-zinc-400' : rank === 3 ? 'text-amber-600' : 'text-zinc-500'
                   }`}>
                     {rank}
                   </div>
 
                   {/* Avatar */}
                   <Link href={`/profile/${entry.username}`} className="flex-shrink-0">
-                    <div className="w-9 h-9 rounded-full bg-zinc-700 overflow-hidden">
+                    <div className="w-10 h-10 rounded-full bg-zinc-700 overflow-hidden">
                       {avatarUrl ? (
-                        <Image src={avatarUrl} alt="" width={36} height={36} className="object-cover w-full h-full" />
+                        <Image src={avatarUrl} alt="" width={40} height={40} className="object-cover w-full h-full" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-sm">
                           {entry.username?.[0]?.toUpperCase() ?? '?'}
@@ -124,17 +125,17 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
 
                   {/* Name + games */}
                   <div className="flex-1 min-w-0">
-                    <Link href={`/profile/${entry.username}`} className="text-sm font-semibold text-white hover:text-orange-400 transition-colors truncate block">
+                    <Link href={`/profile/${entry.username}`} className="text-base font-semibold text-white hover:text-orange-400 transition-colors truncate block">
                       @{entry.username ?? 'unknown'}
                       {isMe && <span className="text-orange-400 ml-1">(you)</span>}
                     </Link>
-                    <p className="text-xs text-zinc-500">{entry.totalGames} games</p>
+                    <p className="text-sm text-zinc-400">{entry.totalGames} games</p>
                   </div>
 
                   {/* Score */}
                   <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-bold text-white">{entry.correctCount}</p>
-                    <p className="text-xs text-zinc-500">{entry.accuracyPercent}%</p>
+                    <p className="text-base font-bold text-white">{entry.correctCount} correct</p>
+                    <p className="text-sm text-zinc-400">{entry.accuracyPercent}%</p>
                   </div>
                 </div>
               )
@@ -172,11 +173,11 @@ function PodiumCard({ entry, rank }: { entry: LeaderboardEntry; rank: number }) 
           </div>
         )}
       </div>
-      <p className="text-xs text-zinc-400 group-hover:text-orange-400 transition-colors truncate max-w-[80px] text-center">
+      <p className="text-sm text-zinc-300 group-hover:text-orange-400 transition-colors truncate max-w-[80px] text-center">
         @{entry.username ?? '?'}
       </p>
-      <p className="text-sm font-bold text-white">{entry.correctCount}</p>
-      <p className="text-xs text-zinc-500">{entry.accuracyPercent}%</p>
+      <p className="text-base font-bold text-white">{entry.correctCount} correct</p>
+      <p className="text-sm text-zinc-400">{entry.accuracyPercent}%</p>
     </Link>
   )
 }

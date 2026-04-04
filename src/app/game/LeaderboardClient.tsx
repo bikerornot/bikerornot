@@ -133,10 +133,7 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
                   </div>
 
                   {/* Score */}
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-base font-bold text-orange-400">{entry.accuracyPercent}%</p>
-                    <p className="text-sm text-zinc-400">{entry.totalGames} played</p>
-                  </div>
+                  <p className="text-base font-bold text-orange-400 flex-shrink-0">{entry.accuracyPercent}%</p>
                 </div>
               )
             })}

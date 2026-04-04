@@ -25,6 +25,8 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
   const [state, setState] = useState<CardState>({ status: 'loading' })
   const [dismissed, setDismissed] = useState(false)
   const [streak, setStreak] = useState(0)
+  const [totalPlayed, setTotalPlayed] = useState(0)
+  const [totalCorrect, setTotalCorrect] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const fetchedRef = useRef(false)
 
@@ -57,8 +59,10 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
     const timeTakenMs = Date.now() - startTime
 
     setState({ status: 'answered', round, selectedIndex: index, isCorrect })
+    setTotalPlayed((n) => n + 1)
 
     if (isCorrect) {
+      setTotalCorrect((n) => n + 1)
       setStreak((s) => s + 1)
     } else {
       setStreak(0)
@@ -94,6 +98,11 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
             <path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.8-2.2-5-5-5-1.09 0-2.09.35-2.91.93L14.4 9.03h5.04zM5 17c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3zm14 0c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z" />
           </svg>
           <span className="text-sm font-semibold text-white">Guess the Harley</span>
+          {totalPlayed > 0 && (
+            <span className="text-xs font-bold text-zinc-300 bg-zinc-800 px-2 py-0.5 rounded-full">
+              {totalCorrect}/{totalPlayed} correct
+            </span>
+          )}
           {streak > 1 && (
             <span className="text-xs font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">
               {streak} streak

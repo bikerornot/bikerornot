@@ -99,36 +99,27 @@ export async function getGamePhotoStats(): Promise<GamePhotoStats> {
   await requireAdmin()
   const admin = getServiceClient()
 
-  // Get all Harley bike IDs first
-  const { data: harleyBikes } = await admin
-    .from('user_bikes')
-    .select('id')
-    .eq('make', 'Harley-Davidson')
+  const { data } = await admin.rpc('get_game_photo_stats' as any)
 
-  if (!harleyBikes || harleyBikes.length === 0) {
-    return { total: 0, approved: 0, rejected: 0, remaining: 0 }
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    // Fallback: direct counts via individual queries with a smaller approach
+    const { data: counts } = await admin
+      .from('bike_photos')
+      .select('game_approved, bike:user_bikes!bike_id(make)')
+
+    const harleys = ((counts ?? []) as any[]).filter((c) => c.bike?.make === 'Harley-Davidson')
+    const total = harleys.length
+    const approved = harleys.filter((c) => c.game_approved === true).length
+    const rejected = harleys.filter((c) => c.game_approved === false).length
+
+    return { total, approved, rejected, remaining: total - approved - rejected }
   }
 
-  const bikeIds = harleyBikes.map((b) => b.id)
-
-  const [
-    { count: total },
-    { count: approved },
-    { count: rejected },
-  ] = await Promise.all([
-    admin.from('bike_photos').select('*', { count: 'exact', head: true }).in('bike_id', bikeIds),
-    admin.from('bike_photos').select('*', { count: 'exact', head: true }).in('bike_id', bikeIds).eq('game_approved', true),
-    admin.from('bike_photos').select('*', { count: 'exact', head: true }).in('bike_id', bikeIds).eq('game_approved', false),
-  ])
-
-  const t = total ?? 0
-  const a = approved ?? 0
-  const r = rejected ?? 0
-
+  const row = data[0]
   return {
-    total: t,
-    approved: a,
-    rejected: r,
-    remaining: t - a - r,
+    total: row.total ?? 0,
+    approved: row.approved ?? 0,
+    rejected: row.rejected ?? 0,
+    remaining: row.remaining ?? 0,
   }
 }

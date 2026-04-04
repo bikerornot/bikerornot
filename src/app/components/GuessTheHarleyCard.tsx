@@ -3,9 +3,11 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { getGameRound, submitGameAnswer, type GameRound } from '@/app/actions/game'
+import { getGameRound, submitGameAnswer, getLeaderboard, type GameRound, type LeaderboardEntry } from '@/app/actions/game'
+import { getImageUrl } from '@/lib/supabase/image'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const TOTAL_ROUNDS = 10
 
 function bikePhotoUrl(path: string) {
   return `${SUPABASE_URL}/storage/v1/object/public/bikes/${path}`
@@ -19,15 +21,16 @@ type CardState =
   | { status: 'loading' }
   | { status: 'playing'; round: GameRound; startTime: number }
   | { status: 'answered'; round: GameRound; selectedIndex: number; isCorrect: boolean }
+  | { status: 'finished' }
   | { status: 'empty' }
 
 export default function GuessTheHarleyCard({ currentUserId }: Props) {
   const [state, setState] = useState<CardState>({ status: 'loading' })
   const [dismissed, setDismissed] = useState(false)
-  const [streak, setStreak] = useState(0)
   const [totalPlayed, setTotalPlayed] = useState(0)
   const [totalCorrect, setTotalCorrect] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+  const [leaders, setLeaders] = useState<LeaderboardEntry[]>([])
   const fetchedRef = useRef(false)
 
   useEffect(() => {
@@ -57,24 +60,15 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
     const { round, startTime } = state
     const isCorrect = index === round.correctIndex
     const timeTakenMs = Date.now() - startTime
+    const newPlayed = totalPlayed + 1
+    const newCorrect = totalCorrect + (isCorrect ? 1 : 0)
 
     setState({ status: 'answered', round, selectedIndex: index, isCorrect })
-    setTotalPlayed((n) => n + 1)
-
-    if (isCorrect) {
-      setTotalCorrect((n) => n + 1)
-      setStreak((s) => s + 1)
-    } else {
-      setStreak(0)
-    }
+    setTotalPlayed(newPlayed)
+    if (isCorrect) setTotalCorrect(newCorrect)
 
     try {
-      await submitGameAnswer(
-        round.photoId,
-        round.options[index],
-        isCorrect,
-        timeTakenMs
-      )
+      await submitGameAnswer(round.photoId, round.options[index], isCorrect, timeTakenMs)
     } catch {
       // Answer still shown even if save fails
     } finally {
@@ -82,12 +76,34 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
     }
   }
 
-  async function handlePlayAgain() {
+  async function handleNext() {
+    if (totalPlayed >= TOTAL_ROUNDS) {
+      // Game over — show leaderboard preview
+      setState({ status: 'loading' })
+      try {
+        const lb = await getLeaderboard(10)
+        setLeaders(lb)
+      } catch {
+        // Show finished state even without leaderboard
+      }
+      setState({ status: 'finished' })
+      return
+    }
     fetchedRef.current = false
     await loadRound()
   }
 
+  function handlePlayNewGame() {
+    setTotalPlayed(0)
+    setTotalCorrect(0)
+    setLeaders([])
+    fetchedRef.current = false
+    loadRound()
+  }
+
   if (dismissed || state.status === 'empty') return null
+
+  const remaining = TOTAL_ROUNDS - totalPlayed
 
   return (
     <div className="bg-zinc-900 sm:border sm:border-zinc-800 overflow-hidden rounded-2xl">
@@ -98,14 +114,9 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
             <path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.8-2.2-5-5-5-1.09 0-2.09.35-2.91.93L14.4 9.03h5.04zM5 17c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3zm14 0c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z" />
           </svg>
           <span className="text-sm font-semibold text-white">Guess the Harley</span>
-          {totalPlayed > 0 && (
+          {totalPlayed > 0 && state.status !== 'finished' && (
             <span className="text-xs font-bold text-zinc-300 bg-zinc-800 px-2 py-0.5 rounded-full">
               {totalCorrect}/{totalPlayed} correct
-            </span>
-          )}
-          {streak > 1 && (
-            <span className="text-xs font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-full">
-              {streak} streak
             </span>
           )}
         </div>
@@ -188,24 +199,80 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
             })}
           </div>
 
-          {/* After answering — play again + leaderboard */}
+          {/* Next button */}
           {state.status === 'answered' && (
-            <div className="px-4 pb-4 flex gap-3">
+            <div className="px-4 pb-4">
               <button
-                onClick={handlePlayAgain}
-                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"
+                onClick={handleNext}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2.5 rounded-xl transition-colors text-sm"
               >
-                Next &rsaquo;
+                {remaining > 0
+                  ? `Next \u203A ${remaining} remaining`
+                  : 'See Results \u203A'}
               </button>
-              <Link
-                href="/game"
-                className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold py-2.5 rounded-xl transition-colors text-sm text-center border border-zinc-700"
-              >
-                Leaderboard
-              </Link>
             </div>
           )}
         </>
+      )}
+
+      {/* Finished — results + leaderboard preview */}
+      {state.status === 'finished' && (
+        <div className="px-4 py-6">
+          {/* Score summary */}
+          <div className="text-center mb-5">
+            <p className="text-3xl font-bold text-white">{totalCorrect}/{TOTAL_ROUNDS}</p>
+            <p className="text-zinc-400 text-sm mt-1">
+              {totalCorrect >= 8 ? 'Impressive! You know your Harleys.' :
+               totalCorrect >= 5 ? 'Not bad! Keep playing to improve.' :
+               'Keep at it — you\'ll get better!'}
+            </p>
+          </div>
+
+          {/* Leaderboard preview */}
+          {leaders.length > 0 && (
+            <div className="mb-5">
+              <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold mb-3 text-center">Top Players</p>
+              <div className="flex justify-center gap-3 flex-wrap">
+                {leaders.slice(0, 8).map((entry, idx) => {
+                  const avatarUrl = entry.profilePhotoUrl
+                    ? getImageUrl('avatars', entry.profilePhotoUrl)
+                    : null
+                  return (
+                    <Link key={entry.userId} href={`/profile/${entry.username}`} className="flex flex-col items-center gap-1 group">
+                      <div className={`w-10 h-10 rounded-full overflow-hidden flex-shrink-0 ${
+                        idx === 0 ? 'ring-2 ring-yellow-400' : idx === 1 ? 'ring-2 ring-zinc-400' : idx === 2 ? 'ring-2 ring-amber-600' : 'ring-1 ring-zinc-700'
+                      }`}>
+                        {avatarUrl ? (
+                          <Image src={avatarUrl} alt={entry.username ?? ''} width={40} height={40} className="object-cover w-full h-full" />
+                        ) : (
+                          <div className="w-full h-full bg-zinc-700 flex items-center justify-center text-zinc-400 text-xs font-bold">
+                            {entry.username?.[0]?.toUpperCase() ?? '?'}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-xs text-zinc-500 group-hover:text-orange-400 transition-colors truncate max-w-[60px]">
+                        {entry.username ?? '?'}
+                      </span>
+                    </Link>
+                  )
+                })}
+              </div>
+              <div className="text-center mt-3">
+                <Link href="/game" className="text-sm text-orange-400 hover:text-orange-300 font-medium transition-colors">
+                  See Full Leaderboard &rsaquo;
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Play again */}
+          <button
+            onClick={handlePlayNewGame}
+            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 rounded-xl transition-colors text-base"
+          >
+            Play Again
+          </button>
+        </div>
       )}
     </div>
   )

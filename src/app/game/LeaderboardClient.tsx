@@ -13,7 +13,6 @@ interface Props {
 
 export default function LeaderboardClient({ myStats, leaderboard, currentUserId }: Props) {
   const sorted = [...leaderboard]
-    .filter((e) => e.totalGames >= 10)
     .sort((a, b) => b.accuracyPercent - a.accuracyPercent)
 
   const myRank = sorted.findIndex((e) => e.userId === currentUserId) + 1
@@ -144,9 +143,6 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
         )}
       </div>
 
-      {sorted.length > 0 && (
-        <p className="text-xs text-zinc-600 text-center">Minimum 10 games to qualify for the leaderboard</p>
-      )}
     </div>
   )
 }

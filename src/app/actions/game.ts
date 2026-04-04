@@ -345,7 +345,7 @@ export async function getLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
   // Filter to 10+ games, sort by accuracy
   const ranked = Object.entries(stats)
     .map(([userId, s]) => ({ userId, ...s }))
-    .filter((s) => s.total >= 10)
+    .filter((s) => s.total >= 1)
     .sort((a, b) => {
       const accA = a.total > 0 ? a.correct / a.total : 0
       const accB = b.total > 0 ? b.correct / b.total : 0

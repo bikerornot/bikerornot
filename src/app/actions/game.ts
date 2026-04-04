@@ -3,6 +3,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 
+async function requireAuth() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  return user
+}
+
 function getServiceClient() {
   return createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -122,4 +129,257 @@ export async function getGamePhotoStats(): Promise<GamePhotoStats> {
     rejected: row.rejected ?? 0,
     remaining: row.remaining ?? 0,
   }
+}
+
+// ─── Game Engine Types ─────────────────────────────────────
+
+export interface GameRound {
+  photoId: string
+  storagePath: string
+  options: string[]       // 4 options like "2019 Street Glide"
+  correctIndex: number    // which option is correct (0-3)
+}
+
+export interface GameStats {
+  totalPlayed: number
+  correctAnswers: number
+  accuracyPercent: number
+  currentStreak: number
+  bestStreak: number
+}
+
+export interface LeaderboardEntry {
+  userId: string
+  username: string | null
+  profilePhotoUrl: string | null
+  correctCount: number
+  totalGames: number
+  accuracyPercent: number
+}
+
+// ─── Game Engine Actions ───────────────────────────────────
+
+export async function getGameRound(): Promise<GameRound | null> {
+  const user = await requireAuth()
+  const admin = getServiceClient()
+
+  // Get IDs of photos this user answered in the last 24 hours (avoid repeats)
+  const { data: recentAnswers } = await admin
+    .from('game_answers')
+    .select('bike_photo_id')
+    .eq('user_id', user.id)
+    .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+
+  const recentPhotoIds = new Set((recentAnswers ?? []).map((a) => a.bike_photo_id))
+
+  // Get all approved photos with bike info
+  const { data: approvedPhotos } = await admin
+    .from('bike_photos')
+    .select('id, storage_path, bike:user_bikes!bike_id(year, model)')
+    .eq('game_approved', true)
+
+  if (!approvedPhotos || approvedPhotos.length === 0) return null
+
+  // Filter out recently answered and those missing year/model
+  const eligible = (approvedPhotos as any[]).filter(
+    (p) => !recentPhotoIds.has(p.id) && p.bike?.year && p.bike?.model
+  )
+
+  if (eligible.length === 0) return null
+
+  // Pick a random photo
+  const pick = eligible[Math.floor(Math.random() * eligible.length)]
+  const correctYear = pick.bike.year as number
+  const correctModel = pick.bike.model as string
+  const correctAnswer = `${correctYear} ${correctModel}`
+
+  // Generate 3 wrong answers from real Harley models
+  const { data: allModels } = await admin
+    .from('user_bikes')
+    .select('year, model')
+    .eq('make', 'Harley-Davidson')
+    .not('model', 'is', null)
+    .not('year', 'is', null)
+    .gte('year', correctYear - 5)
+    .lte('year', correctYear + 5)
+
+  // Build pool of unique "year model" combos that differ from the correct answer
+  const wrongPool = new Map<string, string>()
+  for (const m of allModels ?? []) {
+    const label = `${m.year} ${m.model}`
+    if (label !== correctAnswer && !wrongPool.has(label)) {
+      wrongPool.set(label, label)
+    }
+  }
+
+  let wrongAnswers = Array.from(wrongPool.values())
+
+  // If not enough variety from nearby years, pull from any year
+  if (wrongAnswers.length < 3) {
+    const { data: fallbackModels } = await admin
+      .from('user_bikes')
+      .select('year, model')
+      .eq('make', 'Harley-Davidson')
+      .not('model', 'is', null)
+      .not('year', 'is', null)
+      .limit(200)
+
+    for (const m of fallbackModels ?? []) {
+      const label = `${m.year} ${m.model}`
+      if (label !== correctAnswer && !wrongPool.has(label)) {
+        wrongPool.set(label, label)
+      }
+    }
+    wrongAnswers = Array.from(wrongPool.values())
+  }
+
+  // Shuffle and pick 3
+  for (let i = wrongAnswers.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[wrongAnswers[i], wrongAnswers[j]] = [wrongAnswers[j], wrongAnswers[i]]
+  }
+  const selected = wrongAnswers.slice(0, 3)
+
+  // Combine correct + wrong, shuffle, track correct index
+  const options = [correctAnswer, ...selected]
+  for (let i = options.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[options[i], options[j]] = [options[j], options[i]]
+  }
+
+  return {
+    photoId: pick.id,
+    storagePath: pick.storage_path,
+    options,
+    correctIndex: options.indexOf(correctAnswer),
+  }
+}
+
+export async function submitGameAnswer(
+  photoId: string,
+  selectedAnswer: string,
+  isCorrect: boolean,
+  timeTakenMs: number
+): Promise<void> {
+  const user = await requireAuth()
+  const admin = getServiceClient()
+
+  // Get the correct year/model for this photo
+  const { data: photo } = await admin
+    .from('bike_photos')
+    .select('bike:user_bikes!bike_id(year, model)')
+    .eq('id', photoId)
+    .single()
+
+  const correctYear = (photo as any)?.bike?.year ?? 0
+  const correctModel = (photo as any)?.bike?.model ?? ''
+
+  await admin.from('game_answers').insert({
+    user_id: user.id,
+    bike_photo_id: photoId,
+    correct_year: correctYear,
+    correct_model: correctModel,
+    selected_answer: selectedAnswer,
+    is_correct: isCorrect,
+    time_taken_ms: timeTakenMs,
+  })
+}
+
+export async function getMyGameStats(): Promise<GameStats> {
+  const user = await requireAuth()
+  const admin = getServiceClient()
+
+  const { data: answers } = await admin
+    .from('game_answers')
+    .select('is_correct, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+
+  if (!answers || answers.length === 0) {
+    return { totalPlayed: 0, correctAnswers: 0, accuracyPercent: 0, currentStreak: 0, bestStreak: 0 }
+  }
+
+  const totalPlayed = answers.length
+  const correctAnswers = answers.filter((a) => a.is_correct).length
+  const accuracyPercent = Math.round((correctAnswers / totalPlayed) * 100)
+
+  // Calculate streaks (answers are sorted newest first)
+  let currentStreak = 0
+  for (const a of answers) {
+    if (a.is_correct) currentStreak++
+    else break
+  }
+
+  let bestStreak = 0
+  let streak = 0
+  // Reverse to go oldest first for best streak calculation
+  for (const a of [...answers].reverse()) {
+    if (a.is_correct) {
+      streak++
+      if (streak > bestStreak) bestStreak = streak
+    } else {
+      streak = 0
+    }
+  }
+
+  return { totalPlayed, correctAnswers, accuracyPercent, currentStreak, bestStreak }
+}
+
+export async function getLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
+  await requireAuth()
+  const admin = getServiceClient()
+
+  const { data } = await admin
+    .from('game_answers')
+    .select('user_id')
+
+  if (!data || data.length === 0) return []
+
+  // Aggregate by user
+  const userMap: Record<string, { correct: number; total: number }> = {}
+  for (const a of data as any[]) {
+    if (!userMap[a.user_id]) userMap[a.user_id] = { correct: 0, total: 0 }
+    userMap[a.user_id].total++
+  }
+
+  // Need is_correct too — refetch with that field
+  const { data: fullData } = await admin
+    .from('game_answers')
+    .select('user_id, is_correct')
+
+  const stats: Record<string, { correct: number; total: number }> = {}
+  for (const a of fullData ?? []) {
+    if (!stats[a.user_id]) stats[a.user_id] = { correct: 0, total: 0 }
+    stats[a.user_id].total++
+    if (a.is_correct) stats[a.user_id].correct++
+  }
+
+  // Sort by correct count, take top N
+  const ranked = Object.entries(stats)
+    .map(([userId, s]) => ({ userId, ...s }))
+    .sort((a, b) => b.correct - a.correct)
+    .slice(0, limit)
+
+  if (ranked.length === 0) return []
+
+  // Fetch profiles
+  const userIds = ranked.map((r) => r.userId)
+  const { data: profiles } = await admin
+    .from('profiles')
+    .select('id, username, profile_photo_url')
+    .in('id', userIds)
+
+  const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]))
+
+  return ranked.map((r) => {
+    const profile = profileMap.get(r.userId)
+    return {
+      userId: r.userId,
+      username: profile?.username ?? null,
+      profilePhotoUrl: profile?.profile_photo_url ?? null,
+      correctCount: r.correct,
+      totalGames: r.total,
+      accuracyPercent: r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0,
+    }
+  })
 }

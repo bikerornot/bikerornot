@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Post, Profile } from '@/lib/supabase/types'
 import { getImageUrl } from '@/lib/supabase/image'
 import { likePost, unlikePost, deletePost, sharePost, editPost } from '@/app/actions/posts'
+import { joinGroup } from '@/app/actions/groups'
 import PostImages from './PostImages'
 import CommentSection from './CommentSection'
 import ContentMenu from './ContentMenu'
@@ -21,6 +22,7 @@ interface Props {
   initialShowComments?: boolean
   wallOwnerId?: string
   blockedUserIds?: string[]
+  userGroupIds?: string[]
 }
 
 const GARAGE_REGEX = /^Added a (.+) to my garage! 🏍️/
@@ -43,7 +45,7 @@ function renderGaragePost(text: string, authorUsername?: string | null) {
 
 const GROUP_JOIN_REGEX = /^Joined the group (.+)!(?:\n([\s\S]+))?$/
 
-function renderGroupJoinPost(text: string, groupSlug?: string | null) {
+function renderGroupJoinPost(text: string, groupSlug?: string | null, showedInHeader?: boolean) {
   const match = text.match(GROUP_JOIN_REGEX)
   if (!match) return null
   const groupName = match[1]
@@ -51,14 +53,19 @@ function renderGroupJoinPost(text: string, groupSlug?: string | null) {
   const href = groupSlug ? `/groups/${groupSlug}` : null
   return (
     <div>
-      <span>
-        Joined{' '}
-        {href ? (
-          <Link href={href} className="text-orange-400 hover:text-orange-300 font-semibold">{groupName}</Link>
-        ) : (
-          <span className="font-semibold text-white">{groupName}</span>
-        )}
-      </span>
+      {showedInHeader ? (
+        // Group name already in header — just say "Joined this group"
+        <span className="text-white font-semibold">Joined this group</span>
+      ) : (
+        <span>
+          Joined{' '}
+          {href ? (
+            <Link href={href} className="text-orange-400 hover:text-orange-300 font-semibold">{groupName}</Link>
+          ) : (
+            <span className="font-semibold text-white">{groupName}</span>
+          )}
+        </span>
+      )}
       {description && (
         <p className="text-zinc-300 text-base mt-1 leading-snug">{description}</p>
       )}
@@ -208,7 +215,7 @@ function SharedPostEmbed({ post }: { post: Omit<Post, 'shared_post'> }) {
   )
 }
 
-export default function PostCard({ post, currentUserId, currentUserProfile, initialShowComments, wallOwnerId, blockedUserIds }: Props) {
+export default function PostCard({ post, currentUserId, currentUserProfile, initialShowComments, wallOwnerId, blockedUserIds, userGroupIds }: Props) {
   const [liked, setLiked] = useState(post.is_liked_by_me ?? false)
   const [likeCount, setLikeCount] = useState(post.like_count ?? 0)
   const [commentCount, setCommentCount] = useState(post.comment_count ?? 0)
@@ -217,6 +224,8 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
   const [showShareModal, setShowShareModal] = useState(false)
   const [shareCaption, setShareCaption] = useState('')
   const [sharing, setSharing] = useState(false)
+  const [joinedGroup, setJoinedGroup] = useState(false)
+  const [joiningGroup, setJoiningGroup] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState(post.content ?? '')
   const [editError, setEditError] = useState('')
@@ -325,6 +334,29 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
                 >
                   {post.group.name}
                 </Link>
+                {post.group_id && currentUserId && userGroupIds && !userGroupIds.includes(post.group_id) && !joinedGroup && (
+                  <button
+                    onClick={async (e) => {
+                      e.preventDefault()
+                      if (joiningGroup) return
+                      setJoiningGroup(true)
+                      try {
+                        await joinGroup(post.group_id!)
+                        setJoinedGroup(true)
+                      } catch { /* ignore */ }
+                      setJoiningGroup(false)
+                    }}
+                    disabled={joiningGroup}
+                    className="text-xs font-semibold text-orange-400 bg-orange-500/10 hover:bg-orange-500/20 px-2 py-0.5 rounded-full transition-colors"
+                  >
+                    {joiningGroup ? '...' : 'Join'}
+                  </button>
+                )}
+                {joinedGroup && (
+                  <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    Joined
+                  </span>
+                )}
               </>
             )}
             <span className="text-zinc-600 text-sm">·</span>
@@ -394,7 +426,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
         </div>
       ) : (displayContent || post.shared_post_id) && (() => {
         const garageContent = displayContent ? renderGaragePost(displayContent, post.author?.username) : null
-        const groupJoinContent = !garageContent && displayContent ? renderGroupJoinPost(displayContent, post.group?.slug) : null
+        const groupJoinContent = !garageContent && displayContent ? renderGroupJoinPost(displayContent, post.group?.slug, !!post.group) : null
         const listingContent = !garageContent && !groupJoinContent && displayContent ? renderListingPost(displayContent) : null
         const specialContent = garageContent ?? groupJoinContent ?? listingContent
         const ytVideo = !specialContent && displayContent ? extractYouTubeId(displayContent) : null

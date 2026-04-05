@@ -222,6 +222,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
             currentUserId={currentUserId}
             currentUserProfile={currentUserProfile}
             blockedUserIds={blockedUserIds}
+            userGroupIds={userGroupIds}
           />
           {idx === 0 && initialRiders.length > 0 && (
             <div className="mt-2 sm:mt-4">

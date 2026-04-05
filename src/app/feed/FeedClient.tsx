@@ -138,12 +138,13 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
   useEffect(() => {
     if (cached.current) {
-      // Restore scroll position after render
+      // Restore scroll position after DOM renders cached posts
+      // Use setTimeout to fire after Next.js's own scroll-to-top behavior
       const scrollY = cached.current.scrollY
       cached.current = null
-      requestAnimationFrame(() => {
+      setTimeout(() => {
         window.scrollTo(0, scrollY)
-      })
+      }, 100)
       return
     }
     fetchPosts()

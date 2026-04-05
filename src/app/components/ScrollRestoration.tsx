@@ -72,20 +72,29 @@ export default function ScrollRestoration() {
   useEffect(() => {
     // Continuously save scroll position for current path
     let timer: ReturnType<typeof setTimeout>
+    let lastSavedY = 0
+
     function onScroll() {
       if (isRestoring.current) return // Don't save during restoration
       clearTimeout(timer)
       timer = setTimeout(() => {
-        const map = getScrollMap()
-        map[pathname] = window.scrollY
-        saveScrollMap(map)
+        const y = window.scrollY
+        // Only save if user has actually scrolled (don't overwrite with 0)
+        if (y > 0) {
+          lastSavedY = y
+          const map = getScrollMap()
+          map[pathname] = y
+          saveScrollMap(map)
+        }
       }, 200)
     }
 
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => {
       window.removeEventListener('scroll', onScroll)
-      if (!isRestoring.current) {
+      // On unmount: save current position, but never overwrite a good position with 0
+      // (Next.js may have already scrolled to top before unmount fires)
+      if (!isRestoring.current && window.scrollY > 0) {
         const map = getScrollMap()
         map[pathname] = window.scrollY
         saveScrollMap(map)

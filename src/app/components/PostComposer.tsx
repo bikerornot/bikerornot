@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import Image from 'next/image'
 import { Profile } from '@/lib/supabase/types'
 import { getImageUrl } from '@/lib/supabase/image'
@@ -67,6 +67,15 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
     ? getImageUrl('avatars', currentUserProfile.profile_photo_url)
     : null
   const displayName = currentUserProfile.username ?? 'Unknown'
+
+  const placeholder = useMemo(() => {
+    if (bikeId) return "Share something about this ride…"
+    const firstName = currentUserProfile.first_name ?? 'rider'
+    return Math.random() < 0.7
+      ? `What's on your mind, ${firstName}?`
+      : 'Share something with the crew…'
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
@@ -175,7 +184,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
                 if (mention.handleKeyDown(e)) return
               }}
               onSelect={(e) => setCursorPos((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
-              placeholder={bikeId ? "Share something about this ride…" : "Share something with the crew…"}
+              placeholder={placeholder}
               rows={3}
               maxLength={5000}
               disabled={submitting}

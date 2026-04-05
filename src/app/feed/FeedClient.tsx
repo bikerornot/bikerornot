@@ -138,19 +138,29 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
   useEffect(() => {
     if (cached.current) {
-      // Restore scroll position — fight Next.js scroll-to-top by retrying
+      // Restore scroll position — block Next.js scroll-to-top by overriding scrollTo
       const targetY = cached.current.scrollY
       cached.current = null
-      let attempts = 0
-      const restore = () => {
-        window.scrollTo(0, targetY)
-        attempts++
-        if (attempts < 10 && window.scrollY !== targetY) {
-          requestAnimationFrame(restore)
+
+      // Temporarily intercept scroll-to-top calls from Next.js
+      const originalScrollTo = window.scrollTo.bind(window)
+      let blocked = true
+      window.scrollTo = function(...args: any[]) {
+        // Block any scroll-to-top (y=0) while we're restoring
+        if (blocked) {
+          const y = typeof args[0] === 'number' ? args[1] : args[0]?.top
+          if (y === 0) return
         }
-      }
-      // Start after a frame to let DOM render, then keep trying
-      requestAnimationFrame(restore)
+        return originalScrollTo(...args)
+      } as typeof window.scrollTo
+
+      // Restore after DOM renders, then unblock
+      setTimeout(() => {
+        blocked = false
+        originalScrollTo(0, targetY)
+        // Restore original scrollTo after a bit
+        setTimeout(() => { window.scrollTo = originalScrollTo }, 500)
+      }, 50)
       return
     }
     fetchPosts()

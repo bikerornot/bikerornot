@@ -399,8 +399,8 @@ export async function getFriendBirthdays(): Promise<BirthdayFriend[]> {
     f.requester_id === user.id ? f.addressee_id : f.requester_id
   )
 
-  // Get today's month and day
-  const now = new Date()
+  // Get today's month and day in US Eastern time (server runs UTC, most users are US-based)
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
   const month = now.getMonth() + 1
   const day = now.getDate()
 

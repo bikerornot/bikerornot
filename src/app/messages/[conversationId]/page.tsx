@@ -81,7 +81,7 @@ export default async function ChatPage({
       <header className="bg-zinc-900 border-b border-zinc-800 flex-shrink-0 z-40">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <Logo />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             <DesktopNav />
             <FindRidersLink />
             <MessagesLink userId={user.id} />

@@ -72,7 +72,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
     if (bikeId) return "Share something about this ride…"
     const firstName = currentUserProfile.first_name ?? 'rider'
     return Math.random() < 0.7
-      ? `What's on your mind, ${firstName}?`
+      ? `What's going on, ${firstName}?`
       : 'Share something with the crew…'
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

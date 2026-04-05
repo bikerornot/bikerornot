@@ -58,6 +58,16 @@ export async function sendFriendRequest(addresseeId: string): Promise<{ error?: 
     return { error: `You can send up to ${dailyLimit} friend requests per day.` }
   }
 
+  // Max friends limit — 500
+  const { count: friendCount } = await admin
+    .from('friendships')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'accepted')
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+  if ((friendCount ?? 0) >= 500) {
+    return { error: 'You have reached the maximum of 500 friends.' }
+  }
+
   const { error } = await admin
     .from('friendships')
     .insert({ requester_id: user.id, addressee_id: addresseeId })
@@ -113,6 +123,17 @@ export async function acceptFriendRequest(requesterId: string): Promise<void> {
   if (!user) throw new Error('Not authenticated')
 
   const admin = getServiceClient()
+
+  // Max friends limit — 500
+  const { count: friendCount } = await admin
+    .from('friendships')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'accepted')
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+  if ((friendCount ?? 0) >= 500) {
+    throw new Error('You have reached the maximum of 500 friends.')
+  }
+
   const { data: updated, error } = await admin
     .from('friendships')
     .update({ status: 'accepted', updated_at: new Date().toISOString() })

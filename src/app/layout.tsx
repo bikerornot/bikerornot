@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: 'Connect with fellow riders, share your rides, and find your community.',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children, modal }: { children: React.ReactNode; modal: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -55,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ErrorLogger />
         <ScrollRestoration />
         {children}
+        {modal}
 
         {/* Referral source capture — runs on every page so UTM params are
             caught on any landing page, not just /signup */}

@@ -15,6 +15,7 @@ import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
 import LastSeenTracker from '@/app/components/LastSeenTracker'
 import MessagesLink from '@/app/components/MessagesLink'
+import FindRidersLink from '@/app/components/FindRidersLink'
 import MessageButton from '@/app/components/MessageButton'
 import ContentMenu from '@/app/components/ContentMenu'
 import { getMutualFriends } from '@/app/actions/suggestions'
@@ -318,7 +319,8 @@ export default async function ProfilePage({
             <DesktopNav />
             {user && currentUserProfile && (
               <>
-                <MessagesLink userId={user.id} />
+                <FindRidersLink />
+            <MessagesLink userId={user.id} />
                 <NotificationBell userId={user.id} username={currentUserProfile.username!} />
                 <UserMenu
                   username={currentUserProfile.username!}

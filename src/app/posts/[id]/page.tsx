@@ -9,6 +9,7 @@ import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
 import LastSeenTracker from '@/app/components/LastSeenTracker'
 import MessagesLink from '@/app/components/MessagesLink'
+import FindRidersLink from '@/app/components/FindRidersLink'
 import BottomNav from '@/app/components/BottomNav'
 import type { Post } from '@/lib/supabase/types'
 
@@ -89,6 +90,7 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
           <Logo />
           <div className="flex items-center gap-4">
             <DesktopNav />
+            <FindRidersLink />
             <MessagesLink userId={user.id} />
             <NotificationBell userId={user.id} username={currentUserProfile.username!} />
             <UserMenu

@@ -7,6 +7,7 @@ import DesktopNav from '@/app/components/DesktopNav'
 import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
 import MessagesLink from '@/app/components/MessagesLink'
+import FindRidersLink from '@/app/components/FindRidersLink'
 import BottomNav from '@/app/components/BottomNav'
 import VerifiedBadge from '@/app/components/VerifiedBadge'
 import { getEvent, getEventAttendees } from '@/app/actions/events'
@@ -55,6 +56,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
           <Logo />
           <div className="flex items-center gap-2">
             <DesktopNav />
+            <FindRidersLink />
             <MessagesLink userId={user.id} />
             <NotificationBell userId={user.id} username={profile.username!} />
             <UserMenu

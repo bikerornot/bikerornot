@@ -11,6 +11,7 @@ import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
 import LastSeenTracker from '@/app/components/LastSeenTracker'
 import MessagesLink from '@/app/components/MessagesLink'
+import FindRidersLink from '@/app/components/FindRidersLink'
 import BottomNav from '@/app/components/BottomNav'
 import JoinButton from './JoinButton'
 import InviteButton from './InviteButton'
@@ -91,7 +92,8 @@ export default async function GroupPage({ params, searchParams }: { params: Prom
             <DesktopNav />
             {user && currentUserProfile && (
               <>
-                <MessagesLink userId={user.id} />
+                <FindRidersLink />
+            <MessagesLink userId={user.id} />
                 <NotificationBell userId={user.id} username={currentUserProfile.username!} />
                 <UserMenu
                   username={currentUserProfile.username!}

@@ -11,6 +11,7 @@ import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
 import LastSeenTracker from '@/app/components/LastSeenTracker'
 import MessagesLink from '@/app/components/MessagesLink'
+import FindRidersLink from '@/app/components/FindRidersLink'
 import BottomNav from '@/app/components/BottomNav'
 import DmcaBanner from '@/app/components/DmcaBanner'
 import SiteBanner from '@/app/components/SiteBanner'
@@ -108,6 +109,7 @@ export default async function FeedPage() {
           <Logo />
           <div className="flex items-center gap-4">
             <DesktopNav />
+            <FindRidersLink />
             <MessagesLink userId={user.id} />
             <NotificationBell userId={user.id} username={profile.username!} />
             <UserMenu

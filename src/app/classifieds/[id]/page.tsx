@@ -8,6 +8,7 @@ import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
 import LastSeenTracker from '@/app/components/LastSeenTracker'
 import MessagesLink from '@/app/components/MessagesLink'
+import FindRidersLink from '@/app/components/FindRidersLink'
 import BottomNav from '@/app/components/BottomNav'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getListingDetail } from '@/app/actions/classifieds'
@@ -53,7 +54,8 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             {user && profile ? (
               <>
                 <DesktopNav />
-                <MessagesLink userId={user.id} />
+                <FindRidersLink />
+            <MessagesLink userId={user.id} />
                 <NotificationBell userId={user.id} username={profile.username!} />
                 <UserMenu
                   username={profile.username!}

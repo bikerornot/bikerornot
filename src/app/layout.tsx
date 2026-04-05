@@ -3,6 +3,7 @@ import { Geist } from 'next/font/google'
 import Script from 'next/script'
 import Heartbeat from '@/app/components/Heartbeat'
 import ErrorLogger from '@/app/components/ErrorLogger'
+import ScrollRestoration from '@/app/components/ScrollRestoration'
 import './globals.css'
 
 const geist = Geist({ subsets: ['latin'] })
@@ -52,6 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <Heartbeat />
         <ErrorLogger />
+        <ScrollRestoration />
         {children}
 
         {/* Referral source capture — runs on every page so UTM params are

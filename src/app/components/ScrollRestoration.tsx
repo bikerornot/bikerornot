@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 
 const SCROLL_KEY = 'bon_scroll_positions'
@@ -19,33 +19,52 @@ function saveScrollMap(map: Record<string, number>) {
 
 export default function ScrollRestoration() {
   const pathname = usePathname()
+  const isRestoring = useRef(false)
+
+  // Set manual scroll restoration once on mount
+  useEffect(() => {
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual'
+    }
+  }, [])
 
   useEffect(() => {
-    // On mount / route change: restore saved scroll for this path
     const map = getScrollMap()
     const saved = map[pathname]
 
     if (saved && saved > 0) {
-      // Disable browser auto-scroll
-      if ('scrollRestoration' in history) {
-        history.scrollRestoration = 'manual'
-      }
+      isRestoring.current = true
 
-      // Wait for content to render, then restore
-      const timer = setTimeout(() => {
-        window.scrollTo(0, saved)
-      }, 0)
-
-      // Also retry after images load
-      const timer2 = setTimeout(() => {
-        if (window.scrollY < saved - 100) {
-          window.scrollTo(0, saved)
+      // Override scrollTo to block Next.js scroll-to-top during restoration
+      const original = window.scrollTo
+      const override = function(...args: any[]) {
+        if (isRestoring.current) {
+          // Check if this is a scroll-to-top call — block it
+          const y = typeof args[0] === 'number' ? (args[1] ?? 0) : (args[0]?.top ?? 0)
+          if (y === 0) return
         }
-      }, 300)
+        return original.apply(window, args as any)
+      } as typeof window.scrollTo
+      window.scrollTo = override
+
+      // Restore at multiple intervals to beat Next.js timing
+      const timers = [0, 50, 150, 300, 500].map((delay) =>
+        setTimeout(() => {
+          original.call(window, 0, saved)
+        }, delay)
+      )
+
+      // Stop blocking after restoration window
+      const cleanup = setTimeout(() => {
+        isRestoring.current = false
+        window.scrollTo = original
+      }, 600)
 
       return () => {
-        clearTimeout(timer)
-        clearTimeout(timer2)
+        timers.forEach(clearTimeout)
+        clearTimeout(cleanup)
+        isRestoring.current = false
+        window.scrollTo = original
       }
     }
   }, [pathname])
@@ -54,6 +73,7 @@ export default function ScrollRestoration() {
     // Continuously save scroll position for current path
     let timer: ReturnType<typeof setTimeout>
     function onScroll() {
+      if (isRestoring.current) return // Don't save during restoration
       clearTimeout(timer)
       timer = setTimeout(() => {
         const map = getScrollMap()
@@ -65,10 +85,11 @@ export default function ScrollRestoration() {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => {
       window.removeEventListener('scroll', onScroll)
-      // Save final position on unmount
-      const map = getScrollMap()
-      map[pathname] = window.scrollY
-      saveScrollMap(map)
+      if (!isRestoring.current) {
+        const map = getScrollMap()
+        map[pathname] = window.scrollY
+        saveScrollMap(map)
+      }
     }
   }, [pathname])
 

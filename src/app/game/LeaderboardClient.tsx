@@ -47,7 +47,7 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
               <p className="text-2xl font-bold text-white">{myStats.totalPlayed}</p>
-              <p className="text-sm text-zinc-400 mt-0.5">Games Played</p>
+              <p className="text-sm text-zinc-400 mt-0.5">Answered</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-emerald-400">{myStats.accuracyPercent}%</p>
@@ -129,7 +129,7 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
                       @{entry.username ?? 'unknown'}
                       {isMe && <span className="text-orange-400 ml-1">(you)</span>}
                     </Link>
-                    <p className="text-sm text-zinc-400">{entry.totalGames} games</p>
+                    <p className="text-sm text-zinc-400">{entry.totalGames} answered</p>
                   </div>
 
                   {/* Score */}

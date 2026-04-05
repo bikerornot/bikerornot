@@ -53,30 +53,19 @@ export async function getUnreviewedGamePhotos(limit = 20): Promise<GamePhoto[]> 
   await requireAdmin()
   const admin = getServiceClient()
 
-  const { data } = await admin
-    .from('bike_photos')
-    .select('id, storage_path, bike_id, bike:user_bikes!bike_id(year, make, model, user_id), owner:user_bikes!bike_id(user:profiles!user_id(username))')
-    .is('game_approved', null)
-    .order('created_at', { ascending: true })
-    .limit(200)
+  const { data } = await admin.rpc('get_unreviewed_harley_photos' as any, { p_limit: limit })
 
-  if (!data) return []
+  if (!data || !Array.isArray(data)) return []
 
-  // Filter to Harley-Davidson only (client-side since we can't filter on joined table easily)
-  const harleys = (data as any[])
-    .filter((p) => p.bike?.make === 'Harley-Davidson')
-    .slice(0, limit)
-    .map((p) => ({
-      id: p.id,
-      storage_path: p.storage_path,
-      bike_id: p.bike_id,
-      year: p.bike?.year ?? null,
-      make: p.bike?.make ?? null,
-      model: p.bike?.model ?? null,
-      username: p.owner?.user?.username ?? null,
-    }))
-
-  return harleys
+  return (data as any[]).map((p) => ({
+    id: p.id,
+    storage_path: p.storage_path,
+    bike_id: p.bike_id,
+    year: p.year ?? null,
+    make: p.make ?? null,
+    model: p.model ?? null,
+    username: p.username ?? null,
+  }))
 }
 
 export async function submitGamePhotoReviews(

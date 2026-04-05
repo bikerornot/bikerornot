@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getImageUrl } from '@/lib/supabase/image'
@@ -10,17 +11,30 @@ interface Props {
 }
 
 export default function BirthdayCard({ birthdays }: Props) {
-  if (birthdays.length === 0) return null
+  const [dismissed, setDismissed] = useState(false)
+
+  if (birthdays.length === 0 || dismissed) return null
 
   return (
     <div className="bg-zinc-900 sm:rounded-xl sm:border sm:border-zinc-800 p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-2xl">🎂</span>
-        <p className="text-white text-sm font-semibold">
-          {birthdays.length === 1
-            ? 'A friend has a birthday today!'
-            : `${birthdays.length} friends have birthdays today!`}
-        </p>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">🎂</span>
+          <p className="text-white text-sm font-semibold">
+            {birthdays.length === 1
+              ? 'A friend has a birthday today!'
+              : `${birthdays.length} friends have birthdays today!`}
+          </p>
+        </div>
+        <button
+          onClick={() => setDismissed(true)}
+          className="text-zinc-600 hover:text-zinc-400 transition-colors flex-shrink-0"
+          aria-label="Dismiss"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
       <div className="space-y-3">
         {birthdays.map((friend) => {

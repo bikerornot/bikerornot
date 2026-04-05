@@ -79,8 +79,14 @@ export default function EditGroupPanel({
     setError(null)
   }
 
+  const locationRequired = category === 'local' || category === 'clubs'
+
   function handleSave() {
     setError(null)
+    if (locationRequired && (!state || !zipCode.trim())) {
+      setError('State and zip code are required for local riding groups and clubs.')
+      return
+    }
     startSave(async () => {
       try {
         await updateGroup(groupId, {

@@ -47,9 +47,15 @@ export default function CreateGroupForm() {
     setCoverPreview(null)
   }
 
+  const locationRequired = category === 'local' || category === 'clubs'
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) return
+    if (locationRequired && (!state || !zipCode.trim())) {
+      setError('State and zip code are required for local riding groups and clubs.')
+      return
+    }
 
     setSubmitting(true)
     setError(null)
@@ -181,7 +187,12 @@ export default function CreateGroupForm() {
 
       {/* Location */}
       <div>
-        <label className="block text-sm font-medium text-zinc-300 mb-1.5">Location (optional)</label>
+        <label className="block text-sm font-medium text-zinc-300 mb-1.5">
+          Location {category === 'local' || category === 'clubs' ? <span className="text-red-400">*</span> : <span className="text-zinc-600">(optional)</span>}
+        </label>
+        {(category === 'local' || category === 'clubs') && (
+          <p className="text-zinc-500 text-xs mb-2">State and zip code are required for local riding groups and clubs.</p>
+        )}
         <div className="space-y-2">
           <input
             type="text"
@@ -219,7 +230,7 @@ export default function CreateGroupForm() {
 
       <button
         type="submit"
-        disabled={!name.trim() || submitting}
+        disabled={!name.trim() || submitting || (locationRequired && (!state || !zipCode.trim()))}
         className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-2.5 rounded-xl transition-colors"
       >
         {submitting ? 'Creating...' : 'Create Group'}

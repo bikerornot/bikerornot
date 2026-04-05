@@ -12,7 +12,7 @@ import BottomNav from '@/app/components/BottomNav'
 import { getImageUrl } from '@/lib/supabase/image'
 import LeaderboardClient from './LeaderboardClient'
 
-export const metadata = { title: 'Guess the Harley — BikerOrNot' }
+export const metadata = { title: "What's That Harley? — BikerOrNot" }
 
 export default async function GamePage() {
   const supabase = await createClient()

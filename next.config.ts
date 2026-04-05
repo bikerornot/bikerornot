@@ -12,10 +12,6 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '25mb',
     },
-    scrollRestoration: true,
-    staleTimes: {
-      dynamic: 180,  // Cache dynamic pages for 3 minutes during client-side nav
-    },
   },
   images: {
     remotePatterns: [

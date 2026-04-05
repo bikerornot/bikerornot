@@ -3,7 +3,6 @@ import { Geist } from 'next/font/google'
 import Script from 'next/script'
 import Heartbeat from '@/app/components/Heartbeat'
 import ErrorLogger from '@/app/components/ErrorLogger'
-import ScrollRestoration from '@/app/components/ScrollRestoration'
 import './globals.css'
 
 const geist = Geist({ subsets: ['latin'] })
@@ -13,7 +12,7 @@ export const metadata: Metadata = {
   description: 'Connect with fellow riders, share your rides, and find your community.',
 }
 
-export default function RootLayout({ children, modal }: { children: React.ReactNode; modal: React.ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -53,9 +52,7 @@ export default function RootLayout({ children, modal }: { children: React.ReactN
 
         <Heartbeat />
         <ErrorLogger />
-        <ScrollRestoration />
         {children}
-        {modal}
 
         {/* Referral source capture — runs on every page so UTM params are
             caught on any landing page, not just /signup */}

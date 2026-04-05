@@ -24,34 +24,14 @@ interface Props {
   friendCount?: number
 }
 
-const FEED_CACHE_KEY = 'bon_feed_cache'
-
-function saveFeedCache(posts: Post[], cursor: string | null, hasMore: boolean) {
-  try {
-    sessionStorage.setItem(FEED_CACHE_KEY, JSON.stringify({ posts, cursor, hasMore, scrollY: window.scrollY, time: Date.now() }))
-  } catch { /* quota exceeded — ignore */ }
-}
-
-function loadFeedCache(): { posts: Post[]; cursor: string | null; hasMore: boolean; scrollY: number } | null {
-  try {
-    const raw = sessionStorage.getItem(FEED_CACHE_KEY)
-    if (!raw) return null
-    const data = JSON.parse(raw)
-    // Only use cache if less than 3 minutes old
-    if (Date.now() - data.time > 3 * 60 * 1000) return null
-    return data
-  } catch { return null }
-}
-
 export default function FeedClient({ currentUserId, currentUserProfile, userGroupIds = [], blockedUserIds = [], initialRiders = [], friendCount = 0 }: Props) {
-  const cached = useRef(loadFeedCache())
-  const [posts, setPosts] = useState<Post[]>(cached.current?.posts ?? [])
-  const [loading, setLoading] = useState(!cached.current)
+  const [posts, setPosts] = useState<Post[]>([])
+  const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState(cached.current?.hasMore ?? true)
+  const [hasMore, setHasMore] = useState(true)
   const [newPostCount, setNewPostCount] = useState(0)
   const [ad, setAd] = useState<AdData | null>(null)
-  const cursorRef = useRef<string | null>(cached.current?.cursor ?? null)
+  const cursorRef = useRef<string | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   const fetchPosts = useCallback(
@@ -137,11 +117,6 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
   )
 
   useEffect(() => {
-    if (cached.current) {
-      // Posts already loaded from cache — scroll restoration handled by ScrollRestoration component
-      cached.current = null
-      return
-    }
     fetchPosts()
       .then((data) => {
         setPosts(data)
@@ -201,35 +176,6 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
     setHasMore(data.length === PAGE_SIZE)
     setLoadingMore(false)
   }, [hasMore, loadingMore, fetchPosts])
-
-  // Save feed state for back-navigation restoration
-  const postsRef = useRef(posts)
-  const hasMoreRef = useRef(hasMore)
-  postsRef.current = posts
-  hasMoreRef.current = hasMore
-
-  useEffect(() => {
-    function save() {
-      if (postsRef.current.length > 0) {
-        saveFeedCache(postsRef.current, cursorRef.current, hasMoreRef.current)
-      }
-    }
-    // Save on visibility change (covers tab switches and navigation)
-    document.addEventListener('visibilitychange', save)
-    // Save periodically as user scrolls
-    let scrollTimer: ReturnType<typeof setTimeout>
-    function onScroll() {
-      clearTimeout(scrollTimer)
-      scrollTimer = setTimeout(save, 500)
-    }
-    window.addEventListener('scroll', onScroll, { passive: true })
-
-    return () => {
-      document.removeEventListener('visibilitychange', save)
-      window.removeEventListener('scroll', onScroll)
-      save() // Save on unmount (navigating away)
-    }
-  }, [])
 
   // Infinite scroll — fire loadMore when sentinel enters the viewport
   useEffect(() => {

@@ -99,8 +99,68 @@ export default function LocalGroupsCard({ currentUserId }: Props) {
         </button>
       </div>
 
-      {/* Scrollable card row */}
-      <div className="relative">
+      {/* Single group — full-width layout */}
+      {visible.length === 1 && (() => {
+        const group = visible[0]
+        const joined = joinedIds.has(group.id)
+        const joining = joiningIds.has(group.id)
+        const coverUrl = group.cover_photo_url ? getImageUrl('covers', group.cover_photo_url) : null
+        const location = [group.city, group.state].filter(Boolean).join(', ')
+
+        return (
+          <div>
+            <Link href={`/groups/${group.slug}`} className="block">
+              <div className="relative h-36 bg-zinc-800">
+                {coverUrl ? (
+                  <Image src={coverUrl} alt={group.name} fill className="object-cover" sizes="(max-width: 640px) 100vw, 640px" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                    <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            </Link>
+            <div className="px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <Link href={`/groups/${group.slug}`} className="text-base font-bold text-white hover:text-orange-400 transition-colors line-clamp-1">
+                    {group.name}
+                  </Link>
+                  <div className="flex items-center gap-3 mt-1 text-sm text-zinc-400">
+                    <span>{group.member_count} member{group.member_count !== 1 ? 's' : ''}</span>
+                    {location && (
+                      <span className="flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                        </svg>
+                        {location} · {group.distance_miles} mi
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => !joined && !joining && handleJoin(group.id)}
+                  disabled={joined || joining}
+                  className={`flex-shrink-0 text-sm font-semibold px-5 py-2 rounded-lg transition-colors ${
+                    joined ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
+                    : joining ? 'bg-zinc-700 text-zinc-400 cursor-default'
+                    : 'bg-orange-500 hover:bg-orange-600 text-white'
+                  }`}
+                >
+                  {joined ? 'Joined' : joining ? '...' : 'Join'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Multiple groups — scrollable card row */}
+      {visible.length > 1 && <div className="relative">
         {canScrollLeft && (
           <button
             onClick={() => scrollBy('left')}
@@ -211,7 +271,7 @@ export default function LocalGroupsCard({ currentUserId }: Props) {
             )
           })}
         </div>
-      </div>
+      </div>}
     </div>
   )
 }

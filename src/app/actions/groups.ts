@@ -1024,3 +1024,80 @@ export async function getSuggestedGroups(): Promise<SuggestedGroup[]> {
 
   return top.map(({ _score, ...g }) => g)
 }
+
+// ─── Nearby Local Riding Groups ────────────────────────────
+
+export interface NearbyLocalGroup {
+  id: string
+  name: string
+  slug: string
+  cover_photo_url: string | null
+  city: string | null
+  state: string | null
+  member_count: number
+  distance_miles: number
+}
+
+export async function getNearbyLocalGroups(): Promise<NearbyLocalGroup[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const admin = getServiceClient()
+
+  const [{ data: me }, { data: myGroups }] = await Promise.all([
+    admin.from('profiles').select('latitude, longitude').eq('id', user.id).single(),
+    admin.from('group_members').select('group_id').eq('user_id', user.id).eq('status', 'active'),
+  ])
+
+  if (!me?.latitude || !me?.longitude) return []
+
+  const myGroupIds = new Set((myGroups ?? []).map((m) => m.group_id))
+
+  // Fetch all local/clubs groups with coordinates
+  const { data: groups } = await admin
+    .from('groups')
+    .select('id, name, slug, cover_photo_url, city, state, latitude, longitude')
+    .eq('status', 'active')
+    .in('category', ['local', 'clubs'])
+    .not('latitude', 'is', null)
+    .not('longitude', 'is', null)
+
+  if (!groups || groups.length === 0) return []
+
+  // Filter to groups user hasn't joined, calculate distance, limit to 200 miles
+  const candidates = (groups as any[])
+    .filter((g) => !myGroupIds.has(g.id))
+    .map((g) => ({
+      ...g,
+      distance_miles: Math.round(haversine(me.latitude, me.longitude, g.latitude, g.longitude)),
+    }))
+    .filter((g) => g.distance_miles <= 200)
+    .sort((a, b) => a.distance_miles - b.distance_miles)
+
+  if (candidates.length === 0) return []
+
+  // Get member counts
+  const candidateIds = candidates.map((g) => g.id)
+  const { data: memberCounts } = await admin
+    .from('group_members')
+    .select('group_id')
+    .in('group_id', candidateIds)
+    .eq('status', 'active')
+
+  const countMap: Record<string, number> = {}
+  for (const m of memberCounts ?? []) {
+    countMap[m.group_id] = (countMap[m.group_id] ?? 0) + 1
+  }
+
+  return candidates.slice(0, 10).map((g) => ({
+    id: g.id,
+    name: g.name,
+    slug: g.slug,
+    cover_photo_url: g.cover_photo_url,
+    city: g.city,
+    state: g.state,
+    member_count: countMap[g.id] ?? 0,
+    distance_miles: g.distance_miles,
+  }))
+}

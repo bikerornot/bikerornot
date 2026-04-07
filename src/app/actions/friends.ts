@@ -230,6 +230,8 @@ export interface FriendCard {
   friends_since: string
   show_real_name: boolean
   starred: boolean
+  last_seen_at: string | null
+  show_online_status: boolean
 }
 
 export async function getPendingFriendRequests(): Promise<FriendRequestCard[]> {
@@ -385,6 +387,8 @@ export async function getMyFriends(): Promise<FriendCard[]> {
         friends_since: meta?.friends_since ?? '',
         show_real_name: p.show_real_name ?? false,
         starred: meta?.starred ?? false,
+        last_seen_at: (p as any).last_seen_at ?? null,
+        show_online_status: (p as any).show_online_status ?? true,
       }
     })
     .sort((a, b) => {

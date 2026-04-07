@@ -100,7 +100,8 @@ export default function BikeMatchCard({ currentUserId }: Props) {
   const visibleUsers = data.matches.filter((u) => statuses[u.id] !== 'sent')
   if (visibleUsers.length === 0) return null
 
-  const bikeLabel = `${data.bike.make} ${data.bike.model}`
+  const displayMake = data.bike.make === 'Harley-Davidson' ? 'H-D' : data.bike.make
+  const bikeLabel = `${displayMake} ${data.bike.model}`
 
   return (
     <div className="bg-zinc-900 sm:border sm:border-zinc-800 overflow-hidden rounded-2xl">

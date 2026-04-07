@@ -35,17 +35,28 @@ async function searchNearCoords(
 ): Promise<{ users: NearbyUser[]; error: string | null }> {
   const admin = getServiceClient()
 
-  const { data: profiles, error: profilesError } = await admin
-    .from('profiles')
-    .select('*')
-    .eq('onboarding_complete', true)
-    .eq('status', 'active')
-    .is('deactivated_at', null)
-    .not('latitude', 'is', null)
-    .neq('id', userId)
-
-  if (profilesError) return { users: [], error: profilesError.message }
-  if (!profiles || profiles.length === 0) return { users: [], error: null }
+  // Fetch in chunks to avoid Supabase's 1000-row default limit
+  const allProfiles: any[] = []
+  let page = 0
+  const PAGE_SIZE = 1000
+  while (true) {
+    const { data: chunk, error: chunkError } = await admin
+      .from('profiles')
+      .select('*')
+      .eq('onboarding_complete', true)
+      .eq('status', 'active')
+      .is('deactivated_at', null)
+      .not('latitude', 'is', null)
+      .neq('id', userId)
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+    if (chunkError) return { users: [], error: chunkError.message }
+    if (!chunk || chunk.length === 0) break
+    allProfiles.push(...chunk)
+    if (chunk.length < PAGE_SIZE) break
+    page++
+  }
+  const profiles = allProfiles
+  if (profiles.length === 0) return { users: [], error: null }
 
   const blockedIds = await getBlockedIds(userId, admin)
 

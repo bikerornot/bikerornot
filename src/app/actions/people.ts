@@ -26,19 +26,22 @@ export interface SearchFilters {
   relationshipStatus?: string[]
 }
 
+const SEARCH_PAGE_SIZE = 30
+
 /** Shared core: given a lat/lng, find and return nearby users with friendship statuses. */
 async function searchNearCoords(
   userId: string,
   coords: { lat: number; lng: number },
   radiusMiles: number,
-  filters: SearchFilters
-): Promise<{ users: NearbyUser[]; error: string | null }> {
+  filters: SearchFilters,
+  offset = 0
+): Promise<{ users: NearbyUser[]; error: string | null; hasMore: boolean }> {
   const admin = getServiceClient()
 
   // Fetch in chunks to avoid Supabase's 1000-row default limit
   const allProfiles: any[] = []
-  let page = 0
-  const PAGE_SIZE = 1000
+  let fetchPage = 0
+  const FETCH_SIZE = 1000
   while (true) {
     const { data: chunk, error: chunkError } = await admin
       .from('profiles')
@@ -48,15 +51,15 @@ async function searchNearCoords(
       .is('deactivated_at', null)
       .not('latitude', 'is', null)
       .neq('id', userId)
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
-    if (chunkError) return { users: [], error: chunkError.message }
+      .range(fetchPage * FETCH_SIZE, (fetchPage + 1) * FETCH_SIZE - 1)
+    if (chunkError) return { users: [], error: chunkError.message, hasMore: false }
     if (!chunk || chunk.length === 0) break
     allProfiles.push(...chunk)
-    if (chunk.length < PAGE_SIZE) break
-    page++
+    if (chunk.length < FETCH_SIZE) break
+    fetchPage++
   }
   const profiles = allProfiles
-  if (profiles.length === 0) return { users: [], error: null }
+  if (profiles.length === 0) return { users: [], error: null, hasMore: false }
 
   const blockedIds = await getBlockedIds(userId, admin)
 
@@ -74,9 +77,12 @@ async function searchNearCoords(
     .filter((p) => p.distanceMiles <= radiusMiles)
     .sort((a, b) => a.distanceMiles - b.distanceMiles)
 
-  if (nearby.length === 0) return { users: [], error: null }
+  if (nearby.length === 0) return { users: [], error: null, hasMore: false }
 
-  const nearbyIds = nearby.map((n) => n.profile.id)
+  const hasMore = nearby.length > offset + SEARCH_PAGE_SIZE
+  const page = nearby.slice(offset, offset + SEARCH_PAGE_SIZE)
+
+  const nearbyIds = page.map((n) => n.profile.id)
   const { data: friendships } = await admin
     .from('friendships')
     .select('requester_id, addressee_id, status')
@@ -101,12 +107,13 @@ async function searchNearCoords(
   }
 
   return {
-    users: nearby.map(({ profile, distanceMiles }) => ({
+    users: page.map(({ profile, distanceMiles }) => ({
       profile,
       distanceMiles: Math.round(distanceMiles * 10) / 10,
       friendshipStatus: friendshipMap.get(profile.id) ?? 'none',
     })),
     error: null,
+    hasMore,
   }
 }
 
@@ -178,42 +185,43 @@ export async function findUsersByUsername(
 export async function findNearbyUsers(
   zipCode: string,
   radiusMiles: number,
-  filters: SearchFilters = {}
-): Promise<{ users: NearbyUser[]; error: string | null }> {
+  filters: SearchFilters = {},
+  offset = 0
+): Promise<{ users: NearbyUser[]; error: string | null; hasMore: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { users: [], error: 'Not authenticated' }
+  if (!user) return { users: [], error: 'Not authenticated', hasMore: false }
 
   checkRateLimit(`findNearby:${user.id}`, 10, 60_000)
 
   const coords = await geocodeZip(zipCode)
-  if (!coords) return { users: [], error: 'Could not find that zip code. Please check and try again.' }
+  if (!coords) return { users: [], error: 'Could not find that zip code. Please check and try again.', hasMore: false }
 
-  return searchNearCoords(user.id, coords, radiusMiles, filters)
+  return searchNearCoords(user.id, coords, radiusMiles, filters, offset)
 }
 
 export async function findNearbyUsersByCity(
   city: string,
   stateAbbr: string,
   radiusMiles: number,
-  filters: SearchFilters = {}
-): Promise<{ users: NearbyUser[]; error: string | null }> {
+  filters: SearchFilters = {},
+  offset = 0
+): Promise<{ users: NearbyUser[]; error: string | null; hasMore: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { users: [], error: 'Not authenticated' }
+  if (!user) return { users: [], error: 'Not authenticated', hasMore: false }
 
   checkRateLimit(`findNearby:${user.id}`, 10, 60_000)
 
   const coords = await geocodeCity(city, stateAbbr)
-  if (!coords) return { users: [], error: `Could not find "${city}, ${stateAbbr}". Please check the city and state and try again.` }
+  if (!coords) return { users: [], error: `Could not find "${city}, ${stateAbbr}". Please check the city and state and try again.`, hasMore: false }
 
-  return searchNearCoords(user.id, coords, radiusMiles, filters)
+  return searchNearCoords(user.id, coords, radiusMiles, filters, offset)
 }
 
 /**
  * Default results shown before the user searches.
- * If the current user has stored coordinates, returns the 10 nearest riders.
- * Otherwise returns the 10 most recently joined members.
+ * Returns the 30 nearest riders who were active in the last 14 days.
  */
 export async function getDefaultPeopleResults(): Promise<NearbyUser[]> {
   const supabase = await createClient()
@@ -222,62 +230,61 @@ export async function getDefaultPeopleResults(): Promise<NearbyUser[]> {
 
   const admin = getServiceClient()
 
-  // Fetch current user's stored coordinates
   const { data: me } = await admin
     .from('profiles')
     .select('latitude, longitude')
     .eq('id', user.id)
     .single()
 
-  // Fetch up to 50 eligible profiles, most recently active first
-  const { data: raw } = await admin
-    .from('profiles')
-    .select('*')
-    .eq('onboarding_complete', true)
-    .eq('status', 'active')
-    .is('deactivated_at', null)
-    .neq('id', user.id)
-    .not('last_seen_at', 'is', null)
-    .order('last_seen_at', { ascending: false })
-    .limit(50)
+  const twoWeeksAgo = new Date(Date.now() - 14 * 86400000).toISOString()
 
-  if (!raw || raw.length === 0) return []
+  // Fetch active-in-last-14-days profiles with coordinates, paginated
+  const allProfiles: any[] = []
+  let page = 0
+  const PAGE_SIZE = 1000
+  while (true) {
+    const { data: chunk } = await admin
+      .from('profiles')
+      .select('*')
+      .eq('onboarding_complete', true)
+      .eq('status', 'active')
+      .is('deactivated_at', null)
+      .neq('id', user.id)
+      .not('latitude', 'is', null)
+      .gte('last_seen_at', twoWeeksAgo)
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+    if (!chunk || chunk.length === 0) break
+    allProfiles.push(...chunk)
+    if (chunk.length < PAGE_SIZE) break
+    page++
+  }
+
+  if (allProfiles.length === 0) return []
+
   const blockedIds = await getBlockedIds(user.id, admin)
-  const profiles = (raw as Profile[]).filter((p) => !blockedIds.has(p.id))
+  const profiles = (allProfiles as Profile[]).filter((p) => !blockedIds.has(p.id))
 
-  // Sort by distance when we have the user's coordinates
-  const distanceMap = new Map<string, number | null>()
-  let sorted: Profile[]
+  // Sort by distance (nearest first)
+  let sorted: { profile: Profile; distance: number | null }[]
 
   if (me?.latitude && me?.longitude) {
-    const withCoords = profiles
+    sorted = profiles
       .filter((p) => p.latitude && p.longitude)
       .map((p) => ({
         profile: p,
         distance: Math.round(haversine(me.latitude!, me.longitude!, p.latitude!, p.longitude!) * 10) / 10,
       }))
-      .sort((a, b) => a.distance - b.distance)
-
-    const top = withCoords.slice(0, 10)
-    sorted = top.map((w) => w.profile)
-    top.forEach((w) => distanceMap.set(w.profile.id, w.distance))
-
-    // Pad with newest if fewer than 10 have coordinates
-    if (sorted.length < 10) {
-      const seen = new Set(sorted.map((p) => p.id))
-      const rest = profiles.filter((p) => !seen.has(p.id)).slice(0, 10 - sorted.length)
-      sorted = [...sorted, ...rest]
-      rest.forEach((p) => distanceMap.set(p.id, null))
-    }
+      .sort((a, b) => (a.distance ?? 99999) - (b.distance ?? 99999))
+      .slice(0, 30)
   } else {
-    sorted = profiles.slice(0, 10)
-    sorted.forEach((p) => distanceMap.set(p.id, null))
+    // No coords — just show recently active
+    sorted = profiles.slice(0, 30).map((p) => ({ profile: p, distance: null }))
   }
 
   if (sorted.length === 0) return []
 
-  // Fetch friendship statuses in one query
-  const ids = sorted.map((p) => p.id)
+  // Fetch friendship statuses
+  const ids = sorted.map((s) => s.profile.id)
   const { data: friendships } = await admin
     .from('friendships')
     .select('requester_id, addressee_id, status')
@@ -301,9 +308,9 @@ export async function getDefaultPeopleResults(): Promise<NearbyUser[]> {
     }
   }
 
-  return sorted.map((p) => ({
-    profile: p,
-    distanceMiles: distanceMap.get(p.id) ?? null,
-    friendshipStatus: friendshipMap.get(p.id) ?? 'none',
+  return sorted.map(({ profile, distance }) => ({
+    profile,
+    distanceMiles: distance,
+    friendshipStatus: friendshipMap.get(profile.id) ?? 'none',
   }))
 }

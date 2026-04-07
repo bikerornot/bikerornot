@@ -249,6 +249,9 @@ export default function PeopleSearch({
   const [searchLabel, setSearchLabel] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [searching, startSearch] = useTransition()
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [searchOffset, setSearchOffset] = useState(0)
 
   // Derive label for default results
   const defaultHasDistances = initialResults.some((u) => u.distanceMiles !== null)
@@ -271,23 +274,50 @@ export default function PeopleSearch({
     if (rawFilters.relationshipStatus?.length) filters.relationshipStatus = rawFilters.relationshipStatus
 
     setError(null)
+    setSearchOffset(0)
     startSearch(async () => {
-      let result: { users: NearbyUser[]; error: string | null }
+      let result: { users: NearbyUser[]; error: string | null; hasMore: boolean }
       if (searchMode === 'city') {
-        result = await findNearbyUsersByCity(city.trim(), stateAbbr, radius, filters)
+        result = await findNearbyUsersByCity(city.trim(), stateAbbr, radius, filters, 0)
         setSearchLabel(`${city.trim()}, ${stateAbbr}`)
       } else {
-        result = await findNearbyUsers(zip.trim(), radius, filters)
+        result = await findNearbyUsers(zip.trim(), radius, filters, 0)
         setSearchLabel(zip.trim())
       }
       if (result.error) {
         setError(result.error)
         setResults(null)
+        setHasMore(false)
       } else {
         setResults(result.users)
+        setHasMore(result.hasMore)
+        setSearchOffset(result.users.length)
         setStatusOverrides({})
       }
     })
+  }
+
+  async function handleLoadMore() {
+    if (loadingMore || !hasMore) return
+    setLoadingMore(true)
+    const filters: SearchFilters = {}
+    if (genderFilter.length) filters.gender = genderFilter
+    if (relationshipFilter.length) filters.relationshipStatus = relationshipFilter
+
+    try {
+      let result: { users: NearbyUser[]; error: string | null; hasMore: boolean }
+      if (searchMode === 'city') {
+        result = await findNearbyUsersByCity(city.trim(), stateAbbr, radius, filters, searchOffset)
+      } else {
+        result = await findNearbyUsers(zip.trim(), radius, filters, searchOffset)
+      }
+      if (!result.error) {
+        setResults((prev) => [...(prev ?? []), ...result.users])
+        setHasMore(result.hasMore)
+        setSearchOffset((prev) => prev + result.users.length)
+      }
+    } catch { /* ignore */ }
+    setLoadingMore(false)
   }
 
   function handleUsernameSearch() {
@@ -566,6 +596,17 @@ export default function PeopleSearch({
               />
             ))}
           </div>
+          {hasMore && searchMode !== 'username' && (
+            <div className="text-center mt-6">
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors border border-zinc-700 disabled:opacity-50"
+              >
+                {loadingMore ? 'Loading...' : 'Load More'}
+              </button>
+            </div>
+          )}
         </>
       )}
 

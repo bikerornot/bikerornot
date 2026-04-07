@@ -57,7 +57,9 @@ export default async function FriendsPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         <h1 className="text-2xl font-bold text-white mb-6">Friends</h1>
-        <FriendsClient initialRequests={requests} initialFriends={friends} />
+        <FriendsClient initialRequests={requests} initialFriends={friends} onlineFriendCount={
+          friends.filter((f: any) => f.show_online_status !== false && f.last_seen_at && Date.now() - new Date(f.last_seen_at).getTime() < 5 * 60 * 1000).length
+        } />
       </div>
       <BottomNav />
     </div>

@@ -363,7 +363,7 @@ export async function getMyFriends(): Promise<FriendCard[]> {
 
   const { data: profiles } = await admin
     .from('profiles')
-    .select('id, username, first_name, last_name, profile_photo_url, city, state, riding_style, show_real_name')
+    .select('id, username, first_name, last_name, profile_photo_url, city, state, riding_style, show_real_name, last_seen_at, show_online_status')
     .in('id', friendIds)
     .eq('status', 'active')
     .is('deactivated_at', null)

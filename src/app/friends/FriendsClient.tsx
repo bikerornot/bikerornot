@@ -10,11 +10,12 @@ import { getImageUrl } from '@/lib/supabase/image'
 interface Props {
   initialRequests: FriendRequestCard[]
   initialFriends: FriendCard[]
+  onlineFriendCount?: number
 }
 
 type RequestStatus = 'idle' | 'accepting' | 'declining' | 'accepted' | 'declined'
 
-export default function FriendsClient({ initialRequests, initialFriends }: Props) {
+export default function FriendsClient({ initialRequests, initialFriends, onlineFriendCount = 0 }: Props) {
   const [tab, setTab] = useState<'requests' | 'friends'>(
     initialRequests.length > 0 ? 'requests' : 'friends'
   )
@@ -202,6 +203,12 @@ export default function FriendsClient({ initialRequests, initialFriends }: Props
                 placeholder="Search friends..."
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-600 transition-colors"
               />
+              {onlineFriendCount > 0 && (
+                <p className="flex items-center gap-1.5 text-sm text-zinc-400 mt-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+                  You have <span className="text-emerald-400 font-semibold">{onlineFriendCount}</span> friend{onlineFriendCount !== 1 ? 's' : ''} online!
+                </p>
+              )}
             </div>
           )}
 

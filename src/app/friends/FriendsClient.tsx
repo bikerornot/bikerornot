@@ -96,7 +96,7 @@ export default function FriendsClient({ initialRequests, initialFriends, onlineF
               : 'text-zinc-500 hover:text-zinc-300'
           }`}
         >
-          My Friends{friends.length > 0 && ` (${friends.length})`}
+          All{friends.length > 0 && ` (${friends.length})`}
         </button>
       </div>
 

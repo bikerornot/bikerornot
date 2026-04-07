@@ -524,6 +524,7 @@ export async function getEvents(): Promise<{
     .from('events')
     .select('*, creator:profiles!creator_id(id, username, first_name, last_name, profile_photo_url, phone_verified_at)')
     .eq('status', 'published')
+    .is('recurrence_parent_id', null)
     .gte('starts_at', new Date().toISOString())
     .order('starts_at', { ascending: true })
     .limit(100)
@@ -564,6 +565,7 @@ export async function getRecentEvents(): Promise<EventDetail[]> {
     .from('events')
     .select('*, creator:profiles!creator_id(id, username, first_name, last_name, profile_photo_url, phone_verified_at)')
     .in('status', ['published', 'completed'])
+    .is('recurrence_parent_id', null)
     .order('created_at', { ascending: false })
     .limit(10)
 
@@ -1201,6 +1203,7 @@ export async function searchEvents(filters: EventSearchFilters): Promise<EventDe
     .from('events')
     .select('*, creator:profiles!creator_id(id, username, first_name, last_name, profile_photo_url), group:groups!group_id(id, privacy)')
     .eq('status', 'published')
+    .is('recurrence_parent_id', null)
 
   if (filters.type) query = query.eq('type', filters.type)
   if (filters.category) query = query.eq('category', filters.category)

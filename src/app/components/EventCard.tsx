@@ -17,6 +17,7 @@ interface Props {
     interested_count: number
     category: string | null
     status: string
+    recurrence_rule?: string | null
     creator?: {
       username: string | null
       profile_photo_url: string | null
@@ -55,6 +56,11 @@ export default function EventCard({ event }: Props) {
           <span className={`text-sm font-semibold ${isCancelled ? 'text-red-400' : 'text-orange-400'}`}>
             {isCancelled ? 'Cancelled' : formatCardDate(event.starts_at)}
           </span>
+          {event.recurrence_rule && (
+            <span className="text-xs text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded-full">
+              {event.recurrence_rule === 'weekly' ? 'Weekly' : event.recurrence_rule === 'biweekly' ? 'Biweekly' : 'Monthly'}
+            </span>
+          )}
           <span className={`text-sm font-medium px-1.5 py-0.5 rounded-full ${
             event.type === 'ride' ? 'bg-blue-500/15 text-blue-400' : 'bg-zinc-800 text-zinc-400'
           }`}>

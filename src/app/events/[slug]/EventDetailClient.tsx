@@ -31,9 +31,10 @@ interface Props {
   currentUserId: string
   goingAttendees: any[]
   interestedAttendees: any[]
+  upcomingDates?: string[]
 }
 
-export default function EventDetailClient({ event, currentUserId, goingAttendees, interestedAttendees }: Props) {
+export default function EventDetailClient({ event, currentUserId, goingAttendees, interestedAttendees, upcomingDates = [] }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [myRsvp, setMyRsvp] = useState<RsvpStatus | null>(event.my_rsvp ?? null)
@@ -163,6 +164,27 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
             {event.ends_at && ` — ${formatEventTime(event.ends_at)}`}
           </span>
         </div>
+
+        {/* Recurring event notice */}
+        {event.recurrence_rule && (
+          <div className="mt-2">
+            <p className="text-sm text-orange-400 font-medium">
+              Repeats {event.recurrence_rule === 'weekly' ? 'every week' : event.recurrence_rule === 'biweekly' ? 'every two weeks' : 'every month'}
+            </p>
+            {upcomingDates.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {upcomingDates.slice(0, 6).map((date) => (
+                  <span key={date} className="text-xs bg-zinc-800 text-zinc-400 px-2 py-1 rounded-lg">
+                    {new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                ))}
+                {upcomingDates.length > 6 && (
+                  <span className="text-xs text-zinc-500 px-2 py-1">+{upcomingDates.length - 6} more</span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Location */}
         {location && (

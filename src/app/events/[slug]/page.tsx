@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getImageUrl } from '@/lib/supabase/image'
 import Logo from '@/app/components/Logo'
 import DesktopNav from '@/app/components/DesktopNav'
@@ -35,6 +36,23 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
 
   const event = await getEvent(slug)
   if (!event) notFound()
+
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // Fetch upcoming dates for recurring events
+  let upcomingDates: string[] = []
+  if (event.recurrence_rule) {
+    const { data: instances } = await admin
+      .from('events')
+      .select('starts_at')
+      .eq('recurrence_parent_id', event.id)
+      .gte('starts_at', new Date().toISOString())
+      .order('starts_at', { ascending: true })
+    upcomingDates = (instances ?? []).map((i) => i.starts_at)
+  }
 
   const [goingAttendees, interestedAttendees] = await Promise.all([
     getEventAttendees(event.id, 'going'),
@@ -85,6 +103,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
           currentUserId={user.id}
           goingAttendees={goingAttendees}
           interestedAttendees={interestedAttendees}
+          upcomingDates={upcomingDates}
         />
       </div>
       <BottomNav />

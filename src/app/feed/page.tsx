@@ -50,18 +50,6 @@ export default async function FeedPage() {
     await admin.from('profiles').update({ deactivated_at: null }).eq('id', user.id)
   }
 
-  // New user with no posts and no friends — send to welcome page for guided onboarding
-  if (profile.onboarding_complete) {
-    const admin = createServiceClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-    const [{ count: postCount }, { count: friendCount }] = await Promise.all([
-      admin.from('posts').select('*', { count: 'exact', head: true }).eq('author_id', user.id).is('deleted_at', null),
-      admin.from('friendships').select('*', { count: 'exact', head: true }).eq('status', 'accepted').or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
-    ])
-    if ((postCount ?? 0) === 0 && (friendCount ?? 0) === 0) redirect('/welcome')
-  }
 
   // Fetch user's active group IDs for feed filtering
   const { data: groupMemberships } = await supabase

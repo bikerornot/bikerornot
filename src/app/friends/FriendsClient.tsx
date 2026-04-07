@@ -16,7 +16,7 @@ interface Props {
 type RequestStatus = 'idle' | 'accepting' | 'declining' | 'accepted' | 'declined'
 
 export default function FriendsClient({ initialRequests, initialFriends, onlineFriendCount = 0 }: Props) {
-  const [tab, setTab] = useState<'requests' | 'friends'>(
+  const [tab, setTab] = useState<'requests' | 'friends' | 'online'>(
     initialRequests.length > 0 ? 'requests' : 'friends'
   )
   const [requests, setRequests] = useState(initialRequests)
@@ -79,6 +79,16 @@ export default function FriendsClient({ initialRequests, initialFriends, onlineF
           Requests{visibleRequests.length > 0 && ` (${visibleRequests.length})`}
         </button>
         <button
+          onClick={() => setTab('online')}
+          className={`flex-1 text-sm font-medium py-2 rounded-lg transition-colors ${
+            tab === 'online'
+              ? 'bg-zinc-800 text-white'
+              : 'text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          Online{onlineFriendCount > 0 && ` (${onlineFriendCount})`}
+        </button>
+        <button
           onClick={() => setTab('friends')}
           className={`flex-1 text-sm font-medium py-2 rounded-lg transition-colors ${
             tab === 'friends'
@@ -89,6 +99,63 @@ export default function FriendsClient({ initialRequests, initialFriends, onlineF
           My Friends{friends.length > 0 && ` (${friends.length})`}
         </button>
       </div>
+
+      {/* Online tab */}
+      {tab === 'online' && (() => {
+        const onlineFriends = friends.filter((f: any) =>
+          f.show_online_status !== false && f.last_seen_at &&
+          Date.now() - new Date(f.last_seen_at).getTime() < 5 * 60 * 1000
+        )
+        return (
+          <div>
+            {onlineFriends.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-zinc-500 text-sm">No friends are online right now</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {onlineFriends.map((f) => {
+                  const photo = f.profile_photo_url
+                    ? getImageUrl('avatars', f.profile_photo_url)
+                    : null
+                  const location = [f.city, f.state].filter(Boolean).join(', ')
+
+                  return (
+                    <div
+                      key={f.id}
+                      className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3"
+                    >
+                      <Link href={`/profile/${f.username}`} className="flex-shrink-0 relative">
+                        <div className="w-12 h-12 rounded-full bg-zinc-700 overflow-hidden">
+                          {photo ? (
+                            <Image src={photo} alt="" width={48} height={48} className="object-cover w-full h-full" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-lg">
+                              {(f.show_real_name ? f.first_name?.[0] : f.username?.[0] ?? '?').toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-zinc-900" />
+                      </Link>
+                      <Link href={`/profile/${f.username}`} className="flex-1 min-w-0">
+                        <p className="text-white font-semibold text-base truncate">
+                          {f.show_real_name ? `${f.first_name} ${f.last_name}` : `@${f.username}`}
+                        </p>
+                        {f.show_real_name && f.username && (
+                          <p className="text-zinc-500 text-sm truncate">@{f.username}</p>
+                        )}
+                        {location && !f.show_real_name && (
+                          <p className="text-zinc-600 text-sm truncate">{location}</p>
+                        )}
+                      </Link>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Requests tab */}
       {tab === 'requests' && (

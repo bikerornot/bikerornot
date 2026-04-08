@@ -375,3 +375,83 @@ export async function sendMentionEmail({
     `),
   })
 }
+
+// ─── Weekly Digest ──────────────────────────────────────────
+
+interface NearbyRiderDigest {
+  username: string
+  firstName: string
+  city: string | null
+  state: string | null
+  bike: string | null
+  profilePhotoUrl: string | null
+}
+
+export async function sendWeeklyDigestEmail({
+  toEmail,
+  toName,
+  nearbyRiders,
+  totalNearby,
+}: {
+  toEmail: string
+  toName: string
+  nearbyRiders: NearbyRiderDigest[]
+  totalNearby: number
+}) {
+  const ridersHtml = nearbyRiders.map((r) => {
+    const location = [r.city, r.state].filter(Boolean).join(', ')
+    const photoUrl = r.profilePhotoUrl
+      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${r.profilePhotoUrl}`
+      : null
+    const avatar = photoUrl
+      ? `<img src="${photoUrl}" width="44" height="44" style="width:44px;height:44px;border-radius:50%;object-fit:cover;" alt="" />`
+      : `<div style="width:44px;height:44px;border-radius:50%;background:#3f3f46;line-height:44px;text-align:center;color:#a1a1aa;font-weight:700;font-size:16px;">${(r.firstName?.[0] ?? '?').toUpperCase()}</div>`
+
+    return `
+      <tr>
+        <td style="padding:8px 0;">
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              <td width="52" valign="top">${avatar}</td>
+              <td style="padding-left:12px;" valign="middle">
+                <a href="${BASE_URL}/profile/${r.username}" style="color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;">@${r.username}</a>
+                ${location ? `<br/><span style="color:#a1a1aa;font-size:13px;">${location}</span>` : ''}
+                ${r.bike ? `<br/><span style="color:#f97316;font-size:13px;">${r.bike}</span>` : ''}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`
+  }).join('')
+
+  const moreText = totalNearby > nearbyRiders.length
+    ? `<p style="margin:16px 0 0;font-size:14px;color:#71717a;">+ ${totalNearby - nearbyRiders.length} more new riders near you</p>`
+    : ''
+
+  await resend.emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: `${totalNearby} new rider${totalNearby !== 1 ? 's' : ''} joined near you this week`,
+    html: layout(`
+      <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">
+        New riders near you
+      </h1>
+      <p style="margin:0 0 20px;font-size:15px;color:#a1a1aa;line-height:1.6;">
+        Hey ${toName}, ${totalNearby} new rider${totalNearby !== 1 ? 's' : ''} joined BikerOrNot near you this week.
+      </p>
+      <table cellpadding="0" cellspacing="0" width="100%">
+        ${ridersHtml}
+      </table>
+      ${moreText}
+      <table cellpadding="0" cellspacing="0" style="margin-top:24px;">
+        <tr>
+          <td>
+            <a href="${BASE_URL}/people" style="display:inline-block;background:#f97316;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:10px;">
+              See Who Joined
+            </a>
+          </td>
+        </tr>
+      </table>
+    `),
+  })
+}

@@ -31,6 +31,8 @@ export async function GET(request: Request) {
   const oneWeekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
   const url = new URL(request.url)
   const testUsername = url.searchParams.get('test')
+  const batchStart = parseInt(url.searchParams.get('start') ?? '0')
+  const batchSize = parseInt(url.searchParams.get('size') ?? '500')
 
   // 1. Fetch new signups (active, not deactivated, not banned)
   const { data: newSignups } = await admin
@@ -70,34 +72,30 @@ export async function GET(request: Request) {
       .single()
     if (testUser) recipients.push(testUser)
   } else {
-    let page = 0
-    while (true) {
-      const { data: chunk } = await admin
-        .from('profiles')
-        .select('id, first_name, latitude, longitude, email_weekly_digest')
-        .eq('onboarding_complete', true)
-        .eq('status', 'active')
-        .is('deactivated_at', null)
-        .not('latitude', 'is', null)
-        .range(page * 1000, (page + 1) * 1000 - 1)
-      if (!chunk || chunk.length === 0) break
-      recipients.push(...chunk)
-      if (chunk.length < 1000) break
-      page++
-    }
+    const { data: chunk } = await admin
+      .from('profiles')
+      .select('id, first_name, latitude, longitude, email_weekly_digest')
+      .eq('onboarding_complete', true)
+      .eq('status', 'active')
+      .is('deactivated_at', null)
+      .not('latitude', 'is', null)
+      .order('created_at', { ascending: true })
+      .range(batchStart, batchStart + batchSize - 1)
+    if (chunk) recipients.push(...chunk)
   }
 
-  // 4. Pre-fetch ALL auth user emails in bulk (avoid per-user API calls)
+  // 4. Fetch emails for this batch of recipients only
   const emailMap = new Map<string, string>()
-  let authPage = 1
-  while (true) {
-    const { data: { users }, error } = await admin.auth.admin.listUsers({ page: authPage, perPage: 1000 })
-    if (error || !users || users.length === 0) break
-    for (const u of users) {
-      if (u.email) emailMap.set(u.id, u.email)
+  const recipientBatchIds = recipients.map((r) => r.id)
+  // Fetch emails in chunks of 50 to avoid overloading auth API
+  for (let i = 0; i < recipientBatchIds.length; i += 50) {
+    const chunk = recipientBatchIds.slice(i, i + 50)
+    const results = await Promise.all(
+      chunk.map((id) => admin.auth.admin.getUserById(id).then(({ data }) => ({ id, email: data?.user?.email })))
+    )
+    for (const r of results) {
+      if (r.email) emailMap.set(r.id, r.email)
     }
-    if (users.length < 1000) break
-    authPage++
   }
 
   // 5. Pre-fetch ALL pending friend requests in one query
@@ -187,8 +185,11 @@ export async function GET(request: Request) {
   return NextResponse.json({
     message: 'Weekly digest complete',
     newSignups: newSignups.length,
+    batchStart,
+    batchSize,
     recipients: recipients.length,
     sent,
     skipped,
+    nextBatch: recipients.length === batchSize ? batchStart + batchSize : null,
   })
 }

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getImageUrl } from '@/lib/supabase/image'
-import { rsvpEvent, cancelRsvp, cancelEvent, type EventDetail, type RsvpStatus } from '@/app/actions/events'
+import { rsvpEvent, cancelRsvp, cancelEvent, getEventAttendees, type EventDetail, type RsvpStatus } from '@/app/actions/events'
 import VerifiedBadge from '@/app/components/VerifiedBadge'
 import InviteToEventButton from './InviteToEventButton'
 import ShareToGroupButton from './ShareToGroupButton'
@@ -29,20 +29,31 @@ function formatEventTime(dateStr: string): string {
 interface Props {
   event: EventDetail
   currentUserId: string
-  goingAttendees: any[]
-  interestedAttendees: any[]
+  goingList: any[]
+  interestedList: any[]
   upcomingDates?: string[]
 }
 
-export default function EventDetailClient({ event, currentUserId, goingAttendees, interestedAttendees, upcomingDates = [] }: Props) {
+export default function EventDetailClient({ event, currentUserId, goingList: initialGoing, interestedList: initialInterested, upcomingDates = [] }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
   const [myRsvp, setMyRsvp] = useState<RsvpStatus | null>(event.my_rsvp ?? null)
   const [goingCount, setGoingCount] = useState(event.going_count)
   const [interestedCount, setInterestedCount] = useState(event.interested_count)
+  const [goingList, setGoingList] = useState(initialGoing)
+  const [interestedList, setInterestedList] = useState(initialInterested)
   const [rsvpBusy, setRsvpBusy] = useState(false)
   const [tab, setTab] = useState<'details' | 'attendees'>('details')
   const [cancelBusy, setCancelBusy] = useState(false)
+
+  async function refreshAttendees() {
+    const [going, interested] = await Promise.all([
+      getEventAttendees(event.id, 'going'),
+      getEventAttendees(event.id, 'interested'),
+    ])
+    setGoingList(going)
+    setInterestedList(interested)
+  }
 
   const isCreator = event.creator_id === currentUserId
   const isCancelled = event.status === 'cancelled'
@@ -71,6 +82,7 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
       else setInterestedCount((c) => c - 1)
       try {
         await cancelRsvp(event.id)
+        refreshAttendees()
       } catch {
         setMyRsvp(oldStatus)
         if (oldStatus === 'going') setGoingCount((c) => c + 1)
@@ -96,11 +108,11 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
     try {
       const result = await rsvpEvent(event.id, status)
       if (result.error && result.error.includes('full')) {
-        // Was forced to interested
         setMyRsvp('interested')
         setGoingCount(oldGoing)
         setInterestedCount(oldInterested + 1)
       }
+      refreshAttendees()
     } catch {
       setMyRsvp(oldRsvp)
       setGoingCount(oldGoing)
@@ -394,12 +406,12 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
         <div className="px-4 py-4 space-y-4">
           {/* Going */}
           <div>
-            <h3 className="text-sm font-semibold text-zinc-400 mb-2">Going ({goingAttendees.length})</h3>
-            {goingAttendees.length === 0 ? (
+            <h3 className="text-sm font-semibold text-zinc-400 mb-2">Going ({goingList.length})</h3>
+            {goingList.length === 0 ? (
               <p className="text-zinc-600 text-sm">No one yet</p>
             ) : (
               <div className="space-y-2">
-                {goingAttendees.map((a: any) => (
+                {goingList.map((a: any) => (
                   <AttendeeRow key={a.user.id} profile={a.user} />
                 ))}
               </div>
@@ -408,12 +420,12 @@ export default function EventDetailClient({ event, currentUserId, goingAttendees
 
           {/* Interested */}
           <div>
-            <h3 className="text-sm font-semibold text-zinc-400 mb-2">Interested ({interestedAttendees.length})</h3>
-            {interestedAttendees.length === 0 ? (
+            <h3 className="text-sm font-semibold text-zinc-400 mb-2">Interested ({interestedList.length})</h3>
+            {interestedList.length === 0 ? (
               <p className="text-zinc-600 text-sm">No one yet</p>
             ) : (
               <div className="space-y-2">
-                {interestedAttendees.map((a: any) => (
+                {interestedList.map((a: any) => (
                   <AttendeeRow key={a.user.id} profile={a.user} />
                 ))}
               </div>

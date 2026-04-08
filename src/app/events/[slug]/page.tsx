@@ -101,8 +101,8 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
         <EventDetailClient
           event={event}
           currentUserId={user.id}
-          goingAttendees={goingAttendees}
-          interestedAttendees={interestedAttendees}
+          goingList={goingAttendees}
+          interestedList={interestedAttendees}
           upcomingDates={upcomingDates}
         />
       </div>

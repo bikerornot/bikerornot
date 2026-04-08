@@ -53,7 +53,7 @@ export default function EventCard({ event }: Props) {
       <div className="px-4 py-3">
         {/* Date + type badge */}
         <div className="flex items-center gap-2 mb-1">
-          <span className={`text-sm font-semibold ${isCancelled ? 'text-red-400' : 'text-orange-400'}`}>
+          <span className={`text-base sm:text-sm font-semibold ${isCancelled ? 'text-red-400' : 'text-orange-400'}`}>
             {isCancelled ? 'Cancelled' : formatCardDate(event.starts_at)}
           </span>
           {event.recurrence_rule && (
@@ -69,24 +69,24 @@ export default function EventCard({ event }: Props) {
         </div>
 
         {/* Title */}
-        <h3 className={`text-base font-semibold ${isCancelled ? 'text-zinc-500 line-through' : 'text-white'}`}>
+        <h3 className={`text-lg sm:text-base font-semibold ${isCancelled ? 'text-zinc-500 line-through' : 'text-white'}`}>
           {event.title}
         </h3>
 
         {/* Location */}
         {location && (
-          <p className="text-zinc-500 text-sm mt-0.5 truncate">{location}</p>
+          <p className="text-zinc-400 text-base sm:text-sm mt-0.5 truncate">{location}</p>
         )}
 
         {/* Attendance */}
         <div className="flex items-center gap-3 mt-2">
           {event.going_count > 0 && (
-            <span className="text-zinc-400 text-sm">
+            <span className="text-zinc-300 text-base sm:text-sm">
               {event.going_count} going
             </span>
           )}
           {event.interested_count > 0 && (
-            <span className="text-zinc-500 text-sm">
+            <span className="text-zinc-400 text-base sm:text-sm">
               {event.interested_count} interested
             </span>
           )}

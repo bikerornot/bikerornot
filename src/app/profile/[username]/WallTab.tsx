@@ -35,7 +35,7 @@ export default function WallTab({
 
       const base = supabase
         .from('posts')
-        .select('*, author:profiles!author_id(*), images:post_images(*)')
+        .select('*, author:profiles!author_id(*), images:post_images(*), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, status)')
         .or(`wall_owner_id.eq.${profileId},and(author_id.eq.${profileId},wall_owner_id.is.null,group_id.is.null,bike_id.is.null)`)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })

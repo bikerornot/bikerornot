@@ -67,14 +67,14 @@ export async function GET(request: Request) {
   if (testUsername) {
     const { data: testUser } = await admin
       .from('profiles')
-      .select('id, first_name, latitude, longitude, email_weekly_digest')
+      .select('id, first_name, latitude, longitude, email_weekly_digest, last_digest_sent_at')
       .eq('username', testUsername)
       .single()
     if (testUser) recipients.push(testUser)
   } else {
     const { data: chunk } = await admin
       .from('profiles')
-      .select('id, first_name, latitude, longitude, email_weekly_digest')
+      .select('id, first_name, latitude, longitude, email_weekly_digest, last_digest_sent_at')
       .eq('onboarding_complete', true)
       .eq('status', 'active')
       .is('deactivated_at', null)
@@ -134,6 +134,8 @@ export async function GET(request: Request) {
   for (const user of recipients) {
     if (user.email_weekly_digest === false) { skipped++; continue }
     if (newIds.includes(user.id)) continue
+    // Skip if already sent this week (prevents duplicates on retry)
+    if (user.last_digest_sent_at && Date.now() - new Date(user.last_digest_sent_at).getTime() < 6 * 86400000) { skipped++; continue }
 
     const friendIds = friendSets.get(user.id) ?? new Set()
     const pendingRequests = pendingMap.get(user.id) ?? 0
@@ -171,6 +173,8 @@ export async function GET(request: Request) {
         totalNearby: nearby.length,
         pendingRequests,
       })
+      // Mark as sent to prevent duplicates on retry
+      await admin.from('profiles').update({ last_digest_sent_at: new Date().toISOString() }).eq('id', user.id)
       sent++
     } catch (err) {
       console.error(`Weekly digest failed for ${user.id}:`, err)

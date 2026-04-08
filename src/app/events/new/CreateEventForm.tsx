@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createEvent, type EventType, type EventCategory, type RecurrenceRule } from '@/app/actions/events'
+import { extractFlyerData } from '@/app/actions/flyer-extract'
 import { compressImage } from '@/lib/compress'
 
 const RIDE_CATEGORIES: { value: EventCategory; label: string }[] = [
@@ -73,6 +74,9 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [extracting, setExtracting] = useState(false)
+  const [flyerSkipped, setFlyerSkipped] = useState(false)
+  const extractRef = useRef<HTMLInputElement>(null)
 
   async function handleCoverSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -134,6 +138,64 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
 
   function updateStop(idx: number, field: string, value: string) {
     setStops(stops.map((s, i) => i === idx ? { ...s, [field]: value } : s))
+  }
+
+  async function handleFlyerExtract(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setError(null)
+    setExtracting(true)
+
+    try {
+      const compressed = await compressImage(file, 2, 2048)
+      if (flyerPreview) URL.revokeObjectURL(flyerPreview)
+      setFlyerFile(compressed)
+      setFlyerPreview(URL.createObjectURL(compressed))
+
+      // Convert to base64 for AI extraction
+      const buffer = await compressed.arrayBuffer()
+      const bytes = new Uint8Array(buffer)
+      let binary = ''
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+      const base64 = btoa(binary)
+
+      const data = await extractFlyerData(base64)
+
+      if (data.title) setTitle(data.title)
+      if (data.type) setType(data.type)
+      if (data.category) setCategory(data.category as EventCategory)
+      if (data.description) setDescription(data.description)
+      if (data.startsAt) {
+        const d = new Date(data.startsAt)
+        if (!isNaN(d.getTime())) {
+          const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+          setStartsAt(local)
+        }
+      }
+      if (data.endsAt) {
+        const d = new Date(data.endsAt)
+        if (!isNaN(d.getTime())) {
+          const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+          setEndsAt(local)
+        }
+      }
+      if (data.venueName) setVenueName(data.venueName)
+      if (data.address) setAddress(data.address)
+      else if (data.city) setAddress(data.city + (data.state ? `, ${data.state}` : ''))
+      if (data.zipCode) setZipCode(data.zipCode)
+      if (data.endAddress || data.endCity) {
+        setEndAddress(data.endAddress ?? `${data.endCity ?? ''}${data.endState ? `, ${data.endState}` : ''}`)
+      }
+      if (data.endZipCode) setEndZipCode(data.endZipCode)
+
+      setFlyerSkipped(true)
+    } catch {
+      setError('Failed to read the flyer. Please fill out the details manually.')
+      setFlyerSkipped(true)
+    } finally {
+      setExtracting(false)
+    }
   }
 
   const submittingRef = useRef(false)
@@ -210,7 +272,52 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
         </div>
       )}
 
-      {type && <>
+      {type && !flyerSkipped && !extracting && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 text-center">
+          <h2 className="text-lg font-bold text-white mb-2">
+            Do you have a flyer for this {isRide ? 'ride' : 'event'}?
+          </h2>
+          <p className="text-zinc-400 text-sm mb-4">
+            Upload it and we'll fill out the details for you
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button
+              type="button"
+              onClick={() => extractRef.current?.click()}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
+              Upload Flyer
+            </button>
+            <button
+              type="button"
+              onClick={() => setFlyerSkipped(true)}
+              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm border border-zinc-700"
+            >
+              No, skip
+            </button>
+          </div>
+          <input
+            ref={extractRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleFlyerExtract}
+          />
+        </div>
+      )}
+
+      {extracting && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full mx-auto mb-3" />
+          <p className="text-white font-semibold">Reading your flyer...</p>
+          <p className="text-zinc-400 text-sm mt-1">Extracting event details</p>
+        </div>
+      )}
+
+      {type && flyerSkipped && <>
 
       {/* ── Section 1: The Basics ──────────────────────────────── */}
       <div className="space-y-4">

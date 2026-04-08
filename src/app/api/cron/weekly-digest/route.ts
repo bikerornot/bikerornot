@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendWeeklyDigestEmail } from '@/lib/email'
 
+export const maxDuration = 300
+
 function getServiceClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,8 +21,6 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-export const maxDuration = 300 // 5 minutes max for Vercel Pro
-
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -29,12 +29,10 @@ export async function GET(request: Request) {
 
   const admin = getServiceClient()
   const oneWeekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
-
-  // Optional: test mode — only send to a specific user
   const url = new URL(request.url)
   const testUsername = url.searchParams.get('test')
 
-  // Fetch all new signups from the last 7 days with coordinates
+  // 1. Fetch new signups (active, not deactivated, not banned)
   const { data: newSignups } = await admin
     .from('profiles')
     .select('id, username, first_name, city, state, latitude, longitude, profile_photo_url')
@@ -48,13 +46,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: 'No new signups this week', sent: 0 })
   }
 
-  // Fetch bikes for new signups
   const newIds = newSignups.map((s) => s.id)
+
+  // 2. Fetch bikes for new signups
   const { data: bikes } = await admin
     .from('user_bikes')
     .select('user_id, year, make, model')
     .in('user_id', newIds)
-
   const bikeMap: Record<string, string> = {}
   for (const b of bikes ?? []) {
     if (!bikeMap[b.user_id] && b.year && b.make && b.model) {
@@ -62,7 +60,7 @@ export async function GET(request: Request) {
     }
   }
 
-  // Fetch recipients — test mode sends to one user, full mode paginates all
+  // 3. Fetch recipients
   const recipients: any[] = []
   if (testUsername) {
     const { data: testUser } = await admin
@@ -73,7 +71,6 @@ export async function GET(request: Request) {
     if (testUser) recipients.push(testUser)
   } else {
     let page = 0
-    const PAGE_SIZE = 1000
     while (true) {
       const { data: chunk } = await admin
         .from('profiles')
@@ -82,57 +79,83 @@ export async function GET(request: Request) {
         .eq('status', 'active')
         .is('deactivated_at', null)
         .not('latitude', 'is', null)
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+        .range(page * 1000, (page + 1) * 1000 - 1)
       if (!chunk || chunk.length === 0) break
       recipients.push(...chunk)
-      if (chunk.length < PAGE_SIZE) break
+      if (chunk.length < 1000) break
       page++
     }
   }
 
+  // 4. Pre-fetch ALL auth user emails in bulk (avoid per-user API calls)
+  const emailMap = new Map<string, string>()
+  let authPage = 1
+  while (true) {
+    const { data: { users }, error } = await admin.auth.admin.listUsers({ page: authPage, perPage: 1000 })
+    if (error || !users || users.length === 0) break
+    for (const u of users) {
+      if (u.email) emailMap.set(u.id, u.email)
+    }
+    if (users.length < 1000) break
+    authPage++
+  }
+
+  // 5. Pre-fetch ALL pending friend requests in one query
+  const { data: allPending } = await admin
+    .from('friendships')
+    .select('addressee_id')
+    .eq('status', 'pending')
+  const pendingMap = new Map<string, number>()
+  for (const p of allPending ?? []) {
+    pendingMap.set(p.addressee_id, (pendingMap.get(p.addressee_id) ?? 0) + 1)
+  }
+
+  // 6. Pre-fetch ALL friendships for friend exclusion
+  const { data: allFriendships } = await admin
+    .from('friendships')
+    .select('requester_id, addressee_id')
+
+  // Build friend sets per user (only for users in recipients)
+  const recipientIds = new Set(recipients.map((r) => r.id))
+  const friendSets = new Map<string, Set<string>>()
+  for (const f of allFriendships ?? []) {
+    if (recipientIds.has(f.requester_id)) {
+      if (!friendSets.has(f.requester_id)) friendSets.set(f.requester_id, new Set())
+      friendSets.get(f.requester_id)!.add(f.addressee_id)
+    }
+    if (recipientIds.has(f.addressee_id)) {
+      if (!friendSets.has(f.addressee_id)) friendSets.set(f.addressee_id, new Set())
+      friendSets.get(f.addressee_id)!.add(f.requester_id)
+    }
+  }
+
+  // 7. Process each recipient
   let sent = 0
   let skipped = 0
 
   for (const user of recipients) {
-    // Skip users who opted out
     if (user.email_weekly_digest === false) { skipped++; continue }
-
-    // Skip new signups themselves — don't tell them about themselves
     if (newIds.includes(user.id)) continue
 
-    // Get user's friend IDs + count pending requests
-    const [{ data: friendships }, { count: pendingRequests }] = await Promise.all([
-      admin.from('friendships').select('requester_id, addressee_id')
-        .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
-      admin.from('friendships').select('*', { count: 'exact', head: true })
-        .eq('addressee_id', user.id).eq('status', 'pending'),
-    ])
-    const friendIds = new Set((friendships ?? []).map((f) =>
-      f.requester_id === user.id ? f.addressee_id : f.requester_id
-    ))
+    const friendIds = friendSets.get(user.id) ?? new Set()
+    const pendingRequests = pendingMap.get(user.id) ?? 0
 
-    // Find new signups within 50 miles of this user, excluding friends
     const nearby = newSignups
       .filter((s) => {
         if (!s.latitude || !s.longitude) return false
         if (friendIds.has(s.id)) return false
         return haversine(user.latitude, user.longitude, s.latitude, s.longitude) <= 50
       })
-      .sort((a, b) => {
-        const distA = haversine(user.latitude, user.longitude, a.latitude!, a.longitude!)
-        const distB = haversine(user.latitude, user.longitude, b.latitude!, b.longitude!)
-        return distA - distB
-      })
+      .sort((a, b) =>
+        haversine(user.latitude, user.longitude, a.latitude!, a.longitude!) -
+        haversine(user.latitude, user.longitude, b.latitude!, b.longitude!)
+      )
 
-    // Skip if no new riders nearby AND no pending requests
-    if (nearby.length === 0 && (pendingRequests ?? 0) === 0) { skipped++; continue }
+    if (nearby.length === 0 && pendingRequests === 0) { skipped++; continue }
 
-    // Get user's email from auth
-    const { data: authData } = await admin.auth.admin.getUserById(user.id)
-    const email = authData?.user?.email
+    const email = emailMap.get(user.id)
     if (!email) { skipped++; continue }
 
-    // Build rider list (show up to 5)
     const riderList = nearby.slice(0, 5).map((r) => ({
       username: r.username ?? 'unknown',
       firstName: r.first_name ?? '',
@@ -148,22 +171,23 @@ export async function GET(request: Request) {
         toName: user.first_name ?? 'there',
         nearbyRiders: riderList,
         totalNearby: nearby.length,
-        pendingRequests: pendingRequests ?? 0,
+        pendingRequests,
       })
       sent++
     } catch (err) {
       console.error(`Weekly digest failed for ${user.id}:`, err)
     }
 
-    // Rate limit: small delay between emails to avoid hitting Resend limits
+    // Rate limit: pause every 10 emails
     if (sent % 10 === 0) {
       await new Promise((r) => setTimeout(r, 1000))
     }
   }
 
   return NextResponse.json({
-    message: `Weekly digest complete`,
+    message: 'Weekly digest complete',
     newSignups: newSignups.length,
+    recipients: recipients.length,
     sent,
     skipped,
   })

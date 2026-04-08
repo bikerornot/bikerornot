@@ -100,10 +100,20 @@ export async function GET(request: Request) {
     // Skip new signups themselves — don't tell them about themselves
     if (newIds.includes(user.id)) continue
 
-    // Find new signups within 50 miles of this user
+    // Get user's friend IDs to exclude from digest
+    const { data: friendships } = await admin
+      .from('friendships')
+      .select('requester_id, addressee_id')
+      .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+    const friendIds = new Set((friendships ?? []).map((f) =>
+      f.requester_id === user.id ? f.addressee_id : f.requester_id
+    ))
+
+    // Find new signups within 50 miles of this user, excluding friends
     const nearby = newSignups
       .filter((s) => {
         if (!s.latitude || !s.longitude) return false
+        if (friendIds.has(s.id)) return false
         return haversine(user.latitude, user.longitude, s.latitude, s.longitude) <= 50
       })
       .sort((a, b) => {

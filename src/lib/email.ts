@@ -392,11 +392,13 @@ export async function sendWeeklyDigestEmail({
   toName,
   nearbyRiders,
   totalNearby,
+  pendingRequests = 0,
 }: {
   toEmail: string
   toName: string
   nearbyRiders: NearbyRiderDigest[]
   totalNearby: number
+  pendingRequests?: number
 }) {
   const ridersHtml = nearbyRiders.map((r) => {
     const location = [r.city, r.state].filter(Boolean).join(', ')
@@ -428,17 +430,42 @@ export async function sendWeeklyDigestEmail({
     ? `<p style="margin:16px 0 0;font-size:14px;color:#71717a;">+ ${totalNearby - nearbyRiders.length} more new riders near you</p>`
     : ''
 
-  await resend.emails.send({
-    from: FROM,
-    to: toEmail,
-    subject: `${totalNearby} new rider${totalNearby !== 1 ? 's' : ''} joined near you this week`,
-    html: layout(`
+  const pendingHtml = pendingRequests > 0 ? `
+      <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:24px;">
+        <tr>
+          <td style="background:#f97316;border-radius:12px;padding:16px 20px;">
+            <p style="margin:0 0 8px;font-size:16px;font-weight:700;color:#ffffff;">
+              You have ${pendingRequests} pending friend request${pendingRequests !== 1 ? 's' : ''}
+            </p>
+            <a href="${BASE_URL}/friends" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:underline;">
+              See Requests →
+            </a>
+          </td>
+        </tr>
+      </table>` : ''
+
+  const subject = pendingRequests > 0 && totalNearby === 0
+    ? `You have ${pendingRequests} pending friend request${pendingRequests !== 1 ? 's' : ''} on BikerOrNot`
+    : `${totalNearby} new rider${totalNearby !== 1 ? 's' : ''} joined near you this week`
+
+  const ridersSection = totalNearby > 0 ? `
       <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">
         New riders near you
       </h1>
       <p style="margin:0 0 20px;font-size:15px;color:#a1a1aa;line-height:1.6;">
         Hey ${toName}, ${totalNearby} new rider${totalNearby !== 1 ? 's' : ''} joined BikerOrNot near you this week.
-      </p>
+      </p>` : `
+      <p style="margin:0 0 20px;font-size:15px;color:#a1a1aa;line-height:1.6;">
+        Hey ${toName}, here's your weekly update from BikerOrNot.
+      </p>`
+
+  await resend.emails.send({
+    from: FROM,
+    to: toEmail,
+    subject,
+    html: layout(`
+      ${pendingHtml}
+      ${ridersSection}
       <table cellpadding="0" cellspacing="0" width="100%">
         ${ridersHtml}
       </table>

@@ -100,11 +100,13 @@ export async function GET(request: Request) {
     // Skip new signups themselves — don't tell them about themselves
     if (newIds.includes(user.id)) continue
 
-    // Get user's friend IDs to exclude from digest
-    const { data: friendships } = await admin
-      .from('friendships')
-      .select('requester_id, addressee_id')
-      .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+    // Get user's friend IDs + count pending requests
+    const [{ data: friendships }, { count: pendingRequests }] = await Promise.all([
+      admin.from('friendships').select('requester_id, addressee_id')
+        .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
+      admin.from('friendships').select('*', { count: 'exact', head: true })
+        .eq('addressee_id', user.id).eq('status', 'pending'),
+    ])
     const friendIds = new Set((friendships ?? []).map((f) =>
       f.requester_id === user.id ? f.addressee_id : f.requester_id
     ))
@@ -122,8 +124,8 @@ export async function GET(request: Request) {
         return distA - distB
       })
 
-    // Skip if no new riders nearby
-    if (nearby.length === 0) { skipped++; continue }
+    // Skip if no new riders nearby AND no pending requests
+    if (nearby.length === 0 && (pendingRequests ?? 0) === 0) { skipped++; continue }
 
     // Get user's email from auth
     const { data: authData } = await admin.auth.admin.getUserById(user.id)
@@ -146,6 +148,7 @@ export async function GET(request: Request) {
         toName: user.first_name ?? 'there',
         nearbyRiders: riderList,
         totalNearby: nearby.length,
+        pendingRequests: pendingRequests ?? 0,
       })
       sent++
     } catch (err) {

@@ -21,7 +21,7 @@ function layout(body: string) {
           <!-- Logo -->
           <tr>
             <td align="center" style="padding-bottom:28px;">
-              <span style="font-size:22px;font-weight:700;color:#f97316;letter-spacing:-0.5px;">BikerOrNot</span>
+              <span style="font-size:22px;font-weight:700;letter-spacing:-0.5px;"><span style="color:#ffffff;">Biker</span><span style="color:#f97316;">Or</span><span style="color:#ffffff;">Not</span></span>
             </td>
           </tr>
           <!-- Card -->

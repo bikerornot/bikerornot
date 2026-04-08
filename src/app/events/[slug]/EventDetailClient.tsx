@@ -288,11 +288,19 @@ export default function EventDetailClient({ event, currentUserId, goingList: ini
         </div>
       )}
 
-      {/* Invite + Share */}
+      {/* Spread the Word */}
       {!isCancelled && (
-        <div className="flex items-center gap-4 px-4 py-3 border-b border-zinc-800">
-          <InviteToEventButton eventId={event.id} />
-          <ShareToGroupButton eventId={event.id} currentUserId={currentUserId} />
+        <div className="mx-4 my-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-3">Spread the Word</h3>
+          <div className="flex gap-3">
+            <div className="flex-1 [&>button]:w-full [&>button]:bg-orange-500 [&>button]:hover:bg-orange-600 [&>button]:text-white [&>button]:font-semibold [&>button]:py-2.5 [&>button]:rounded-xl [&>button]:transition-all [&>button]:text-sm [&>button]:flex [&>button]:items-center [&>button]:justify-center [&>button]:gap-2 [&>button]:animate-[glow_2s_ease-in-out_infinite]">
+              <style>{`@keyframes glow { 0%, 100% { box-shadow: 0 0 8px rgba(249,115,22,0.3); } 50% { box-shadow: 0 0 16px rgba(249,115,22,0.5); } }`}</style>
+              <InviteToEventButton eventId={event.id} />
+            </div>
+            <div className="flex-1 [&>button]:w-full [&>button]:bg-zinc-800 [&>button]:hover:bg-zinc-700 [&>button]:text-zinc-300 [&>button]:font-semibold [&>button]:py-2.5 [&>button]:rounded-xl [&>button]:transition-colors [&>button]:text-sm [&>button]:border [&>button]:border-zinc-700 [&>button]:flex [&>button]:items-center [&>button]:justify-center [&>button]:gap-2">
+              <ShareToGroupButton eventId={event.id} currentUserId={currentUserId} />
+            </div>
+          </div>
         </div>
       )}
 

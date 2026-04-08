@@ -8,7 +8,6 @@ import PostComposer from '@/app/components/PostComposer'
 import AdCard from '@/app/components/AdCard'
 import BikeMatchCard from '@/app/components/BikeMatchCard'
 import SuggestedGroupsCard from '@/app/components/SuggestedGroupsCard'
-import LocalGroupsCard from '@/app/components/LocalGroupsCard'
 import GuessTheHarleyCard from '@/app/components/GuessTheHarleyCard'
 import RidersWidget from '@/app/components/RidersWidget'
 import { getNextAd, type AdData } from '@/app/actions/ads'
@@ -233,11 +232,6 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
           {idx === Math.min(1, posts.length - 1) && ad && (
             <div className="mt-2 sm:mt-4">
               <AdCard ad={ad} onDismiss={() => setAd(null)} />
-            </div>
-          )}
-          {idx === Math.min(3, posts.length - 1) && (
-            <div className="mt-2 sm:mt-4">
-              <LocalGroupsCard currentUserId={currentUserId} />
             </div>
           )}
           {idx === Math.min(4, posts.length - 1) && (

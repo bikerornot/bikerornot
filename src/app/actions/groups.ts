@@ -992,10 +992,15 @@ export async function getSuggestedGroups(): Promise<SuggestedGroup[]> {
       : null
     const sameState = myState && g.state && myState === g.state
 
+    // Local riding groups and clubs get a proximity boost
+    const isLocal = g.category === 'local' || g.category === 'clubs'
+    const proximityBonus = dist != null ? Math.max(0, 20 - dist / 50) : 0
+
     const score =
       friends * 20 +
       (sameState ? 15 : 0) +
-      (dist != null ? Math.max(0, 20 - dist / 50) : 0) +
+      proximityBonus +
+      (isLocal && dist != null && dist <= 100 ? 25 : 0) + // Strong bonus for nearby local groups
       Math.min(members, 30) * 0.5
 
     return {

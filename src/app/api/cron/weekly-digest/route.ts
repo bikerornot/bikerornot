@@ -19,6 +19,8 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
+export const maxDuration = 300 // 5 minutes max for Vercel Pro
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -27,6 +29,10 @@ export async function GET(request: Request) {
 
   const admin = getServiceClient()
   const oneWeekAgo = new Date(Date.now() - 7 * 86400000).toISOString()
+
+  // Optional: test mode — only send to a specific user
+  const url = new URL(request.url)
+  const testUsername = url.searchParams.get('test')
 
   // Fetch all new signups from the last 7 days with coordinates
   const { data: newSignups } = await admin
@@ -56,24 +62,32 @@ export async function GET(request: Request) {
     }
   }
 
-  // Fetch all active users who opted in to weekly digest, have coordinates and email
-  // Paginate to avoid 1000-row limit
+  // Fetch recipients — test mode sends to one user, full mode paginates all
   const recipients: any[] = []
-  let page = 0
-  const PAGE_SIZE = 1000
-  while (true) {
-    const { data: chunk } = await admin
+  if (testUsername) {
+    const { data: testUser } = await admin
       .from('profiles')
       .select('id, first_name, latitude, longitude, email_weekly_digest')
-      .eq('onboarding_complete', true)
-      .eq('status', 'active')
-      .is('deactivated_at', null)
-      .not('latitude', 'is', null)
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
-    if (!chunk || chunk.length === 0) break
-    recipients.push(...chunk)
-    if (chunk.length < PAGE_SIZE) break
-    page++
+      .eq('username', testUsername)
+      .single()
+    if (testUser) recipients.push(testUser)
+  } else {
+    let page = 0
+    const PAGE_SIZE = 1000
+    while (true) {
+      const { data: chunk } = await admin
+        .from('profiles')
+        .select('id, first_name, latitude, longitude, email_weekly_digest')
+        .eq('onboarding_complete', true)
+        .eq('status', 'active')
+        .is('deactivated_at', null)
+        .not('latitude', 'is', null)
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+      if (!chunk || chunk.length === 0) break
+      recipients.push(...chunk)
+      if (chunk.length < PAGE_SIZE) break
+      page++
+    }
   }
 
   let sent = 0

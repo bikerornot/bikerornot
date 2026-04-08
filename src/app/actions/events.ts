@@ -333,6 +333,11 @@ export async function createEvent(
     await generateRecurrenceInstances(event.id, input.recurrence_rule, admin)
   }
 
+  // If flyer uploaded but no cover photo, use flyer as cover too
+  if (flyer_url && !cover_photo_url) {
+    await admin.from('events').update({ cover_photo_url: flyer_url }).eq('id', event.id)
+  }
+
   // Auto-create a feed post for this event
   await admin.from('posts').insert({
     author_id: user.id,

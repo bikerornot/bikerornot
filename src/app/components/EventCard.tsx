@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
+import { getImageUrl } from '@/lib/supabase/image'
 
 interface Props {
   event: {
@@ -50,6 +52,17 @@ export default function EventCard({ event }: Props) {
       href={`/events/${event.slug}`}
       className="block bg-zinc-900 sm:border sm:border-zinc-800 sm:rounded-xl overflow-hidden hover:bg-zinc-800/50 transition-colors"
     >
+      {event.cover_photo_url && (
+        <div className="relative w-full aspect-[3/1] bg-zinc-800">
+          <Image
+            src={getImageUrl('covers', event.cover_photo_url)}
+            alt={event.title}
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 100vw, 640px"
+          />
+        </div>
+      )}
       <div className="px-4 py-3">
         {/* Date + type badge */}
         <div className="flex items-center gap-2 mb-1">

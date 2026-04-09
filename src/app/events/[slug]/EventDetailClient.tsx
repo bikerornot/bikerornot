@@ -221,8 +221,8 @@ export default function EventDetailClient({ event, currentUserId, goingList: ini
                 </div>
               )}
             </div>
-            <span className="text-base sm:text-sm text-zinc-300 group-hover:text-white transition-colors inline-flex items-center gap-1">
-              Hosted by <span className="text-white font-medium">@{creator?.username ?? 'unknown'}</span>
+            <span className="text-base sm:text-sm text-white font-medium group-hover:text-orange-400 transition-colors inline-flex items-center gap-1">
+              @{creator?.username ?? 'unknown'}
               {creator?.phone_verified_at && <VerifiedBadge className="w-3.5 h-3.5" />}
             </span>
           </Link>

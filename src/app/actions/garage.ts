@@ -148,7 +148,7 @@ export async function uploadBikePhoto(bikeId: string, formData: FormData): Promi
 
   const file = formData.get('file') as File
   if (!file) throw new Error('No file provided')
-  validateImageFile(file)
+  await validateImageFile(file)
 
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
   const path = `${user.id}/${bikeId}.${ext}`
@@ -227,7 +227,7 @@ export async function uploadBikeGalleryPhoto(bikeId: string, formData: FormData)
 
   const file = formData.get('file') as File
   if (!file) throw new Error('No file provided')
-  validateImageFile(file)
+  await validateImageFile(file)
 
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
   const photoId = crypto.randomUUID()

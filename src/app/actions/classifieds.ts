@@ -494,7 +494,7 @@ export async function uploadListingImages(
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i]
-    validateImageFile(file)
+    await validateImageFile(file)
 
     // Read bytes for moderation
     const bytes = await file.arrayBuffer()

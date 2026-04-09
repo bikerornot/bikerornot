@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { headers } from 'next/headers'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 function getServiceClient() {
   return createServiceClient(
@@ -49,11 +50,24 @@ export async function logError(input: ErrorLogInput): Promise<void> {
     }
 
     let userAgent: string | null = null
+    let clientIp: string | null = null
     try {
       const h = await headers()
       userAgent = h.get('user-agent')
+      clientIp = h.get('x-forwarded-for')?.split(',')[0].trim() ?? h.get('x-real-ip') ?? null
     } catch {
       // Headers not available outside request context
+    }
+
+    // Rate limit to prevent error-log table spam. Key by user if authenticated,
+    // else by client IP, else by a shared bucket so one bad actor can't knock
+    // out legit error reporting. Silently drop on overflow (never throw from
+    // the error logger — it would defeat the purpose).
+    try {
+      const key = `logError:${userId ?? clientIp ?? 'anon'}`
+      checkRateLimit(key, 60, 60_000) // 60 errors/minute per user or IP
+    } catch {
+      return
     }
 
     const fp = fingerprint(input.source, input.message)

@@ -91,7 +91,7 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
 
   // Validate and moderate images BEFORE creating the post so a rejection never leaves an orphaned post
   const validFiles = files.filter((f) => f && f.size > 0)
-  for (const file of validFiles) validateImageFile(file)
+  for (const file of validFiles) await validateImageFile(file)
   type CheckedFile = { file: File; bytes: ArrayBuffer; moderation: ModerationResult }
   const checkedFiles: CheckedFile[] = []
 

@@ -65,7 +65,7 @@ export async function uploadAvatar(formData: FormData): Promise<string> {
 
   const file = formData.get('file') as File
   if (!file) throw new Error('No file provided')
-  validateImageFile(file)
+  await validateImageFile(file)
 
   const ext = file.name.split('.').pop() ?? 'jpg'
   const path = `${user.id}/avatar.${ext}`
@@ -234,7 +234,7 @@ export async function uploadOnboardingBikePhoto(bikeId: string, formData: FormDa
 
   const file = formData.get('file') as File
   if (!file) throw new Error('No file provided')
-  validateImageFile(file)
+  await validateImageFile(file)
 
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
   const photoId = crypto.randomUUID()

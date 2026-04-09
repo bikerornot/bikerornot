@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getAdConversions } from '@/lib/google-analytics'
+import { assertUuid, checkRateLimit } from '@/lib/rate-limit'
 
 function getServiceClient() {
   return createServiceClient(
@@ -100,8 +101,19 @@ export async function getNextAd(): Promise<AdData | null> {
 }
 
 export async function recordImpression(adId: string) {
+  assertUuid(adId, 'adId')
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  // Cap impressions to prevent metric spam. Silently drop on overflow —
+  // impression logging is best-effort and shouldn't break the UI.
+  try {
+    checkRateLimit(`recordImpression:${user?.id ?? 'anon'}`, 120, 60_000)
+  } catch {
+    return
+  }
+
   const admin = getServiceClient()
 
   await admin.from('ad_impressions').insert({
@@ -111,6 +123,8 @@ export async function recordImpression(adId: string) {
 }
 
 export async function dismissAd(adId: string) {
+  assertUuid(adId, 'adId')
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')

@@ -71,7 +71,8 @@ export default function AdCard({ ad, onDismiss, preview }: Props) {
   const imageUrl = ad.imageUrl.startsWith('blob:') || ad.imageUrl.startsWith('http')
     ? ad.imageUrl
     : getImageUrl('ads', ad.imageUrl)
-  const clickUrl = `/api/ads/click?ad=${encodeURIComponent(ad.id)}&dest=${encodeURIComponent(ad.destinationUrl)}`
+  // The click route looks up the ad's destination from the DB — don't pass it here.
+  const clickUrl = `/api/ads/click?ad=${encodeURIComponent(ad.id)}`
 
   return (
     <div ref={cardRef} className="bg-zinc-900 sm:rounded-xl sm:border sm:border-zinc-800 overflow-hidden">

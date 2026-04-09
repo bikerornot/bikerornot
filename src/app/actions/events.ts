@@ -192,7 +192,7 @@ export async function createEvent(
   // Upload cover photo
   let cover_photo_url: string | null = null
   if (coverFile && coverFile.size > 0) {
-    validateImageFile(coverFile)
+    await validateImageFile(coverFile)
     const ext = coverFile.name.split('.').pop() ?? 'jpg'
     const path = `events/${user.id}/${slug}.${ext}`
     const bytes = await coverFile.arrayBuffer()
@@ -208,7 +208,7 @@ export async function createEvent(
   // Upload flyer image
   let flyer_url: string | null = null
   if (flyerFile && flyerFile.size > 0) {
-    validateImageFile(flyerFile)
+    await validateImageFile(flyerFile)
     const ext = flyerFile.name.split('.').pop() ?? 'jpg'
     const path = `events/${user.id}/${slug}-flyer.${ext}`
     const bytes = await flyerFile.arrayBuffer()
@@ -767,7 +767,7 @@ export async function updateEvent(
 
   // Cover photo update
   if (coverFile && coverFile.size > 0) {
-    validateImageFile(coverFile)
+    await validateImageFile(coverFile)
     const ext = coverFile.name.split('.').pop() ?? 'jpg'
     const path = `events/${user.id}/${eventId}.${ext}`
     const bytes = await coverFile.arrayBuffer()
@@ -782,7 +782,7 @@ export async function updateEvent(
 
   // Flyer upload
   if (flyerFile && flyerFile.size > 0) {
-    validateImageFile(flyerFile)
+    await validateImageFile(flyerFile)
     const ext = flyerFile.name.split('.').pop() ?? 'jpg'
     const path = `events/${user.id}/${eventId}-flyer.${ext}`
     const bytes = await flyerFile.arrayBuffer()

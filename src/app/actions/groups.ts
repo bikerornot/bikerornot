@@ -63,7 +63,7 @@ export async function createGroup(
   // Upload cover photo if provided
   let cover_photo_url: string | null = null
   if (coverFile && coverFile.size > 0) {
-    validateImageFile(coverFile)
+    await validateImageFile(coverFile)
     const ext = coverFile.name.split('.').pop() ?? 'jpg'
     const path = `groups/${user.id}/${slug}.${ext}`
     const bytes = await coverFile.arrayBuffer()

@@ -20,7 +20,7 @@ export async function uploadProfilePhoto(formData: FormData): Promise<{ error: s
 
   const file = formData.get('file') as File
   if (!file) throw new Error('No file provided')
-  validateImageFile(file)
+  await validateImageFile(file)
 
   const ext = file.name.split('.').pop() ?? 'jpg'
   const path = `${user.id}/avatar.${ext}`
@@ -76,7 +76,7 @@ export async function uploadCoverPhoto(formData: FormData): Promise<void> {
 
   const file = formData.get('file') as File
   if (!file) throw new Error('No file provided')
-  validateImageFile(file)
+  await validateImageFile(file)
 
   const ext = file.name.split('.').pop() ?? 'jpg'
   const path = `${user.id}/cover.${ext}`

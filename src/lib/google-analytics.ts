@@ -211,3 +211,49 @@ export async function getGADailySessions(startDate: string, endDate: string): Pr
     return { date, value: Number(row.metricValues?.[0]?.value ?? 0) }
   })
 }
+
+// ─── Skull Society Ad Conversions ───────────────────────────
+
+const SKULL_SOCIETY_PROPERTY_ID = '403505022'
+
+export interface AdConversion {
+  utmContent: string
+  conversions: number
+  revenue: number
+}
+
+export async function getAdConversions(startDate: string, endDate: string): Promise<AdConversion[]> {
+  const analyticsClient = getClient()
+
+  try {
+    const [response] = await analyticsClient.runReport({
+      property: `properties/${SKULL_SOCIETY_PROPERTY_ID}`,
+      dateRanges: [{ startDate, endDate }],
+      dimensions: [
+        { name: 'sessionManualAdContent' },  // maps to utm_content
+      ],
+      metrics: [
+        { name: 'ecommercePurchases' },
+        { name: 'purchaseRevenue' },
+      ],
+      dimensionFilter: {
+        filter: {
+          fieldName: 'sessionSource',
+          stringFilter: {
+            matchType: 'EXACT',
+            value: 'bikerornot',
+          },
+        },
+      },
+    })
+
+    return (response.rows ?? []).map((row) => ({
+      utmContent: row.dimensionValues?.[0]?.value ?? '',
+      conversions: Number(row.metricValues?.[0]?.value ?? 0),
+      revenue: Number(row.metricValues?.[1]?.value ?? 0),
+    })).filter((r) => r.conversions > 0)
+  } catch (err) {
+    console.error('Failed to fetch ad conversions:', err)
+    return []
+  }
+}

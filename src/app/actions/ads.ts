@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { getAdConversions } from '@/lib/google-analytics'
 
 function getServiceClient() {
   return createServiceClient(
@@ -139,6 +140,8 @@ export interface AdWithStats {
   clicks: number
   ctr: number
   dismissals: number
+  conversions: number
+  revenue: number
 }
 
 export interface Advertiser {
@@ -318,6 +321,17 @@ export async function getAdStats(startDate?: string, endDate?: string): Promise<
     return counts
   }
 
+  // Fetch conversions from Skull Society GA4
+  const gaStart = startDate || '2026-01-01'
+  const gaEnd = endDate || new Date().toISOString().slice(0, 10)
+  const conversionData = await getAdConversions(gaStart, gaEnd).catch(() => [])
+
+  // Build utm_content → conversion map
+  const conversionMap = new Map<string, { conversions: number; revenue: number }>()
+  for (const c of conversionData) {
+    conversionMap.set(c.utmContent, { conversions: c.conversions, revenue: c.revenue })
+  }
+
   const [impressionMap, clickMap, dismissalMap] = await Promise.all([
     countPerAd('ad_impressions'),
     countPerAd('ad_clicks'),
@@ -327,6 +341,16 @@ export async function getAdStats(startDate?: string, endDate?: string): Promise<
   return ads.map((ad: any) => {
     const imp = impressionMap[ad.id] ?? 0
     const clk = clickMap[ad.id] ?? 0
+
+    // Extract utm_content from destination URL to match conversions
+    let utmContent = ''
+    try {
+      const url = new URL(ad.destination_url)
+      utmContent = url.searchParams.get('utm_content') ?? ''
+    } catch { /* ignore */ }
+
+    const conv = utmContent ? conversionMap.get(utmContent) : undefined
+
     return {
       id: ad.id,
       primary_text: ad.primary_text,
@@ -343,6 +367,8 @@ export async function getAdStats(startDate?: string, endDate?: string): Promise<
       clicks: clk,
       ctr: imp > 0 ? Math.round((clk / imp) * 10000) / 100 : 0,
       dismissals: dismissalMap[ad.id] ?? 0,
+      conversions: conv?.conversions ?? 0,
+      revenue: Math.round((conv?.revenue ?? 0) * 100) / 100,
     }
   })
 }

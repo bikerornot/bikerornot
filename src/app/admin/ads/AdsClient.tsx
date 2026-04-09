@@ -374,6 +374,8 @@ export default function AdsClient() {
                   <th className="pb-2 pr-4 font-medium text-right">Impressions</th>
                   <th className="pb-2 pr-4 font-medium text-right">Clicks</th>
                   <th className="pb-2 pr-4 font-medium text-right">CTR</th>
+                  <th className="pb-2 pr-4 font-medium text-right">Conversions</th>
+                  <th className="pb-2 pr-4 font-medium text-right">Revenue</th>
                   <th className="pb-2 pr-4 font-medium text-right">Dismissals</th>
                   <th className="pb-2 font-medium">Actions</th>
                 </tr>
@@ -410,6 +412,8 @@ export default function AdsClient() {
                     <td className="py-3 pr-4 text-right text-zinc-300 tabular-nums">{ad.impressions.toLocaleString()}</td>
                     <td className="py-3 pr-4 text-right text-zinc-300 tabular-nums">{ad.clicks.toLocaleString()}</td>
                     <td className="py-3 pr-4 text-right text-zinc-300 tabular-nums">{ad.ctr}%</td>
+                    <td className="py-3 pr-4 text-right text-zinc-300 tabular-nums">{ad.conversions > 0 ? <span className="text-emerald-400">{ad.conversions}</span> : '—'}</td>
+                    <td className="py-3 pr-4 text-right text-zinc-300 tabular-nums">{ad.revenue > 0 ? <span className="text-emerald-400">${ad.revenue.toFixed(2)}</span> : '—'}</td>
                     <td className="py-3 pr-4 text-right text-zinc-300 tabular-nums">{ad.dismissals.toLocaleString()}</td>
                     <td className="py-3">
                       <div className="flex items-center gap-2">

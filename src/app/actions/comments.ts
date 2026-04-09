@@ -89,7 +89,7 @@ export async function createComment(postId: string, content: string, parentComme
   })
 
   // Send notification (skipped for banned/suspended users via notifyIfActive)
-  const postUrl = `https://www.bikerornot.com/post/${postId}`
+  const postUrl = `https://www.bikerornot.com/posts/${postId}`
 
   if (parentCommentId) {
     const { data: parent } = await admin

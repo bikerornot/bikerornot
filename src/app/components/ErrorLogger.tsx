@@ -28,6 +28,18 @@ export default function ErrorLogger() {
       'invalid origin',
       'DuckDuckGo',
       'The request was denied',
+      // Firefox internal module loader timeouts — one flaky Firefox user produced 20k+ of these
+      'Module load timeout',
+      // Stale deployment — user's cached HTML references a chunk that no longer exists
+      'Failed to load chunk',
+      // Stale deployment — user submits a server action ID from a previous build
+      'was not found on the server',
+      // Firefox private mode / storage access denied — not actionable
+      'The operation is insecure',
+      // Generic network noise (Safari, mobile), no stack, not actionable
+      'network error',
+      // React DOM race during unmount — not actionable, usually benign
+      "Failed to execute 'removeChild' on 'Node'",
     ]
 
     // Bare rejection with no real info — Safari often swallows the details

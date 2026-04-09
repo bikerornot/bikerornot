@@ -52,19 +52,36 @@ export async function getSuspiciousProfiles(): Promise<SuspiciousProfile[]> {
 
   const userIds = newUsers.map((u) => u.id)
 
-  // Fetch messages sent by these users
-  const { data: messages } = await admin
-    .from('messages')
-    .select('sender_id, conversation_id')
-    .in('sender_id', userIds)
+  // Fetch messages sent by these users — paginated to avoid 1000-row limit
+  const allMessages: any[] = []
+  for (let i = 0; i < userIds.length; i += 50) {
+    const chunk = userIds.slice(i, i + 50)
+    let page = 0
+    while (true) {
+      const { data: msgs } = await admin
+        .from('messages')
+        .select('sender_id, conversation_id')
+        .in('sender_id', chunk)
+        .range(page * 1000, (page + 1) * 1000 - 1)
+      if (!msgs || msgs.length === 0) break
+      allMessages.push(...msgs)
+      if (msgs.length < 1000) break
+      page++
+    }
+  }
+  const messages = allMessages
 
   // Fetch conversations to determine who they're messaging
-  const convIds = [...new Set((messages ?? []).map((m) => m.conversation_id))]
-  const { data: conversations } = convIds.length > 0
-    ? await admin.from('conversations').select('id, participant1_id, participant2_id').in('id', convIds)
-    : { data: [] }
+  const convIds = [...new Set(messages.map((m) => m.conversation_id))]
+  const allConversations: any[] = []
+  for (let i = 0; i < convIds.length; i += 50) {
+    const chunk = convIds.slice(i, i + 50)
+    const { data: convs } = await admin.from('conversations').select('id, participant1_id, participant2_id').in('id', chunk)
+    if (convs) allConversations.push(...convs)
+  }
+  const conversations = allConversations
 
-  const convMap = new Map((conversations ?? []).map((c) => [c.id, c]))
+  const convMap = new Map(conversations.map((c: any) => [c.id, c]))
 
   // Fetch gender of conversation partners
   const partnerIds = new Set<string>()

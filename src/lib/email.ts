@@ -6,6 +6,21 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = 'BikerOrNot <noreply@bikerornot.com>'
 const BASE_URL = 'https://www.bikerornot.com'
 
+/**
+ * Escape user-controlled content before interpolating into email HTML.
+ * Prevents attackers from injecting <a>, <img>, or attribute-breaking payloads
+ * into recipient inboxes via post content, usernames, bike names, etc.
+ */
+function esc(value: string | null | undefined): string {
+  if (value == null) return ''
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function layout(body: string) {
   return `<!DOCTYPE html>
 <html>
@@ -58,7 +73,7 @@ export async function sendFriendRequestEmail({
   toName: string
   fromUsername: string
 }) {
-  const profileUrl = `${BASE_URL}/profile/${fromUsername}`
+  const profileUrl = `${BASE_URL}/profile/${encodeURIComponent(fromUsername)}`
 
   await resend.emails.send({
     from: FROM,
@@ -69,7 +84,7 @@ export async function sendFriendRequestEmail({
         New friend request
       </h1>
       <p style="margin:0 0 24px;font-size:15px;color:#a1a1aa;line-height:1.6;">
-        Hey ${toName}, <strong style="color:#ffffff;">@${fromUsername}</strong> wants to connect with you on BikerOrNot.
+        Hey ${esc(toName)}, <strong style="color:#ffffff;">@${esc(fromUsername)}</strong> wants to connect with you on BikerOrNot.
       </p>
       <table cellpadding="0" cellspacing="0">
         <tr>
@@ -103,7 +118,7 @@ export async function sendConfirmEmailReminder({
         One step left — confirm your email
       </h1>
       <p style="margin:0 0 24px;font-size:15px;color:#a1a1aa;line-height:1.6;">
-        Hey ${firstName}, you started signing up for BikerOrNot but haven't confirmed your email yet.
+        Hey ${esc(firstName)}, you started signing up for BikerOrNot but haven't confirmed your email yet.
         Check your inbox for the confirmation link we sent, or click below to resend it.
       </p>
       <table cellpadding="0" cellspacing="0">
@@ -140,13 +155,13 @@ export async function sendOnboardingReminder({
         Your profile is almost ready
       </h1>
       <p style="margin:0 0 24px;font-size:15px;color:#a1a1aa;line-height:1.6;">
-        Hey ${firstName}, you confirmed your email but haven't finished setting up your BikerOrNot profile yet.
+        Hey ${esc(firstName)}, you confirmed your email but haven't finished setting up your BikerOrNot profile yet.
         It only takes a minute — pick a username, add a photo, and tell us about your ride.
       </p>
       <table cellpadding="0" cellspacing="0">
         <tr>
           <td>
-            <a href="${magicLink}" style="display:inline-block;background:#f97316;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:10px;">
+            <a href="${esc(magicLink)}" style="display:inline-block;background:#f97316;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:10px;">
               Complete your profile
             </a>
           </td>
@@ -170,7 +185,7 @@ export async function sendFriendAcceptedEmail({
   toName: string
   fromUsername: string
 }) {
-  const profileUrl = `${BASE_URL}/profile/${fromUsername}`
+  const profileUrl = `${BASE_URL}/profile/${encodeURIComponent(fromUsername)}`
 
   await resend.emails.send({
     from: FROM,
@@ -181,7 +196,7 @@ export async function sendFriendAcceptedEmail({
         Friend request accepted!
       </h1>
       <p style="margin:0 0 24px;font-size:15px;color:#a1a1aa;line-height:1.6;">
-        Hey ${toName}, <strong style="color:#ffffff;">@${fromUsername}</strong> accepted your friend request. You're now connected on BikerOrNot.
+        Hey ${esc(toName)}, <strong style="color:#ffffff;">@${esc(fromUsername)}</strong> accepted your friend request. You're now connected on BikerOrNot.
       </p>
       <table cellpadding="0" cellspacing="0">
         <tr>
@@ -220,19 +235,19 @@ export async function sendWallPostEmail({
         New post on your wall
       </h1>
       <p style="margin:0 0 20px;font-size:15px;color:#a1a1aa;line-height:1.6;">
-        Hey ${toName}, <strong style="color:#ffffff;">@${fromUsername}</strong> posted on your wall.
+        Hey ${esc(toName)}, <strong style="color:#ffffff;">@${esc(fromUsername)}</strong> posted on your wall.
       </p>
       ${snippet ? `
       <div style="background:#09090b;border:1px solid #27272a;border-radius:12px;padding:16px;margin-bottom:24px;">
         <p style="margin:0;font-size:14px;color:#d4d4d8;line-height:1.5;">
-          "${snippet}"
+          "${esc(snippet)}"
         </p>
       </div>
       ` : ''}
       <table cellpadding="0" cellspacing="0">
         <tr>
           <td>
-            <a href="${profileUrl}" style="display:inline-block;background:#f97316;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:10px;">
+            <a href="${esc(profileUrl)}" style="display:inline-block;background:#f97316;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:10px;">
               View Your Wall
             </a>
           </td>
@@ -272,17 +287,17 @@ export async function sendCommentEmail({
         ${heading}
       </h1>
       <p style="margin:0 0 20px;font-size:15px;color:#a1a1aa;line-height:1.6;">
-        Hey ${toName}, <strong style="color:#ffffff;">@${fromUsername}</strong> ${isReply ? 'replied to your comment' : 'commented on your post'}.
+        Hey ${esc(toName)}, <strong style="color:#ffffff;">@${esc(fromUsername)}</strong> ${isReply ? 'replied to your comment' : 'commented on your post'}.
       </p>
       <div style="background:#09090b;border:1px solid #27272a;border-radius:12px;padding:16px;margin-bottom:24px;">
         <p style="margin:0;font-size:14px;color:#d4d4d8;line-height:1.5;">
-          "${snippet}"
+          "${esc(snippet)}"
         </p>
       </div>
       <table cellpadding="0" cellspacing="0">
         <tr>
           <td>
-            <a href="${postUrl}" style="display:inline-block;background:#f97316;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:10px;">
+            <a href="${esc(postUrl)}" style="display:inline-block;background:#f97316;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:10px;">
               View Comment
             </a>
           </td>
@@ -312,15 +327,15 @@ export async function sendMentionEmail({
   postImageUrl: string | null
 }) {
   const fromAvatarHtml = fromAvatarUrl
-    ? `<img src="${fromAvatarUrl}" alt="@${fromUsername}" width="40" height="40" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />`
-    : `<div style="width:40px;height:40px;border-radius:50%;background:#3f3f46;color:#a1a1aa;font-size:16px;font-weight:700;line-height:40px;text-align:center;">${(fromUsername[0] ?? '?').toUpperCase()}</div>`
+    ? `<img src="${esc(fromAvatarUrl)}" alt="@${esc(fromUsername)}" width="40" height="40" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />`
+    : `<div style="width:40px;height:40px;border-radius:50%;background:#3f3f46;color:#a1a1aa;font-size:16px;font-weight:700;line-height:40px;text-align:center;">${esc((fromUsername[0] ?? '?').toUpperCase())}</div>`
 
   const toAvatarHtml = toAvatarUrl
-    ? `<img src="${toAvatarUrl}" alt="${toName}" width="32" height="32" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />`
+    ? `<img src="${esc(toAvatarUrl)}" alt="${esc(toName)}" width="32" height="32" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />`
     : ''
 
   const imageHtml = postImageUrl
-    ? `<img src="${postImageUrl}" alt="" width="440" style="width:100%;max-width:440px;border-radius:8px;margin-top:16px;display:block;" />`
+    ? `<img src="${esc(postImageUrl)}" alt="" width="440" style="width:100%;max-width:440px;border-radius:8px;margin-top:16px;display:block;" />`
     : ''
 
   await resend.emails.send({
@@ -335,7 +350,7 @@ export async function sendMentionEmail({
             ${toAvatarHtml}
           </td>
           <td style="vertical-align:middle;">
-            <p style="margin:0;font-size:15px;color:#a1a1aa;">Hey ${toName},</p>
+            <p style="margin:0;font-size:15px;color:#a1a1aa;">Hey ${esc(toName)},</p>
           </td>
         </tr>
       </table>
@@ -352,10 +367,10 @@ export async function sendMentionEmail({
           </td>
           <td style="vertical-align:top;">
             <p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#ffffff;">
-              @${fromUsername}
+              @${esc(fromUsername)}
             </p>
             <p style="margin:0;font-size:14px;color:#d4d4d8;line-height:1.5;">
-              ${postSnippet}
+              ${esc(postSnippet)}
             </p>
             ${imageHtml}
           </td>
@@ -366,7 +381,7 @@ export async function sendMentionEmail({
       <table cellpadding="0" cellspacing="0" style="margin-top:24px;">
         <tr>
           <td>
-            <a href="${postUrl}" style="display:inline-block;background:#f97316;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:10px;">
+            <a href="${esc(postUrl)}" style="display:inline-block;background:#f97316;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:12px 28px;border-radius:10px;">
               See what they said
             </a>
           </td>
@@ -403,11 +418,11 @@ export async function sendWeeklyDigestEmail({
   const ridersHtml = nearbyRiders.map((r) => {
     const location = [r.city, r.state].filter(Boolean).join(', ')
     const photoUrl = r.profilePhotoUrl
-      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${r.profilePhotoUrl}`
+      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${encodeURIComponent(r.profilePhotoUrl)}`
       : null
     const avatar = photoUrl
-      ? `<img src="${photoUrl}" width="44" height="44" style="width:44px;height:44px;border-radius:50%;object-fit:cover;" alt="" />`
-      : `<div style="width:44px;height:44px;border-radius:50%;background:#3f3f46;line-height:44px;text-align:center;color:#a1a1aa;font-weight:700;font-size:16px;">${(r.firstName?.[0] ?? '?').toUpperCase()}</div>`
+      ? `<img src="${esc(photoUrl)}" width="44" height="44" style="width:44px;height:44px;border-radius:50%;object-fit:cover;" alt="" />`
+      : `<div style="width:44px;height:44px;border-radius:50%;background:#3f3f46;line-height:44px;text-align:center;color:#a1a1aa;font-weight:700;font-size:16px;">${esc((r.firstName?.[0] ?? '?').toUpperCase())}</div>`
 
     return `
       <tr>
@@ -416,9 +431,9 @@ export async function sendWeeklyDigestEmail({
             <tr>
               <td width="52" valign="top">${avatar}</td>
               <td style="padding-left:12px;" valign="middle">
-                <a href="${BASE_URL}/profile/${r.username}" style="color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;">@${r.username}</a>
-                ${location ? `<br/><span style="color:#a1a1aa;font-size:13px;">${location}</span>` : ''}
-                ${r.bike ? `<br/><span style="color:#f97316;font-size:13px;">${r.bike}</span>` : ''}
+                <a href="${BASE_URL}/profile/${encodeURIComponent(r.username)}" style="color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;">@${esc(r.username)}</a>
+                ${location ? `<br/><span style="color:#a1a1aa;font-size:13px;">${esc(location)}</span>` : ''}
+                ${r.bike ? `<br/><span style="color:#f97316;font-size:13px;">${esc(r.bike)}</span>` : ''}
               </td>
             </tr>
           </table>
@@ -453,10 +468,10 @@ export async function sendWeeklyDigestEmail({
         New riders near you
       </h1>
       <p style="margin:0 0 20px;font-size:15px;color:#a1a1aa;line-height:1.6;">
-        Hey ${toName}, ${totalNearby} new rider${totalNearby !== 1 ? 's' : ''} joined BikerOrNot near you this week.
+        Hey ${esc(toName)}, ${totalNearby} new rider${totalNearby !== 1 ? 's' : ''} joined BikerOrNot near you this week.
       </p>` : `
       <p style="margin:0 0 20px;font-size:15px;color:#a1a1aa;line-height:1.6;">
-        Hey ${toName}, here's your weekly update from BikerOrNot.
+        Hey ${esc(toName)}, here's your weekly update from BikerOrNot.
       </p>`
 
   await resend.emails.send({

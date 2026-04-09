@@ -8,7 +8,10 @@ import { createClient } from '@/lib/supabase/client'
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirectTo') || '/'
+  // Only allow same-origin relative paths — reject `https://evil.com`,
+  // protocol-relative `//evil.com`, and any other absolute URL.
+  const rawRedirect = searchParams.get('redirectTo') || '/'
+  const redirectTo = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') ? rawRedirect : '/'
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

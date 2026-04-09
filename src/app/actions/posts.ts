@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { moderateImage, type ModerationResult } from '@/lib/sightengine'
-import { checkRateLimit, validateImageFile } from '@/lib/rate-limit'
+import { checkRateLimit, validateImageFile, assertUuid } from '@/lib/rate-limit'
 import { notifyIfActive } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
 import { sendWallPostEmail } from '@/lib/email'
@@ -32,6 +32,11 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
   const groupId = formData.get('groupId') as string | null
   const bikeId = formData.get('bikeId') as string | null
   const files = formData.getAll('images') as File[]
+
+  // Reject malformed IDs before any are interpolated into PostgREST filter strings
+  if (wallOwnerId) assertUuid(wallOwnerId, 'wallOwnerId')
+  if (groupId) assertUuid(groupId, 'groupId')
+  if (bikeId) assertUuid(bikeId, 'bikeId')
 
   // If posting on someone else's wall, require an accepted friendship
   if (wallOwnerId && wallOwnerId !== user.id) {

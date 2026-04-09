@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import type { ConversationSummary, Message } from '@/lib/supabase/types'
 import { scanMessageForScam } from '@/app/actions/scam-scan'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkRateLimit, assertUuid } from '@/lib/rate-limit'
 import { getBlockedIds } from '@/app/actions/blocks'
 
 function getServiceClient() {
@@ -16,6 +16,7 @@ function getServiceClient() {
 }
 
 export async function getOrCreateConversation(otherUserId: string): Promise<string> {
+  assertUuid(otherUserId, 'otherUserId')
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')

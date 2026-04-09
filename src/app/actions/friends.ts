@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { sendFriendRequestEmail, sendFriendAcceptedEmail } from '@/lib/email'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkRateLimit, assertUuid } from '@/lib/rate-limit'
 import { notifyIfActive } from '@/lib/notify'
 import { getBlockedIds } from '@/app/actions/blocks'
 
@@ -469,6 +469,7 @@ export async function getPendingRequestCount(): Promise<number> {
 }
 
 export async function toggleStarFriend(friendId: string): Promise<boolean> {
+  assertUuid(friendId, 'friendId')
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
@@ -503,6 +504,7 @@ export async function toggleStarFriend(friendId: string): Promise<boolean> {
 }
 
 export async function unfriend(otherUserId: string): Promise<void> {
+  assertUuid(otherUserId, 'otherUserId')
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')

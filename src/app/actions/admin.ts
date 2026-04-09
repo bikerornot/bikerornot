@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { assertUuid } from '@/lib/rate-limit'
 import { HIGH_RISK_COUNTRIES, computeRiskFlags } from '@/lib/risk'
 import { computeScammerScore, type ScammerInput, type ScammerResult } from '@/lib/scammer-score'
 
@@ -1033,6 +1034,7 @@ export interface ScammerAnalysis {
 
 export async function getScammerAnalysis(userId: string): Promise<ScammerAnalysis | null> {
   await requireAdmin()
+  assertUuid(userId, 'userId')
   const admin = getServiceClient()
 
   // Parallel fetch all data

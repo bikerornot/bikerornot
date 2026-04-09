@@ -20,6 +20,20 @@ export function checkRateLimit(key: string, max: number, windowMs: number): void
   entry.count++
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Validate that a string is a well-formed UUID before interpolating it into
+ * a PostgREST .or() filter string. Any non-UUID input (commas, parens, .eq.
+ * expressions) could otherwise subvert filter logic and bypass auth gates.
+ */
+export function assertUuid(value: unknown, label = 'id'): string {
+  if (typeof value !== 'string' || !UUID_RE.test(value)) {
+    throw new Error(`Invalid ${label}`)
+  }
+  return value
+}
+
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const ALLOWED_IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp'])
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024 // 10 MB

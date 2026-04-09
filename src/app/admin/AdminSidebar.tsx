@@ -141,7 +141,7 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
   const pathname = usePathname()
   const [activeUsers, setActiveUsers] = useState(initialActiveUsers)
   const [menuOpen, setMenuOpen] = useState(false)
-  const isSafetyPage = pathname.startsWith('/admin/safety') || pathname.startsWith('/admin/reports') || pathname.startsWith('/admin/flags') || pathname.startsWith('/admin/watchlist')
+  const isSafetyPage = pathname.startsWith('/admin/safety') || pathname.startsWith('/admin/reports') || pathname.startsWith('/admin/flags') || pathname.startsWith('/admin/watchlist') || pathname.startsWith('/admin/ai-analysis')
   const [safetyOpen, setSafetyOpen] = useState(isSafetyPage)
   const [adsEnabled, setAdsEnabled] = useState(initialAdsEnabled)
   const [adsToggling, setAdsToggling] = useState(false)
@@ -201,6 +201,7 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
               { href: '/admin/reports', label: 'Reports', badge: pendingReports },
               { href: '/admin/flags', label: 'AI Flags', badge: pendingFlags },
               { href: '/admin/watchlist', label: 'Watchlist', badge: watchlistCount },
+              { href: '/admin/ai-analysis', label: 'AI Analysis', badge: 0 },
             ]
             return (
               <div>
@@ -364,6 +365,7 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
                     { href: '/admin/reports', label: 'Reports', badge: pendingReports },
                     { href: '/admin/flags', label: 'AI Flags', badge: pendingFlags },
                     { href: '/admin/watchlist', label: 'Watchlist', badge: watchlistCount },
+                    { href: '/admin/ai-analysis', label: 'AI Analysis', badge: 0 },
                   ]
                   return (
                     <div>

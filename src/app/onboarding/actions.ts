@@ -102,11 +102,24 @@ export async function uploadAvatar(formData: FormData): Promise<string> {
   return path
 }
 
+export interface SignupAttribution {
+  utm_source?: string | null
+  utm_medium?: string | null
+  utm_campaign?: string | null
+  utm_content?: string | null
+  utm_term?: string | null
+  fbclid?: string | null
+  gclid?: string | null
+  landing_path?: string | null
+  referrer?: string | null
+}
+
 export async function saveOnboardingData(
   username: string,
   photoPath: string | null,
   bikes: Array<{ year: number; make: string; model: string }>,
-  refUrl?: string | null
+  refUrl?: string | null,
+  attribution?: SignupAttribution | null
 ): Promise<{ username: string; bikeIds: string[]; phoneRequired: boolean }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -169,6 +182,22 @@ export async function saveOnboardingData(
   geoUpdate.signup_region = location.region
   geoUpdate.signup_city = location.city
   geoUpdate.signup_ref_url = refUrl ?? null
+
+  // Structured attribution (UTM / click IDs / landing path) — lets us slice
+  // paid cohorts in SQL without parsing the freeform signup_ref_url string.
+  // Truncate long values defensively so a bad actor can't stuff the DB.
+  if (attribution) {
+    const trunc = (v: string | null | undefined) =>
+      (typeof v === 'string' && v.length > 0) ? v.slice(0, 512) : null
+    geoUpdate.signup_utm_source = trunc(attribution.utm_source)
+    geoUpdate.signup_utm_medium = trunc(attribution.utm_medium)
+    geoUpdate.signup_utm_campaign = trunc(attribution.utm_campaign)
+    geoUpdate.signup_utm_content = trunc(attribution.utm_content)
+    geoUpdate.signup_utm_term = trunc(attribution.utm_term)
+    geoUpdate.signup_fbclid = trunc(attribution.fbclid)
+    geoUpdate.signup_gclid = trunc(attribution.gclid)
+    geoUpdate.signup_landing_path = trunc(attribution.landing_path)
+  }
 
   await admin.from('profiles').update(geoUpdate).eq('id', user.id)
 

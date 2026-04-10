@@ -466,6 +466,13 @@ export default function OnboardingPage() {
       }
 
       const refUrl = localStorage.getItem('signup_ref_url') ?? null
+      let attribution = null
+      try {
+        const raw = localStorage.getItem('signup_attribution')
+        if (raw) attribution = JSON.parse(raw)
+      } catch {
+        // Corrupt localStorage — ignore, refUrl fallback still works
+      }
       const validBikes = skipBikes
         ? []
         : bikes
@@ -475,8 +482,9 @@ export default function OnboardingPage() {
               make: b.make.trim(),
               model: b.model.trim(),
             }))
-      const result = await saveOnboardingData(username, photoPath, validBikes, refUrl)
+      const result = await saveOnboardingData(username, photoPath, validBikes, refUrl, attribution)
       localStorage.removeItem('signup_ref_url')
+      localStorage.removeItem('signup_attribution')
 
       // Upload bike photos (best-effort — don't block completion)
       if (result.bikeIds.length > 0 && !skipBikes) {

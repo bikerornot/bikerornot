@@ -54,8 +54,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ErrorLogger />
         {children}
 
-        {/* Referral source capture — runs on every page so UTM params are
-            caught on any landing page, not just /signup */}
+        {/* Referral / attribution capture — runs on every page so UTM params
+            and ad click IDs are caught on any landing page, not just /signup.
+            Stores both the legacy freeform string (signup_ref_url, kept for
+            backward compat with existing admin views) and a structured JSON
+            blob (signup_attribution) that the onboarding action parses into
+            dedicated columns on profiles. First touch wins — once either
+            value is set we never overwrite, so a user who lands via
+            facebook/cpc and later navigates to bikerornot.com directly still
+            gets credited to Facebook. */}
         <Script
           id="referral-capture"
           strategy="afterInteractive"
@@ -63,21 +70,45 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `
               (function() {
                 try {
-                  if (localStorage.getItem('signup_ref_url')) return;
+                  if (localStorage.getItem('signup_attribution')) return;
                   var p = new URLSearchParams(window.location.search);
-                  var src = p.get('utm_source');
-                  var med = p.get('utm_medium');
-                  var cmp = p.get('utm_campaign');
-                  var ref = p.get('ref');
-                  var val = null;
-                  if (src) {
-                    val = src + (med ? ' / ' + med : '') + (cmp ? ' / ' + cmp : '');
-                  } else if (ref) {
-                    val = 'ref:' + ref;
-                  } else if (document.referrer) {
-                    val = document.referrer;
+                  var attribution = {
+                    utm_source: p.get('utm_source') || null,
+                    utm_medium: p.get('utm_medium') || null,
+                    utm_campaign: p.get('utm_campaign') || null,
+                    utm_content: p.get('utm_content') || null,
+                    utm_term: p.get('utm_term') || null,
+                    fbclid: p.get('fbclid') || null,
+                    gclid: p.get('gclid') || null,
+                    landing_path: window.location.pathname || null,
+                    referrer: document.referrer || null,
+                  };
+                  // Only persist if we actually have some attribution signal —
+                  // avoid overwriting a future first-touch capture with an
+                  // empty object on a direct visit.
+                  var hasSignal = attribution.utm_source || attribution.fbclid ||
+                    attribution.gclid || attribution.referrer || p.get('ref');
+                  if (!hasSignal) return;
+
+                  localStorage.setItem('signup_attribution', JSON.stringify(attribution));
+
+                  // Legacy freeform string — kept so admin UIs that read
+                  // signup_ref_url keep working unchanged.
+                  if (!localStorage.getItem('signup_ref_url')) {
+                    var src = attribution.utm_source;
+                    var med = attribution.utm_medium;
+                    var cmp = attribution.utm_campaign;
+                    var ref = p.get('ref');
+                    var val = null;
+                    if (src) {
+                      val = src + (med ? ' / ' + med : '') + (cmp ? ' / ' + cmp : '');
+                    } else if (ref) {
+                      val = 'ref:' + ref;
+                    } else if (attribution.referrer) {
+                      val = attribution.referrer;
+                    }
+                    if (val) localStorage.setItem('signup_ref_url', val);
                   }
-                  if (val) localStorage.setItem('signup_ref_url', val);
                 } catch(e) {}
               })();
             `,

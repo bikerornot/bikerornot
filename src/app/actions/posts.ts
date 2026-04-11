@@ -400,3 +400,71 @@ export async function unlikePost(postId: string): Promise<void> {
 
   if (error) throw new Error(error.message)
 }
+
+export interface PostLiker {
+  id: string
+  username: string | null
+  first_name: string | null
+  profile_photo_url: string | null
+  phone_verified_at: string | null
+  friendshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'accepted'
+}
+
+export async function getPostLikers(postId: string): Promise<PostLiker[]> {
+  assertUuid(postId, 'postId')
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const admin = getServiceClient()
+
+  const { data: likes } = await admin
+    .from('post_likes')
+    .select('user_id, profiles:profiles!user_id(id, username, first_name, profile_photo_url, phone_verified_at, status)')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  if (!likes || likes.length === 0) return []
+
+  // Filter to active users only
+  const likerProfiles = (likes as any[])
+    .filter((l) => l.profiles?.status === 'active')
+    .map((l) => l.profiles)
+
+  if (likerProfiles.length === 0) return []
+
+  // Batch fetch friendship status between viewer and all likers
+  const likerIds = likerProfiles.map((p: any) => p.id)
+  const { data: friendships } = await admin
+    .from('friendships')
+    .select('requester_id, addressee_id, status')
+    .or(
+      likerIds
+        .map((id: string) =>
+          `and(requester_id.eq.${user.id},addressee_id.eq.${id}),and(requester_id.eq.${id},addressee_id.eq.${user.id})`
+        )
+        .join(',')
+    )
+
+  const friendMap = new Map<string, PostLiker['friendshipStatus']>()
+  for (const f of friendships ?? []) {
+    const otherId = f.requester_id === user.id ? f.addressee_id : f.requester_id
+    if (f.status === 'accepted') {
+      friendMap.set(otherId, 'accepted')
+    } else if (f.requester_id === user.id) {
+      friendMap.set(otherId, 'pending_sent')
+    } else {
+      friendMap.set(otherId, 'pending_received')
+    }
+  }
+
+  return likerProfiles.map((p: any) => ({
+    id: p.id,
+    username: p.username,
+    first_name: p.first_name,
+    profile_photo_url: p.profile_photo_url,
+    phone_verified_at: p.phone_verified_at,
+    friendshipStatus: p.id === user.id ? 'accepted' : (friendMap.get(p.id) ?? 'none'),
+  }))
+}

@@ -14,6 +14,7 @@ import { extractYouTubeId, fetchYouTubeMeta } from '@/lib/youtube'
 import { renderContent } from '@/lib/render-content'
 import VerifiedBadge from './VerifiedBadge'
 import EventCard from './EventCard'
+import LikersModal from './LikersModal'
 
 interface Props {
   post: Post
@@ -226,6 +227,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
   const [sharing, setSharing] = useState(false)
   const [joinedGroup, setJoinedGroup] = useState(false)
   const [joiningGroup, setJoiningGroup] = useState(false)
+  const [showLikers, setShowLikers] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editContent, setEditContent] = useState(post.content ?? '')
   const [editError, setEditError] = useState('')
@@ -476,8 +478,15 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
           }`}
         >
           {liked ? '♥' : '♡'}
-          {likeCount > 0 && <span className="text-sm">{likeCount}</span>}
         </button>
+        {likeCount > 0 && (
+          <button
+            onClick={() => setShowLikers(true)}
+            className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors -ml-1"
+          >
+            {likeCount}
+          </button>
+        )}
 
         <button
           onClick={() => {
@@ -506,6 +515,15 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
           </button>
         )}
       </div>
+
+      {/* Likers modal */}
+      {showLikers && currentUserId && (
+        <LikersModal
+          postId={post.id}
+          currentUserId={currentUserId}
+          onClose={() => setShowLikers(false)}
+        />
+      )}
 
       {/* Share modal */}
       {showShareModal && (

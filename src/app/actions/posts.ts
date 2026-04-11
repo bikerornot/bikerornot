@@ -404,7 +404,6 @@ export async function unlikePost(postId: string): Promise<void> {
 export interface PostLiker {
   id: string
   username: string | null
-  first_name: string | null
   profile_photo_url: string | null
   phone_verified_at: string | null
   friendshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'accepted'
@@ -420,7 +419,7 @@ export async function getPostLikers(postId: string): Promise<PostLiker[]> {
 
   const { data: likes } = await admin
     .from('post_likes')
-    .select('user_id, profiles:profiles!user_id(id, username, first_name, profile_photo_url, phone_verified_at, status)')
+    .select('user_id, profiles:profiles!user_id(id, username, profile_photo_url, phone_verified_at, status)')
     .eq('post_id', postId)
     .order('created_at', { ascending: false })
     .limit(200)
@@ -462,7 +461,6 @@ export async function getPostLikers(postId: string): Promise<PostLiker[]> {
   return likerProfiles.map((p: any) => ({
     id: p.id,
     username: p.username,
-    first_name: p.first_name,
     profile_photo_url: p.profile_photo_url,
     phone_verified_at: p.phone_verified_at,
     friendshipStatus: p.id === user.id ? 'accepted' : (friendMap.get(p.id) ?? 'none'),

@@ -96,9 +96,6 @@ export default function LikersModal({ postId, currentUserId, onClose }: Props) {
                     <span className="text-white text-sm font-medium truncate">@{liker.username}</span>
                     {liker.phone_verified_at && <VerifiedBadge className="w-3.5 h-3.5" />}
                   </div>
-                  {liker.first_name && (
-                    <p className="text-zinc-500 text-xs truncate">{liker.first_name}</p>
-                  )}
                 </Link>
 
                 {!isMe && !isFriend && !isPending && (

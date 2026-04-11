@@ -59,7 +59,7 @@ export default function PhotosTab({ profileId, currentUserId, currentUserProfile
 
       const [{ data: allLikes }, { data: myLikes }, { data: allComments }] = await Promise.all([
         postIds.length > 0
-          ? supabase.from('post_likes').select('post_id').in('post_id', postIds)
+          ? supabase.from('post_likes').select('post_id, user:profiles!user_id(status)').in('post_id', postIds)
           : Promise.resolve({ data: [] as { post_id: string }[] }),
         postIds.length > 0 && currentUserId
           ? supabase.from('post_likes').select('post_id').in('post_id', postIds).eq('user_id', currentUserId)
@@ -69,7 +69,8 @@ export default function PhotosTab({ profileId, currentUserId, currentUserProfile
           : Promise.resolve({ data: [] as { post_id: string }[] }),
       ])
 
-      const likeCountByPost = (allLikes ?? []).reduce<Record<string, number>>((acc, r) => {
+      const likeCountByPost = (allLikes ?? []).reduce<Record<string, number>>((acc, r: any) => {
+        if (['banned', 'suspended'].includes(r.user?.status)) return acc
         acc[r.post_id] = (acc[r.post_id] ?? 0) + 1
         return acc
       }, {})

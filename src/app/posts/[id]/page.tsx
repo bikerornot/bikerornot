@@ -56,7 +56,7 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
     { data: myLikes },
     sharedResult,
   ] = await Promise.all([
-    supabase.from('post_likes').select('post_id').eq('post_id', id),
+    supabase.from('post_likes').select('post_id, user:profiles!user_id(status)').eq('post_id', id),
     supabase.from('comments').select('post_id, author:profiles!author_id(status)').eq('post_id', id).is('deleted_at', null),
     supabase.from('post_likes').select('post_id').eq('post_id', id).eq('user_id', user.id),
     post.shared_post_id
@@ -70,7 +70,7 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
 
   const enrichedPost: Post = {
     ...post,
-    like_count: likeCounts?.length ?? 0,
+    like_count: (likeCounts ?? []).filter((l: any) => !['banned', 'suspended'].includes(l.user?.status)).length,
     comment_count: (commentCounts ?? []).filter((c: any) => !['banned', 'suspended'].includes(c.author?.status)).length,
     is_liked_by_me: (myLikes?.length ?? 0) > 0,
     shared_post: (sharedResult.data as Post | null) ?? null,

@@ -502,7 +502,7 @@ export async function getGroupPosts(groupId: string, cursor?: string): Promise<P
   const sharedPostIds = filtered.map((p: any) => p.shared_post_id).filter(Boolean) as string[]
 
   const [{ data: likeCounts }, { data: commentCounts }, { data: myLikes }, { data: sharedPostsData }] = await Promise.all([
-    admin.from('post_likes').select('post_id').in('post_id', postIds),
+    admin.from('post_likes').select('post_id, user:profiles!user_id(status)').in('post_id', postIds),
     admin.from('comments').select('post_id, author:profiles!author_id(status)').in('post_id', postIds).is('deleted_at', null),
     admin.from('post_likes').select('post_id').in('post_id', postIds).eq('user_id', user.id),
     sharedPostIds.length > 0
@@ -510,7 +510,8 @@ export async function getGroupPosts(groupId: string, cursor?: string): Promise<P
       : Promise.resolve({ data: [] }),
   ])
 
-  const likeMap = (likeCounts ?? []).reduce<Record<string, number>>((acc, r) => {
+  const likeMap = (likeCounts ?? []).reduce<Record<string, number>>((acc, r: any) => {
+    if (['banned', 'suspended'].includes(r.user?.status)) return acc
     acc[r.post_id] = (acc[r.post_id] ?? 0) + 1
     return acc
   }, {})

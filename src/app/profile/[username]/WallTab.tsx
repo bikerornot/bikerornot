@@ -56,7 +56,7 @@ export default function WallTab({
 
       const [{ data: likeCounts }, { data: commentCounts }, { data: myLikes }, { data: sharedPostsData }] =
         await Promise.all([
-          supabase.from('post_likes').select('post_id').in('post_id', postIds),
+          supabase.from('post_likes').select('post_id, user:profiles!user_id(status)').in('post_id', postIds),
           supabase
             .from('comments')
             .select('post_id, author:profiles!author_id(status)')
@@ -77,7 +77,8 @@ export default function WallTab({
             : Promise.resolve({ data: [] }),
         ])
 
-      const likeMap = (likeCounts ?? []).reduce<Record<string, number>>((acc, r) => {
+      const likeMap = (likeCounts ?? []).reduce<Record<string, number>>((acc, r: any) => {
+        if (['banned', 'suspended'].includes(r.user?.status)) return acc
         acc[r.post_id] = (acc[r.post_id] ?? 0) + 1
         return acc
       }, {})

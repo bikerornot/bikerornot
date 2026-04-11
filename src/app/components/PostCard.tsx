@@ -468,44 +468,59 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
       )}
 
       {/* Action bar */}
-      <div className="flex items-center gap-1 px-3 py-2 border-t border-zinc-800">
-        <button
-          onClick={handleLike}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-base font-medium transition-colors ${
-            liked
-              ? 'text-orange-400 bg-orange-500/10'
-              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
-          }`}
-        >
-          {liked ? '♥' : '♡'}
-        </button>
-        {likeCount > 0 && (
+      <div className="flex items-center gap-4 px-2 py-1 border-t border-zinc-800">
+        {/* Like group: heart + count */}
+        <div className="flex items-center">
           <button
-            onClick={() => setShowLikers(true)}
-            className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors -ml-1"
+            onClick={handleLike}
+            className={`flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg transition-colors ${
+              liked
+                ? 'text-orange-400 bg-orange-500/10'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+            }`}
           >
-            {likeCount}
+            {liked ? (
+              <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+              </svg>
+            ) : (
+              <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
           </button>
-        )}
+          {likeCount > 0 && (
+            <button
+              onClick={() => setShowLikers(true)}
+              className="min-h-[44px] px-2 flex items-center text-sm font-medium text-zinc-400 hover:text-zinc-200 transition-colors"
+            >
+              {likeCount}
+            </button>
+          )}
+        </div>
 
+        {/* Comment group: bubble + count */}
         <button
           onClick={() => {
             setShowComments(!showComments)
             setCommentCount((c) => c)
           }}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-base font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+          className="flex items-center gap-2 min-h-[44px] px-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
         >
-          💬
-          {commentCount > 0 && <span className="text-sm">{commentCount}</span>}
+          <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          {commentCount > 0 && <span className="text-sm font-medium">{commentCount}</span>}
         </button>
 
+        {/* Share */}
         {currentUserId && !post.shared_post_id && (
           <button
             onClick={() => setShowShareModal(true)}
-            className="flex items-center px-3 py-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors ml-auto"
+            className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors ml-auto"
             title="Share"
           >
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="18" cy="5" r="3" />
               <circle cx="6" cy="12" r="3" />
               <circle cx="18" cy="19" r="3" />

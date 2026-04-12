@@ -63,6 +63,7 @@ export default function ProfileTabs({
       {active === 'Wall' && (
         <WallTab
           profileId={profileId}
+          profileUsername={username}
           isOwnProfile={isOwnProfile}
           isFriend={isFriend}
           currentUserId={currentUserId}

@@ -10,6 +10,7 @@ const PAGE_SIZE = 10
 
 interface Props {
   profileId: string
+  profileUsername: string
   isOwnProfile: boolean
   isFriend: boolean
   currentUserId?: string
@@ -18,6 +19,7 @@ interface Props {
 
 export default function WallTab({
   profileId,
+  profileUsername,
   isOwnProfile,
   isFriend,
   currentUserId,
@@ -140,6 +142,7 @@ export default function WallTab({
         <PostComposer
           currentUserProfile={currentUserProfile}
           wallOwnerId={profileId}
+          wallOwnerUsername={isOwnProfile ? undefined : profileUsername}
           onPostCreated={handlePostCreated}
         />
       )}

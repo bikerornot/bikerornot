@@ -356,8 +356,110 @@ export default async function ProfilePage({
 
       {/* Profile body */}
       <div className="max-w-2xl mx-auto px-4">
-        {/* Avatar overlaps cover; info block stays below the cover on solid bg */}
-        <div className={`sm:flex sm:gap-5 sm:items-start ${coverUrl ? '-mt-16' : 'pt-5'}`}>
+        {/* ---------- MOBILE HEADER (sm:hidden) ---------- */}
+        <div className={`sm:hidden ${coverUrl ? '-mt-16' : 'pt-5'}`}>
+          {/* Avatar + stats (next to avatar) */}
+          <div className="flex gap-4 items-start">
+            <div className="flex-shrink-0">
+              <AvatarLightbox
+                avatarUrl={avatarUrl}
+                firstInitial={(profile.first_name?.[0] ?? '?').toUpperCase()}
+                isOwnProfile={isOwnProfile}
+              />
+            </div>
+            <div className={`flex-1 min-w-0 ${coverUrl ? 'pt-20' : 'pt-0'}`}>
+              <h1 className="text-xl font-bold text-white flex items-center gap-1.5 min-w-0 mb-1.5">
+                <span className="truncate">@{profile.username}</span>
+                {profile.phone_verified_at && <VerifiedBadge className="w-5 h-5 flex-shrink-0" />}
+              </h1>
+              <div className="text-sm text-zinc-400 space-y-0.5">
+                <Link
+                  href={`/profile/${profile.username}?tab=Friends`}
+                  className="block hover:text-white transition-colors"
+                >
+                  <span className="text-white font-semibold">{friendCount ?? 0}</span> Friends
+                </Link>
+                {mutualFriends.length > 0 && (
+                  <div>
+                    <span className="text-white font-medium">{mutualFriends.length}</span>{' '}
+                    mutual {mutualFriends.length === 1 ? 'friend' : 'friends'}
+                  </div>
+                )}
+                <div>
+                  Member since <span className="text-white">{memberSince}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Below avatar — full-width bio, details, action buttons */}
+          <div className="mt-3 space-y-2">
+            {/* Bio details */}
+            <div className="flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-400">
+              {(profile.city || profile.state) && (
+                <span>{[profile.city, profile.state].filter(Boolean).join(', ')}</span>
+              )}
+              {(profile.city || profile.state) && profile.gender && <span className="text-zinc-600">·</span>}
+              {profile.gender && (
+                <span>{profile.gender === 'male' ? 'Male' : 'Female'}</span>
+              )}
+              {profile.gender && profile.date_of_birth && <span className="text-zinc-600">·</span>}
+              {profile.date_of_birth && (
+                <span>{(() => {
+                  const today = new Date()
+                  const birth = new Date(profile.date_of_birth)
+                  let age = today.getFullYear() - birth.getFullYear()
+                  if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--
+                  return `${age}`
+                })()}</span>
+              )}
+              {profile.date_of_birth && profile.relationship_status && <span className="text-zinc-600">·</span>}
+              {profile.relationship_status && (
+                <span>{relationshipLabel[profile.relationship_status]}</span>
+              )}
+            </div>
+
+            {/* Bio text */}
+            {profile.bio && (
+              <p className="text-zinc-300 text-sm leading-relaxed">{profile.bio}</p>
+            )}
+
+            {/* Action buttons — full-width row */}
+            <div className="flex gap-2 pt-1 [&>div]:flex-1 [&>div>button]:w-full">
+              {isOwnProfile ? (
+                <Link
+                  href="/settings"
+                  className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors border border-zinc-700 text-center"
+                >
+                  Edit Profile
+                </Link>
+              ) : (
+                <>
+                  {user && (
+                    <FriendButton
+                      profileId={profile.id}
+                      initialStatus={friendshipStatus}
+                    />
+                  )}
+                  {friendshipStatus === 'accepted' && (
+                    <MessageButton profileId={profile.id} locked={!viewerHasPublicActivity} />
+                  )}
+                  {user && (
+                    <ContentMenu
+                      reportType="profile"
+                      reportTargetId={profile.id}
+                      blockUserId={profile.id}
+                      buttonClassName="bg-white/10 hover:bg-white/20 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors border border-white/20"
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ---------- DESKTOP HEADER (hidden sm:flex) ---------- */}
+        <div className={`hidden sm:flex sm:gap-5 sm:items-start ${coverUrl ? '-mt-16' : 'pt-5'}`}>
           {/* Avatar — overlaps cover photo */}
           <div className="flex-shrink-0">
             <AvatarLightbox
@@ -370,7 +472,7 @@ export default async function ProfilePage({
           {/* Info block — pushed below the cover overlap so text is always on dark bg.
               The avatar is 128px tall and overlaps by 64px (-mt-16), so the info block
               needs at least 20 (80px) of top padding to clear the cover bottom edge. */}
-          <div className={`flex-1 min-w-0 pt-3 ${coverUrl ? 'sm:pt-20' : 'sm:pt-2'}`}>
+          <div className={`flex-1 min-w-0 ${coverUrl ? 'pt-20' : 'pt-2'}`}>
             {/* Username + buttons row */}
             <div className="flex items-center justify-between gap-3 mb-2">
               <h1 className="text-xl font-bold text-white flex items-center gap-1.5 min-w-0">
@@ -378,7 +480,6 @@ export default async function ProfilePage({
                 {profile.phone_verified_at && <VerifiedBadge className="w-5 h-5 flex-shrink-0" />}
               </h1>
 
-              {/* Action buttons */}
               <div className="flex gap-2 flex-shrink-0">
                 {isOwnProfile ? (
                   <Link

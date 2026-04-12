@@ -12,12 +12,13 @@ import MentionDropdown, { useMention } from './MentionDropdown'
 interface Props {
   currentUserProfile: Profile
   wallOwnerId?: string
+  wallOwnerUsername?: string
   groupId?: string
   bikeId?: string
   onPostCreated?: (postId: string) => void
 }
 
-export default function PostComposer({ currentUserProfile, wallOwnerId, groupId, bikeId, onPostCreated }: Props) {
+export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwnerUsername, groupId, bikeId, onPostCreated }: Props) {
   const [content, setContent] = useState('')
   const [images, setImages] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
@@ -70,6 +71,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, groupId,
 
   const placeholder = useMemo(() => {
     if (bikeId) return "Share something about this ride…"
+    if (wallOwnerUsername) return `Share something with @${wallOwnerUsername}…`
     const firstName = currentUserProfile.first_name ?? 'rider'
     return Math.random() < 0.7
       ? `What's going on, ${firstName}?`

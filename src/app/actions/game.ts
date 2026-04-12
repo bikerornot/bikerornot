@@ -120,6 +120,44 @@ export async function getGamePhotoStats(): Promise<GamePhotoStats> {
   }
 }
 
+export async function getApprovedGamePhotos(page = 1, pageSize = 40): Promise<{ photos: GamePhoto[]; total: number }> {
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  const { data, count } = await admin
+    .from('bike_photos')
+    .select('id, storage_path, bike_id, bike:user_bikes!bike_id(year, make, model, user_id), user:user_bikes!bike_id(user:profiles!user_id(username))', { count: 'exact' })
+    .eq('game_approved', true)
+    .order('game_reviewed_at', { ascending: false })
+    .range(from, to)
+
+  const photos: GamePhoto[] = ((data ?? []) as any[]).map((p) => ({
+    id: p.id,
+    storage_path: p.storage_path,
+    bike_id: p.bike_id,
+    year: p.bike?.year ?? null,
+    make: p.bike?.make ?? null,
+    model: p.bike?.model ?? null,
+    username: p.user?.user?.username ?? null,
+  }))
+
+  return { photos, total: count ?? 0 }
+}
+
+export async function unapproveGamePhotos(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  await admin
+    .from('bike_photos')
+    .update({ game_approved: false, game_reviewed_at: new Date().toISOString() })
+    .in('id', ids)
+}
+
 // ─── Game Engine Types ─────────────────────────────────────
 
 export interface GameRound {

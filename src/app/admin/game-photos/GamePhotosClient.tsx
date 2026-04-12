@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { getUnreviewedGamePhotos, submitGamePhotoReviews, getGamePhotoStats, type GamePhoto, type GamePhotoStats } from '@/app/actions/game'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -87,10 +88,10 @@ export default function GamePhotosClient({ initialPhotos, initialStats }: Props)
           <p className="text-xs text-zinc-500 uppercase tracking-wider">Total</p>
           <p className="text-lg font-bold text-white">{stats.total}</p>
         </div>
-        <div>
+        <Link href="/admin/game-photos/approved" className="hover:bg-zinc-800/50 rounded-lg px-2 py-1 -mx-2 -my-1 transition-colors">
           <p className="text-xs text-zinc-500 uppercase tracking-wider">Approved</p>
-          <p className="text-lg font-bold text-emerald-400">{stats.approved}</p>
-        </div>
+          <p className="text-lg font-bold text-emerald-400 underline decoration-emerald-400/30 underline-offset-2">{stats.approved}</p>
+        </Link>
         <div>
           <p className="text-xs text-zinc-500 uppercase tracking-wider">Rejected</p>
           <p className="text-lg font-bold text-red-400">{stats.rejected}</p>

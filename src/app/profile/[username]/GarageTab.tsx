@@ -435,7 +435,6 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
                 )}
               </div>
             </div>
-            <ReadOnlyPhotoStrip bikeId={bike.id} />
           </div>
         ))}
       </div>

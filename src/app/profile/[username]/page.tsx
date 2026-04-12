@@ -356,9 +356,9 @@ export default async function ProfilePage({
 
       {/* Profile body */}
       <div className="max-w-2xl mx-auto px-4">
-        {/* Desktop: horizontal layout — avatar left, info + buttons right */}
-        <div className={`sm:flex sm:gap-5 ${coverUrl ? '-mt-16' : 'pt-5'}`}>
-          {/* Avatar */}
+        {/* Avatar overlaps cover; info block stays below the cover on solid bg */}
+        <div className={`sm:flex sm:gap-5 sm:items-start ${coverUrl ? '-mt-16' : 'pt-5'}`}>
+          {/* Avatar — overlaps cover photo */}
           <div className="flex-shrink-0">
             <AvatarLightbox
               avatarUrl={avatarUrl}
@@ -367,8 +367,8 @@ export default async function ProfilePage({
             />
           </div>
 
-          {/* Info block — sits beside avatar on desktop, below on mobile */}
-          <div className="flex-1 min-w-0 pt-3 sm:pt-2">
+          {/* Info block — pushed below the cover overlap so text is always on dark bg */}
+          <div className={`flex-1 min-w-0 pt-3 ${coverUrl ? 'sm:pt-14' : 'sm:pt-2'}`}>
             {/* Username + buttons row */}
             <div className="flex items-start justify-between gap-3 mb-2">
               <h1 className="text-2xl font-bold text-white flex items-center gap-1.5 truncate">

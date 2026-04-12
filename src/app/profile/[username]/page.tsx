@@ -372,10 +372,10 @@ export default async function ProfilePage({
               needs at least 20 (80px) of top padding to clear the cover bottom edge. */}
           <div className={`flex-1 min-w-0 pt-3 ${coverUrl ? 'sm:pt-20' : 'sm:pt-2'}`}>
             {/* Username + buttons row */}
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <h1 className="text-2xl font-bold text-white flex items-center gap-1.5 truncate">
-                @{profile.username}
-                {profile.phone_verified_at && <VerifiedBadge className="w-5 h-5" />}
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <h1 className="text-xl font-bold text-white flex items-center gap-1.5 min-w-0">
+                <span className="truncate">@{profile.username}</span>
+                {profile.phone_verified_at && <VerifiedBadge className="w-5 h-5 flex-shrink-0" />}
               </h1>
 
               {/* Action buttons */}

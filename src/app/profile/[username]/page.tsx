@@ -367,8 +367,10 @@ export default async function ProfilePage({
             />
           </div>
 
-          {/* Info block — pushed below the cover overlap so text is always on dark bg */}
-          <div className={`flex-1 min-w-0 pt-3 ${coverUrl ? 'sm:pt-14' : 'sm:pt-2'}`}>
+          {/* Info block — pushed below the cover overlap so text is always on dark bg.
+              The avatar is 128px tall and overlaps by 64px (-mt-16), so the info block
+              needs at least 20 (80px) of top padding to clear the cover bottom edge. */}
+          <div className={`flex-1 min-w-0 pt-3 ${coverUrl ? 'sm:pt-20' : 'sm:pt-2'}`}>
             {/* Username + buttons row */}
             <div className="flex items-start justify-between gap-3 mb-2">
               <h1 className="text-2xl font-bold text-white flex items-center gap-1.5 truncate">

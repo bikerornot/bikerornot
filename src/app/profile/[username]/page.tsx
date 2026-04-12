@@ -356,155 +356,142 @@ export default async function ProfilePage({
 
       {/* Profile body */}
       <div className="max-w-2xl mx-auto px-4">
-        {/* Avatar + action buttons row */}
-        <div className={`flex items-end justify-between mb-3 ${coverUrl ? '-mt-16' : 'pt-5'}`}>
+        {/* Desktop: horizontal layout — avatar left, info + buttons right */}
+        <div className={`sm:flex sm:gap-5 ${coverUrl ? '-mt-16' : 'pt-5'}`}>
           {/* Avatar */}
-          <AvatarLightbox
-            avatarUrl={avatarUrl}
-            firstInitial={(profile.first_name?.[0] ?? '?').toUpperCase()}
-            isOwnProfile={isOwnProfile}
-          />
-
-          {/* Action buttons */}
-          <div className="pb-2 flex gap-2">
-            {isOwnProfile ? (
-              <Link
-                href="/settings"
-                className="bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors border border-zinc-700"
-              >
-                Edit Profile
-              </Link>
-            ) : (
-              <>
-                {user && (
-                  <FriendButton
-                    profileId={profile.id}
-                    initialStatus={friendshipStatus}
-                  />
-                )}
-                {friendshipStatus === 'accepted' && (
-                  <MessageButton profileId={profile.id} locked={!viewerHasPublicActivity} />
-                )}
-                {user && (
-                  <ContentMenu
-                    reportType="profile"
-                    reportTargetId={profile.id}
-                    blockUserId={profile.id}
-                    buttonClassName="bg-white/10 hover:bg-white/20 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors border border-white/20"
-                  />
-                )}
-              </>
-            )}
+          <div className="flex-shrink-0">
+            <AvatarLightbox
+              avatarUrl={avatarUrl}
+              firstInitial={(profile.first_name?.[0] ?? '?').toUpperCase()}
+              isOwnProfile={isOwnProfile}
+            />
           </div>
-        </div>
 
-        {/* Username — full width so it never gets truncated on mobile */}
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold text-white flex items-center gap-1.5">
-            @{profile.username}
-            {profile.phone_verified_at && <VerifiedBadge className="w-5 h-5" />}
-          </h1>
-        </div>
+          {/* Info block — sits beside avatar on desktop, below on mobile */}
+          <div className="flex-1 min-w-0 pt-3 sm:pt-2">
+            {/* Username + buttons row */}
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <h1 className="text-2xl font-bold text-white flex items-center gap-1.5 truncate">
+                @{profile.username}
+                {profile.phone_verified_at && <VerifiedBadge className="w-5 h-5" />}
+              </h1>
 
-        {/* Stats */}
-        <div className="flex flex-wrap gap-5 text-sm text-zinc-400 mb-4">
-          <Link
-            href={`/profile/${profile.username}?tab=Friends`}
-            className="hover:text-white transition-colors"
-          >
-            <span className="text-white font-semibold">{friendCount ?? 0}</span> Friends
-          </Link>
-          <span>
-            Member since <span className="text-white">{memberSince}</span>
-          </span>
-        </div>
-
-        {/* Mutual friends */}
-        {mutualFriends.length > 0 && (
-          <div className="flex items-center gap-2 mb-4">
-            {/* Avatar stack */}
-            <div className="flex -space-x-2">
-              {mutualFriends.slice(0, 3).map((mf) => {
-                const mfAvatarUrl = mf.profile_photo_url
-                  ? getImageUrl('avatars', mf.profile_photo_url)
-                  : null
-                return (
-                  <div
-                    key={mf.id}
-                    className="w-7 h-7 rounded-full border-2 border-zinc-950 bg-zinc-700 overflow-hidden flex-shrink-0"
+              {/* Action buttons */}
+              <div className="flex gap-2 flex-shrink-0">
+                {isOwnProfile ? (
+                  <Link
+                    href="/settings"
+                    className="bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors border border-zinc-700"
                   >
-                    {mfAvatarUrl ? (
-                      <Image
-                        src={mfAvatarUrl}
-                        alt={mf.username ?? ''}
-                        width={28}
-                        height={28}
-                        className="object-cover w-full h-full"
+                    Edit Profile
+                  </Link>
+                ) : (
+                  <>
+                    {user && (
+                      <FriendButton
+                        profileId={profile.id}
+                        initialStatus={friendshipStatus}
                       />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-sm font-bold text-zinc-300">
-                        {(mf.username?.[0] ?? '?').toUpperCase()}
-                      </div>
                     )}
-                  </div>
-                )
-              })}
+                    {friendshipStatus === 'accepted' && (
+                      <MessageButton profileId={profile.id} locked={!viewerHasPublicActivity} />
+                    )}
+                    {user && (
+                      <ContentMenu
+                        reportType="profile"
+                        reportTargetId={profile.id}
+                        blockUserId={profile.id}
+                        buttonClassName="bg-white/10 hover:bg-white/20 text-white text-sm font-semibold px-3 py-2 rounded-lg transition-colors border border-white/20"
+                      />
+                    )}
+                  </>
+                )}
+              </div>
             </div>
-            <span className="text-sm text-zinc-400">
-              <span className="text-white font-medium">{mutualFriends.length}</span>{' '}
-              mutual {mutualFriends.length === 1 ? 'friend' : 'friends'}
-            </span>
-          </div>
-        )}
 
-        {/* Info card */}
-        <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-5 mb-4 space-y-3">
-          {profile.bio && (
-            <p className="text-zinc-300 text-sm leading-relaxed">{profile.bio}</p>
-          )}
-
-          <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-zinc-400">
-            {(profile.city || profile.state) && (
-              <div className="flex items-center gap-1.5">
-                <span>📍</span>
+            {/* Bio details — compact inline on desktop */}
+            <div className="flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-400 mb-2">
+              {(profile.city || profile.state) && (
                 <span>{[profile.city, profile.state].filter(Boolean).join(', ')}</span>
-              </div>
-            )}
-
-            {profile.gender && (
-              <div className="flex items-center gap-1.5">
-                <span>{profile.gender === 'male' ? '♂️' : '♀️'}</span>
+              )}
+              {(profile.city || profile.state) && profile.gender && <span className="text-zinc-600">·</span>}
+              {profile.gender && (
                 <span>{profile.gender === 'male' ? 'Male' : 'Female'}</span>
-              </div>
-            )}
-
-            {profile.date_of_birth && (
-              <div className="flex items-center gap-1.5">
-                <span>🎂</span>
+              )}
+              {profile.gender && profile.date_of_birth && <span className="text-zinc-600">·</span>}
+              {profile.date_of_birth && (
                 <span>{(() => {
                   const today = new Date()
                   const birth = new Date(profile.date_of_birth)
                   let age = today.getFullYear() - birth.getFullYear()
                   if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--
-                  return `${age} years old`
+                  return `${age}`
                 })()}</span>
+              )}
+              {profile.date_of_birth && profile.relationship_status && <span className="text-zinc-600">·</span>}
+              {profile.relationship_status && (
+                <span>{relationshipLabel[profile.relationship_status]}</span>
+              )}
+            </div>
+
+            {/* Stats + mutual friends */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-400 mb-2">
+              <Link
+                href={`/profile/${profile.username}?tab=Friends`}
+                className="hover:text-white transition-colors"
+              >
+                <span className="text-white font-semibold">{friendCount ?? 0}</span> Friends
+              </Link>
+              <span>
+                Member since <span className="text-white">{memberSince}</span>
+              </span>
+            </div>
+
+            {/* Mutual friends */}
+            {mutualFriends.length > 0 && (
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex -space-x-2">
+                  {mutualFriends.slice(0, 3).map((mf) => {
+                    const mfAvatarUrl = mf.profile_photo_url
+                      ? getImageUrl('avatars', mf.profile_photo_url)
+                      : null
+                    return (
+                      <div
+                        key={mf.id}
+                        className="w-6 h-6 rounded-full border-2 border-zinc-950 bg-zinc-700 overflow-hidden flex-shrink-0"
+                      >
+                        {mfAvatarUrl ? (
+                          <Image
+                            src={mfAvatarUrl}
+                            alt={mf.username ?? ''}
+                            width={24}
+                            height={24}
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-xs font-bold text-zinc-300">
+                            {(mf.username?.[0] ?? '?').toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                <span className="text-sm text-zinc-400">
+                  <span className="text-white font-medium">{mutualFriends.length}</span>{' '}
+                  mutual {mutualFriends.length === 1 ? 'friend' : 'friends'}
+                </span>
               </div>
             )}
 
-            {profile.relationship_status && (
-              <div className="flex items-center gap-1.5">
-                <span>{relationshipEmoji[profile.relationship_status]}</span>
-                <span>{relationshipLabel[profile.relationship_status]}</span>
-              </div>
+            {/* Bio text */}
+            {profile.bio && (
+              <p className="text-zinc-300 text-sm leading-relaxed mb-1">{profile.bio}</p>
             )}
           </div>
-
-          {!profile.bio && !profile.city && !profile.state && !profile.gender &&
-            !profile.date_of_birth && !profile.relationship_status && (
-            <p className="text-zinc-500 text-sm text-center py-2">No profile info yet.</p>
-          )}
         </div>
 
+        <div className="h-3" />
       </div>
 
       {/* Tabs — sm:px-4 so wall posts go edge-to-edge on mobile like the feed */}

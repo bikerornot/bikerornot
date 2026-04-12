@@ -318,11 +318,24 @@ export async function getLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
   await requireAuth()
   const admin = getServiceClient()
 
-  const { data: fullData } = await admin
-    .from('game_answers')
-    .select('user_id, is_correct')
+  // Paginate to get ALL game answers — default .select() caps at 1000 rows,
+  // which caused leaderboard totals to fluctuate as the table grew past 1000.
+  const allAnswers: { user_id: string; is_correct: boolean }[] = []
+  let page = 0
+  const PAGE_SIZE = 1000
+  while (true) {
+    const { data: chunk } = await admin
+      .from('game_answers')
+      .select('user_id, is_correct')
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+    if (!chunk || chunk.length === 0) break
+    allAnswers.push(...chunk)
+    if (chunk.length < PAGE_SIZE) break
+    page++
+  }
 
-  if (!fullData || fullData.length === 0) return []
+  if (allAnswers.length === 0) return []
+  const fullData = allAnswers
 
   const stats: Record<string, { correct: number; total: number }> = {}
   for (const a of fullData) {

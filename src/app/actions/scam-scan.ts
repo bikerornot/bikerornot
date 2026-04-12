@@ -190,8 +190,11 @@ export async function getFlaggedContent(): Promise<ContentFlag[]> {
     if (!seen.has(row.id)) { seen.add(row.id); data.push(row) }
   }
 
+  // Filter out flags from already-banned senders — no point reviewing them
+  const filtered = data.filter((flag: any) => flag.sender?.status !== 'banned')
+
   // Resolve recipient from conversation participants (for DM flags)
-  return (data ?? []).map((flag: any) => {
+  return filtered.map((flag: any) => {
     let recipient = null
     if (flag.flag_type === 'message' || !flag.flag_type) {
       const conv = flag.message?.conversation

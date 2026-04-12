@@ -38,8 +38,11 @@ export default function ErrorLogger() {
       'The operation is insecure',
       // Generic network noise (Safari, mobile), no stack, not actionable
       'network error',
+      // Firefox-specific network failure wording
+      'NetworkError when attempting to fetch resource',
       // React DOM race during unmount — not actionable, usually benign
       "Failed to execute 'removeChild' on 'Node'",
+      "reading 'removeChild'",
     ]
 
     // Bare rejection with no real info — Safari often swallows the details

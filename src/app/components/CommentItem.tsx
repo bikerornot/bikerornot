@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Comment, Profile } from '@/lib/supabase/types'
@@ -187,6 +187,16 @@ export default function CommentItem({
 
   const replyMention = useMention(replyText, replyCursorPos, handleReplyMentionSelect)
 
+  // Auto-grow reply textarea — moved out of onChange to avoid layout
+  // recalculations that can trigger infinite re-render loops on iOS Safari.
+  useEffect(() => {
+    const el = replyInputRef.current
+    if (el) {
+      el.style.height = 'auto'
+      el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+    }
+  }, [replyText])
+
   const isPostAuthor = currentUserId === postAuthorId
   const canHide = isPostAuthor && comment.author_id !== currentUserId
 
@@ -361,8 +371,6 @@ export default function CommentItem({
                 onChange={(e) => {
                   setReplyText(e.target.value)
                   setReplyCursorPos(e.target.selectionStart ?? 0)
-                  e.target.style.height = 'auto'
-                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
                 }}
                 onKeyDown={(e) => {
                   if (replyMention.handleKeyDown(e)) return

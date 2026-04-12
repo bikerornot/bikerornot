@@ -26,6 +26,17 @@ export default function CommentSection({ postId, postAuthorId, currentUserId, cu
   const [cursorPos, setCursorPos] = useState(0)
   const commentInputRef = useRef<HTMLTextAreaElement>(null)
 
+  // Auto-grow textarea — runs on value change instead of inside onChange
+  // to avoid triggering layout recalculations that can fire additional
+  // change events and cause an infinite loop (React error #185) on iOS Safari.
+  useEffect(() => {
+    const el = commentInputRef.current
+    if (el) {
+      el.style.height = 'auto'
+      el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+    }
+  }, [text])
+
   const handleMentionSelect = useCallback((newText: string, newCursorPos: number) => {
     setText(newText)
     setCursorPos(newCursorPos)
@@ -199,9 +210,6 @@ export default function CommentSection({ postId, postAuthorId, currentUserId, cu
               onChange={(e) => {
                 setText(e.target.value)
                 setCursorPos(e.target.selectionStart ?? 0)
-                // Auto-grow
-                e.target.style.height = 'auto'
-                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px'
               }}
               onKeyDown={(e) => {
                 if (mention.handleKeyDown(e)) return

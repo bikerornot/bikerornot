@@ -29,14 +29,13 @@ const DISTANCE_OPTIONS = [
 
 interface Props {
   initialEvents: EventDetail[]
-  recentEvents: EventDetail[]
   userLat: number | null
   userLng: number | null
   userZip: string
   currentUserId: string
 }
 
-export default function EventsClient({ initialEvents, recentEvents, userLat, userLng, userZip, currentUserId }: Props) {
+export default function EventsClient({ initialEvents, userLat, userLng, userZip, currentUserId }: Props) {
   const [tab, setTab] = useState<TabType>('all')
   const [sort, setSort] = useState<SortType>('soonest')
   const [dateFilter, setDateFilter] = useState<DateFilter>('')
@@ -44,7 +43,7 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
 
   // Zip code search
   const [zip, setZip] = useState(userZip)
-  const [radius, setRadius] = useState(100)
+  const [radius, setRadius] = useState(0)
   const [searchLat, setSearchLat] = useState<number | null>(userLat)
   const [searchLng, setSearchLng] = useState<number | null>(userLng)
   const [geoLoading, setGeoLoading] = useState(false)
@@ -120,10 +119,10 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
       })
     }
 
-    // Zip code radius filter
+    // Zip code radius filter — events without coords are kept in (can't be excluded by distance)
     if (searchLat && searchLng && radius > 0) {
       results = results.filter((e) => {
-        if (!e.latitude || !e.longitude) return false
+        if (!e.latitude || !e.longitude) return true
         const dist = haversine(searchLat, searchLng, Number(e.latitude), Number(e.longitude))
         return dist <= radius
       })
@@ -286,7 +285,7 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
         </select>
       </div>
 
-      {filtered.length === 0 && recentEvents.filter((e) => !filtered.some((f) => f.id === e.id)).length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="text-center py-12 px-4">
           <p className="text-zinc-400 text-base">No rides or events yet in your area</p>
           <p className="text-zinc-500 text-sm mt-1 mb-4">Be the first to post one!</p>
@@ -298,15 +297,10 @@ export default function EventsClient({ initialEvents, recentEvents, userLat, use
           </Link>
         </div>
       ) : (
-        <div className="space-y-2 sm:space-y-3">
+        <div className="space-y-3 px-4 sm:px-0">
           {filtered.map((event) => (
             <EventCard key={event.id} event={event} />
           ))}
-          {recentEvents
-            .filter((e) => !filtered.some((f) => f.id === e.id))
-            .map((event) => (
-              <EventCard key={event.id} event={event} />
-            ))}
         </div>
       )}
     </div>

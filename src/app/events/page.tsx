@@ -8,7 +8,7 @@ import NotificationBell from '@/app/components/NotificationBell'
 import MessagesLink from '@/app/components/MessagesLink'
 import FindRidersLink from '@/app/components/FindRidersLink'
 import BottomNav from '@/app/components/BottomNav'
-import { getEvents, getRecentEvents } from '@/app/actions/events'
+import { getEvents } from '@/app/actions/events'
 import EventsClient from './EventsClient'
 
 export const dynamic = 'force-dynamic'
@@ -27,10 +27,7 @@ export default async function EventsPage() {
 
   if (!profile?.onboarding_complete) redirect('/onboarding')
 
-  const [{ events, userLat, userLng }, recentEvents] = await Promise.all([
-    getEvents(),
-    getRecentEvents(),
-  ])
+  const { events, userLat, userLng } = await getEvents()
 
   const avatarUrl = profile.profile_photo_url
     ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
@@ -60,7 +57,6 @@ export default async function EventsPage() {
       <div className="max-w-2xl mx-auto sm:px-4 py-4">
         <EventsClient
           initialEvents={events}
-          recentEvents={recentEvents}
           userLat={userLat}
           userLng={userLng}
           userZip={profile.zip_code ?? ''}

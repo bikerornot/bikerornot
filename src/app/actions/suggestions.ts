@@ -89,17 +89,21 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
 
   const admin = getServiceClient()
 
-  // Fetch current user profile + connection data + dismissed suggestions in parallel
+  const threeDaysAgo = new Date(Date.now() - 3 * 86400000).toISOString()
+
+  // Fetch current user profile + connection data + dismissed + recently-shown suggestions in parallel
   const [
     { data: me },
     { data: friendships },
     { data: blocks },
     { data: dismissed },
+    { data: recentlyShown },
   ] = await Promise.all([
     admin.from('profiles').select('latitude, longitude, state, riding_style').eq('id', user.id).single(),
     admin.from('friendships').select('requester_id, addressee_id, status').or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
     admin.from('blocks').select('blocker_id, blocked_id').or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`),
     admin.from('dismissed_suggestions').select('dismissed_user_id').eq('user_id', user.id),
+    admin.from('shown_suggestions').select('shown_user_id').eq('user_id', user.id).gte('shown_at', threeDaysAgo),
   ])
 
   // Build exclude set + track accepted friend IDs in one pass
@@ -119,6 +123,9 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
   }
   for (const d of dismissed ?? []) {
     excludeIds.add(d.dismissed_user_id)
+  }
+  for (const s of recentlyShown ?? []) {
+    excludeIds.add(s.shown_user_id)
   }
 
   const friendCount = acceptedFriendIds.size
@@ -159,7 +166,7 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
       _mutuals: 0,
     }))
     .sort((a, b) => a._dist - b._dist)
-    .slice(0, 30)
+    .slice(0, 100)
 
   if (nearby.length === 0) return { riders: [], friendCount }
 
@@ -183,7 +190,7 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
     }
   }
 
-  // Shuffle the 30 nearest for variety, then take top 10
+  // Shuffle the 100 nearest for variety, then take top 10
   for (let i = nearby.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
     ;[nearby[i], nearby[j]] = [nearby[j], nearby[i]]
@@ -218,6 +225,20 @@ export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; fr
     mutual_friend_count: p._mutuals,
     bike: bikeMap[p.id] ?? null,
   }))
+
+  // Record these as "shown" so the 3-day cooldown kicks in next time
+  if (riders.length > 0) {
+    const now = new Date().toISOString()
+    const rows = riders.map((r) => ({
+      user_id: user.id,
+      shown_user_id: r.id,
+      shown_at: now,
+    }))
+    admin
+      .from('shown_suggestions')
+      .upsert(rows, { onConflict: 'user_id,shown_user_id' })
+      .then(() => {})
+  }
 
   return { riders, friendCount }
 }

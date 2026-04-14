@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { getMyGameStats, getLeaderboard } from '@/app/actions/game'
+import { getImageUrl } from '@/lib/supabase/image'
 import Logo from '@/app/components/Logo'
 import DesktopNav from '@/app/components/DesktopNav'
 import UserMenu from '@/app/components/UserMenu'
@@ -9,12 +9,11 @@ import NotificationBell from '@/app/components/NotificationBell'
 import MessagesLink from '@/app/components/MessagesLink'
 import FindRidersLink from '@/app/components/FindRidersLink'
 import BottomNav from '@/app/components/BottomNav'
-import { getImageUrl } from '@/lib/supabase/image'
-import LeaderboardClient from './LeaderboardClient'
+import GuessTheHarleyCard from '@/app/components/GuessTheHarleyCard'
 
 export const metadata = { title: "What's That Bike? — BikerOrNot" }
 
-export default async function GamePage() {
+export default async function PlayPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -26,11 +25,6 @@ export default async function GamePage() {
     .single()
 
   if (!profile?.onboarding_complete) redirect('/onboarding')
-
-  const [myStats, leaderboard] = await Promise.all([
-    getMyGameStats(),
-    getLeaderboard(50),
-  ])
 
   const avatarUrl = profile.profile_photo_url
     ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
@@ -57,12 +51,18 @@ export default async function GamePage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        <LeaderboardClient
-          myStats={myStats}
-          leaderboard={leaderboard}
-          currentUserId={user.id}
-        />
+      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-white">What's That Bike?</h1>
+          <Link
+            href="/game"
+            className="text-sm text-orange-400 hover:text-orange-300 font-medium transition-colors"
+          >
+            Leaderboard →
+          </Link>
+        </div>
+
+        <GuessTheHarleyCard currentUserId={user.id} />
       </div>
       <BottomNav />
     </div>

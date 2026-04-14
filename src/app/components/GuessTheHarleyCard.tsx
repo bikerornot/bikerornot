@@ -113,7 +113,7 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
           <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
             <path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.8-2.2-5-5-5-1.09 0-2.09.35-2.91.93L14.4 9.03h5.04zM5 17c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3zm14 0c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z" />
           </svg>
-          <span className="text-lg font-bold text-white">What's That Harley?</span>
+          <span className="text-lg font-bold text-white">What's That Bike?</span>
           {totalPlayed > 0 && state.status !== 'finished' && (
             <span className="text-xs font-bold text-white/80 bg-white/20 px-2 py-0.5 rounded-full">
               {totalCorrect}/{totalPlayed}
@@ -145,7 +145,7 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
           <div className="relative aspect-video bg-zinc-800">
             <Image
               src={bikePhotoUrl(state.round.storagePath)}
-              alt="Guess this Harley-Davidson"
+              alt="Guess this bike"
               fill
               className="object-cover"
               sizes="(max-width: 640px) 100vw, 640px"
@@ -222,7 +222,7 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
           <div className="text-center mb-5">
             <p className="text-3xl font-bold text-white">{totalCorrect}/{TOTAL_ROUNDS}</p>
             <p className="text-zinc-400 text-sm mt-1">
-              {totalCorrect >= 8 ? 'Impressive! You know your Harleys.' :
+              {totalCorrect >= 8 ? 'Impressive! You know your bikes.' :
                totalCorrect >= 5 ? 'Not bad! Keep playing to improve.' :
                'Keep at it — you\'ll get better!'}
             </p>

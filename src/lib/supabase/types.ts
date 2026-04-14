@@ -96,6 +96,7 @@ export interface Post {
   shared_post_id?: string | null
   event_id?: string | null
   content: string | null
+  post_type?: string | null
   created_at: string
   updated_at: string
   deleted_at: string | null

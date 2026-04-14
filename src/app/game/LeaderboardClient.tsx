@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getImageUrl } from '@/lib/supabase/image'
 import type { GameStats, LeaderboardEntry } from '@/app/actions/game'
+import ShareStatsButton from './ShareStatsButton'
 
 interface Props {
   myStats: GameStats
@@ -26,12 +27,12 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
             <svg className="w-6 h-6 text-orange-400" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.8-2.2-5-5-5-1.09 0-2.09.35-2.91.93L14.4 9.03h5.04zM5 17c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3zm14 0c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z" />
             </svg>
-            What's That Harley?
+            What's That Bike?
           </h1>
-          <p className="text-zinc-400 text-sm mt-0.5">How well do you know your Harleys?</p>
+          <p className="text-zinc-400 text-sm mt-0.5">How well do you know your bikes?</p>
         </div>
         <Link
-          href="/feed"
+          href="/play"
           className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
         >
           Play
@@ -44,7 +45,7 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
         {myStats.totalPlayed === 0 ? (
           <p className="text-zinc-500 text-sm">You haven't played yet. Find the game in your feed!</p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <p className="text-2xl font-bold text-white">{myStats.totalPlayed}</p>
               <p className="text-sm text-zinc-400 mt-0.5">Answered</p>
@@ -54,11 +55,7 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
               <p className="text-sm text-zinc-400 mt-0.5">Accuracy</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-orange-400">{myStats.currentStreak}</p>
-              <p className="text-sm text-zinc-400 mt-0.5">Current Streak</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-zinc-300">{myStats.bestStreak}</p>
+              <p className="text-2xl font-bold text-orange-400">{myStats.bestStreak}</p>
               <p className="text-sm text-zinc-400 mt-0.5">Best Streak</p>
             </div>
           </div>
@@ -67,6 +64,11 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
           <p className="text-sm text-zinc-400 mt-3 border-t border-zinc-800 pt-3">
             You're ranked <span className="text-orange-400 font-semibold">#{myRank}</span> on the leaderboard
           </p>
+        )}
+        {myStats.totalPlayed > 0 && (
+          <div className="mt-3 border-t border-zinc-800 pt-3">
+            <ShareStatsButton />
+          </div>
         )}
       </div>
 

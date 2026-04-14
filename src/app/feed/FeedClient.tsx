@@ -35,7 +35,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
   const sentinelRef = useRef<HTMLDivElement>(null)
 
   const fetchPosts = useCallback(
-    async (cursor?: string): Promise<Post[]> => {
+    async (cursor?: string): Promise<{ posts: Post[]; rawCursor: string | null; rawFull: boolean }> => {
       const supabase = createClient()
 
       let base = supabase
@@ -58,7 +58,14 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       const { data, error } = cursor ? await base.lt('created_at', cursor) : await base
 
       if (error) throw error
-      if (!data || data.length === 0) return []
+      if (!data || data.length === 0) return { posts: [], rawCursor: null, rawFull: false }
+
+      // Track pagination markers against the RAW result, not the filtered one — otherwise
+      // a single banned/blocked author in a page silently ends the feed and strands every
+      // post behind them. `rawFull` tells the outer flow there might be more, and
+      // `rawCursor` advances past everything we pulled (including filtered-out rows).
+      const rawCursor = data[data.length - 1].created_at
+      const rawFull = data.length === PAGE_SIZE
 
       // Only keep posts where the author is confirmed active (not banned/suspended/missing)
       // and not from a blocked user
@@ -105,13 +112,15 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
         if (p?.id) sharedPostMap[p.id] = p as Post
       }
 
-      return filtered.map((post) => ({
+      const posts = filtered.map((post) => ({
         ...post,
         like_count: likeMap[post.id] ?? 0,
         comment_count: commentMap[post.id] ?? 0,
         is_liked_by_me: myLikeSet.has(post.id),
         shared_post: post.shared_post_id ? (sharedPostMap[post.shared_post_id] ?? null) : null,
       })) as Post[]
+
+      return { posts, rawCursor, rawFull }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [currentUserId, userGroupIds.join(','), blockedUserIds.join(',')]
@@ -119,10 +128,10 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
   useEffect(() => {
     fetchPosts()
-      .then((data) => {
-        setPosts(data)
-        cursorRef.current = data.length > 0 ? data[data.length - 1].created_at : null
-        setHasMore(data.length === PAGE_SIZE)
+      .then(({ posts, rawCursor, rawFull }) => {
+        setPosts(posts)
+        cursorRef.current = rawCursor
+        setHasMore(rawFull)
       })
       .catch((err) => console.error('Feed fetch error:', err))
       .finally(() => setLoading(false))
@@ -161,20 +170,20 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
   async function refresh() {
     setNewPostCount(0)
-    const data = await fetchPosts()
-    setPosts(data)
-    cursorRef.current = data.length > 0 ? data[data.length - 1].created_at : null
-    setHasMore(data.length === PAGE_SIZE)
+    const { posts, rawCursor, rawFull } = await fetchPosts()
+    setPosts(posts)
+    cursorRef.current = rawCursor
+    setHasMore(rawFull)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const loadMore = useCallback(async () => {
     if (!hasMore || loadingMore || !cursorRef.current) return
     setLoadingMore(true)
-    const data = await fetchPosts(cursorRef.current)
-    setPosts((prev) => [...prev, ...data])
-    if (data.length > 0) cursorRef.current = data[data.length - 1].created_at
-    setHasMore(data.length === PAGE_SIZE)
+    const { posts, rawCursor, rawFull } = await fetchPosts(cursorRef.current)
+    setPosts((prev) => [...prev, ...posts])
+    if (rawCursor) cursorRef.current = rawCursor
+    setHasMore(rawFull)
     setLoadingMore(false)
   }, [hasMore, loadingMore, fetchPosts])
 

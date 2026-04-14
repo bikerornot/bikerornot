@@ -186,6 +186,19 @@ export async function GET(request: Request) {
     }
   }
 
+  // Self-chain: if this batch was full, kick off the next one. Fire-and-forget —
+  // the receiving endpoint is another serverless function that runs independently,
+  // so we don't block returning this response on completion of the chain.
+  const hasMore = !testUsername && recipients.length === batchSize
+  if (hasMore) {
+    const nextUrl = new URL(request.url)
+    nextUrl.searchParams.set('start', String(batchStart + batchSize))
+    nextUrl.searchParams.set('size', String(batchSize))
+    fetch(nextUrl.toString(), {
+      headers: { authorization: authHeader ?? '' },
+    }).catch((err) => console.error('Weekly digest self-chain failed:', err))
+  }
+
   return NextResponse.json({
     message: 'Weekly digest complete',
     newSignups: newSignups.length,
@@ -194,6 +207,6 @@ export async function GET(request: Request) {
     recipients: recipients.length,
     sent,
     skipped,
-    nextBatch: recipients.length === batchSize ? batchStart + batchSize : null,
+    nextBatch: hasMore ? batchStart + batchSize : null,
   })
 }

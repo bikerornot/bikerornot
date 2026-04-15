@@ -316,13 +316,23 @@ export async function getMyGameStats(): Promise<GameStats> {
   const user = await requireAuth()
   const admin = getServiceClient()
 
-  const { data: answers } = await admin
-    .from('game_answers')
-    .select('is_correct, created_at')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
+  const answers: { is_correct: boolean; created_at: string }[] = []
+  let page = 0
+  const PAGE_SIZE = 1000
+  while (true) {
+    const { data: chunk } = await admin
+      .from('game_answers')
+      .select('is_correct, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+    if (!chunk || chunk.length === 0) break
+    answers.push(...chunk)
+    if (chunk.length < PAGE_SIZE) break
+    page++
+  }
 
-  if (!answers || answers.length === 0) {
+  if (answers.length === 0) {
     return { totalPlayed: 0, correctAnswers: 0, accuracyPercent: 0, currentStreak: 0, bestStreak: 0 }
   }
 

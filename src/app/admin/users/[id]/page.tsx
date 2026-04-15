@@ -123,13 +123,19 @@ export default async function UserDetailPage({
                 <p className="text-white font-semibold">{user.first_name} {user.last_name}</p>
                 <p className="text-zinc-400 text-sm">@{user.username ?? 'no username'}</p>
                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                    user.status === 'banned' ? 'bg-red-500/20 text-red-400' :
-                    user.status === 'suspended' ? 'bg-orange-500/20 text-orange-400' :
-                    'bg-emerald-500/20 text-emerald-400'
-                  }`}>
-                    {user.status}
-                  </span>
+                  {user.deactivated_at ? (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-300">
+                      Deactivated
+                    </span>
+                  ) : (
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      user.status === 'banned' ? 'bg-red-500/20 text-red-400' :
+                      user.status === 'suspended' ? 'bg-orange-500/20 text-orange-400' :
+                      'bg-emerald-500/20 text-emerald-400'
+                    }`}>
+                      {user.status}
+                    </span>
+                  )}
                   <span className="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">
                     {user.role}
                   </span>

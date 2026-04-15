@@ -300,6 +300,7 @@ export interface AdminUserRow {
   last_name: string
   created_at: string
   status: string
+  deactivated_at: string | null
   role: string
   city: string | null
   state: string | null
@@ -331,6 +332,7 @@ export interface AdminUserDetail {
   date_of_birth: string | null
   created_at: string
   status: string
+  deactivated_at: string | null
   role: string
   profile_photo_url: string | null
   avatar_reviewed_at: string | null
@@ -409,7 +411,7 @@ export async function getUsers({
 
   let query = admin
     .from('profiles')
-    .select('id, username, first_name, last_name, created_at, status, role, city, state, profile_photo_url, signup_country, signup_region, signup_city, signup_ref_url, date_of_birth, gender, phone_verified_at', { count: 'exact' })
+    .select('id, username, first_name, last_name, created_at, status, deactivated_at, role, city, state, profile_photo_url, signup_country, signup_region, signup_city, signup_ref_url, date_of_birth, gender, phone_verified_at', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1)
 
@@ -595,6 +597,7 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     date_of_birth: profile.date_of_birth ?? null,
     created_at: profile.created_at,
     status: profile.status,
+    deactivated_at: profile.deactivated_at ?? null,
     role: profile.role,
     profile_photo_url: profile.profile_photo_url,
     avatar_reviewed_at: profile.avatar_reviewed_at ?? null,

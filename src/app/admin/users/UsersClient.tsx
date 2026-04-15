@@ -284,13 +284,19 @@ export default function UsersClient({
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          u.status === 'banned' ? 'bg-red-500/20 text-red-400' :
-                          u.status === 'suspended' ? 'bg-orange-500/20 text-orange-400' :
-                          'bg-emerald-500/20 text-emerald-400'
-                        }`}>
-                          {u.status}
-                        </span>
+                        {u.deactivated_at ? (
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-zinc-700 text-zinc-300">
+                            deactivated
+                          </span>
+                        ) : (
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            u.status === 'banned' ? 'bg-red-500/20 text-red-400' :
+                            u.status === 'suspended' ? 'bg-orange-500/20 text-orange-400' :
+                            'bg-emerald-500/20 text-emerald-400'
+                          }`}>
+                            {u.status}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <Link

@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getGameRound, submitGameAnswer, getLeaderboard, type GameRound, type LeaderboardEntry } from '@/app/actions/game'
 import { getImageUrl } from '@/lib/supabase/image'
+import GameReportModal from './GameReportModal'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const TOTAL_ROUNDS = 10
@@ -31,6 +32,8 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
   const [totalCorrect, setTotalCorrect] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [leaders, setLeaders] = useState<LeaderboardEntry[]>([])
+  const [reportingPhotoId, setReportingPhotoId] = useState<string | null>(null)
+  const [reportedIds, setReportedIds] = useState<Set<string>>(new Set())
   const fetchedRef = useRef(false)
 
   useEffect(() => {
@@ -107,6 +110,16 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
 
   return (
     <div className="bg-zinc-900 sm:border sm:border-zinc-800 overflow-hidden rounded-2xl">
+      {reportingPhotoId && (
+        <GameReportModal
+          bikePhotoId={reportingPhotoId}
+          onClose={() => setReportingPhotoId(null)}
+          onSubmitted={() => {
+            setReportedIds((prev) => new Set(prev).add(reportingPhotoId))
+            setReportingPhotoId(null)
+          }}
+        />
+      )}
       {/* Header — orange background */}
       <div className="flex items-center justify-between px-4 py-3 bg-orange-500">
         <div className="flex items-center gap-2.5">
@@ -210,6 +223,16 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
                   ? `Next \u203A ${remaining} remaining`
                   : 'See Results \u203A'}
               </button>
+              {!reportedIds.has(state.round.photoId) ? (
+                <button
+                  onClick={() => setReportingPhotoId(state.round.photoId)}
+                  className="w-full text-xs text-zinc-500 hover:text-zinc-300 mt-3 transition-colors"
+                >
+                  Report this bike
+                </button>
+              ) : (
+                <p className="text-center text-xs text-zinc-500 mt-3">Thanks — we&rsquo;ll take a look.</p>
+              )}
             </div>
           )}
         </>
@@ -257,8 +280,11 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
                   )
                 })}
               </div>
-              <div className="text-center mt-3">
-                <Link href="/game" className="text-sm text-orange-400 hover:text-orange-300 font-medium transition-colors">
+              <div className="text-center mt-6 mb-4">
+                <Link
+                  href="/game"
+                  className="inline-block text-base text-orange-400 hover:text-orange-300 font-semibold transition-colors py-2 px-4"
+                >
                   See Full Leaderboard &rsaquo;
                 </Link>
               </div>

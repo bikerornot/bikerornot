@@ -93,6 +93,7 @@ export async function savePrivacySettings(prefs: {
   show_real_name?: boolean
   show_birthday?: boolean
   show_online_status?: boolean
+  message_privacy?: 'everyone' | 'friends_only'
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

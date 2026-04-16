@@ -35,6 +35,7 @@ export default function SettingsForm({ profile }: Props) {
   const [showRealName, setShowRealName] = useState(profile.show_real_name ?? false)
   const [showBirthday, setShowBirthday] = useState(profile.show_birthday ?? false)
   const [showOnlineStatus, setShowOnlineStatus] = useState(profile.show_online_status ?? true)
+  const [friendsOnlyMessages, setFriendsOnlyMessages] = useState(profile.message_privacy === 'friends_only')
   const [phoneVerified, setPhoneVerified] = useState(!!profile.phone_verified_at)
   const [showPhoneForm, setShowPhoneForm] = useState(false)
   const [removingPhone, setRemovingPhone] = useState(false)
@@ -304,6 +305,25 @@ export default function SettingsForm({ profile }: Props) {
             className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors focus:outline-none ${showOnlineStatus ? 'bg-orange-500' : 'bg-zinc-700'}`}
           >
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${showOnlineStatus ? 'translate-x-5' : 'translate-x-0'}`} />
+          </button>
+        </div>
+        <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
+          <div>
+            <span className="text-sm text-zinc-300">Only friends can message me</span>
+            <p className="text-zinc-600 text-xs mt-0.5">When on, non-friends can't send message requests.</p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={friendsOnlyMessages}
+            onClick={async () => {
+              const next = !friendsOnlyMessages
+              setFriendsOnlyMessages(next)
+              await savePrivacySettings({ message_privacy: next ? 'friends_only' : 'everyone' })
+            }}
+            className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors focus:outline-none ${friendsOnlyMessages ? 'bg-orange-500' : 'bg-zinc-700'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${friendsOnlyMessages ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>
         </div>
       </div>

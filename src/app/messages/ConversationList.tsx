@@ -20,9 +20,10 @@ function formatTimeAgo(dateStr: string): string {
 interface Props {
   initialConversations: ConversationSummary[]
   currentUserId: string
+  mode?: 'inbox' | 'requests'
 }
 
-export default function ConversationList({ initialConversations, currentUserId }: Props) {
+export default function ConversationList({ initialConversations, currentUserId, mode = 'inbox' }: Props) {
   const [conversations, setConversations] = useState<ConversationSummary[]>(initialConversations)
 
   useEffect(() => {
@@ -58,6 +59,15 @@ export default function ConversationList({ initialConversations, currentUserId }
   }, [currentUserId])
 
   if (conversations.length === 0) {
+    if (mode === 'requests') {
+      return (
+        <div className="text-center py-16 text-zinc-600">
+          <p className="text-4xl mb-3">📬</p>
+          <p className="text-base">No pending message requests.</p>
+          <p className="text-sm mt-1">Requests from non-friends show up here.</p>
+        </div>
+      )
+    }
     return (
       <div className="text-center py-16 text-zinc-600">
         <p className="text-4xl mb-3">💬</p>
@@ -109,9 +119,13 @@ export default function ConversationList({ initialConversations, currentUserId }
                 <p className={`text-sm truncate flex-1 ${hasUnread ? 'text-zinc-300' : 'text-zinc-500'}`}>
                   {c.last_message_preview ?? 'No messages yet'}
                 </p>
-                {hasUnread && (
+                {c.is_sent_request ? (
+                  <span className="text-xs font-semibold text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full flex-shrink-0">
+                    Pending
+                  </span>
+                ) : hasUnread ? (
                   <span className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0" />
-                )}
+                ) : null}
               </div>
             </div>
           </Link>

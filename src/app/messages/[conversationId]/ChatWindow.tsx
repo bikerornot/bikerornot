@@ -28,9 +28,10 @@ interface Props {
   initialHasMore: boolean
   currentUserId: string
   otherUser: Profile
+  composeDisabledReason?: string | null
 }
 
-export default function ChatWindow({ conversationId, initialMessages, initialHasMore, currentUserId, otherUser }: Props) {
+export default function ChatWindow({ conversationId, initialMessages, initialHasMore, currentUserId, otherUser, composeDisabledReason }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -345,31 +346,40 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
       </div>
 
       {/* Input area */}
-      <div
-        className="border-t border-zinc-800 bg-zinc-900 px-4 py-3"
-        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
-      >
-        <div className="flex items-end gap-3">
-          <textarea
-            ref={inputRef}
-            value={text}
-            onChange={handleTextChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Message..."
-            rows={1}
-            className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 text-base rounded-xl px-4 py-2.5 resize-none outline-none focus:ring-1 focus:ring-orange-500 max-h-32 overflow-y-auto"
-            style={{ scrollbarWidth: 'none' }}
-          />
-          <button
-            onClick={handleSend}
-            disabled={!text.trim() || sending}
-            className="bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl px-4 py-2.5 text-base font-semibold transition-colors flex-shrink-0"
-          >
-            Send
-          </button>
+      {composeDisabledReason ? (
+        <div
+          className="border-t border-zinc-800 bg-zinc-900 px-4 py-4 text-center"
+          style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
+          <p className="text-sm text-zinc-500">{composeDisabledReason}</p>
         </div>
-        <p className="text-sm text-zinc-600 mt-1.5 text-right">Enter to send · Shift+Enter for newline</p>
-      </div>
+      ) : (
+        <div
+          className="border-t border-zinc-800 bg-zinc-900 px-4 py-3"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+        >
+          <div className="flex items-end gap-3">
+            <textarea
+              ref={inputRef}
+              value={text}
+              onChange={handleTextChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Message..."
+              rows={1}
+              className="flex-1 bg-zinc-800 text-white placeholder-zinc-500 text-base rounded-xl px-4 py-2.5 resize-none outline-none focus:ring-1 focus:ring-orange-500 max-h-32 overflow-y-auto"
+              style={{ scrollbarWidth: 'none' }}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!text.trim() || sending}
+              className="bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl px-4 py-2.5 text-base font-semibold transition-colors flex-shrink-0"
+            >
+              Send
+            </button>
+          </div>
+          <p className="text-sm text-zinc-600 mt-1.5 text-right">Enter to send · Shift+Enter for newline</p>
+        </div>
+      )}
     </div>
   )
 }

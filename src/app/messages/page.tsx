@@ -3,8 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getImageUrl } from '@/lib/supabase/image'
 import Logo from '@/app/components/Logo'
 import DesktopNav from '@/app/components/DesktopNav'
-import { getConversations } from '@/app/actions/messages'
-import ConversationList from './ConversationList'
+import { getConversations, getMessageRequests } from '@/app/actions/messages'
+import InboxTabs from './InboxTabs'
 import UserMenu from '@/app/components/UserMenu'
 import NotificationBell from '@/app/components/NotificationBell'
 import LastSeenTracker from '@/app/components/LastSeenTracker'
@@ -26,7 +26,10 @@ export default async function MessagesPage() {
 
   if (!profile?.onboarding_complete) redirect('/onboarding')
 
-  const conversations = await getConversations()
+  const [conversations, requests] = await Promise.all([
+    getConversations(),
+    getMessageRequests(),
+  ])
 
   const avatarUrl = profile.profile_photo_url
     ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
@@ -54,7 +57,11 @@ export default async function MessagesPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-4">
         <h1 className="text-xl font-bold text-white mb-4">Messages</h1>
-        <ConversationList initialConversations={conversations} currentUserId={user.id} />
+        <InboxTabs
+          initialConversations={conversations}
+          initialRequests={requests}
+          currentUserId={user.id}
+        />
       </div>
       <BottomNav />
     </div>

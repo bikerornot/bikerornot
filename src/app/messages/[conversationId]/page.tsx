@@ -16,6 +16,7 @@ import FindRidersLink from '@/app/components/FindRidersLink'
 import VerifiedBadge from '@/app/components/VerifiedBadge'
 import OnlineIndicator from '@/app/components/OnlineIndicator'
 import ContentMenu from '@/app/components/ContentMenu'
+import MessageRequestActions from './MessageRequestActions'
 import type { Profile } from '@/lib/supabase/types'
 
 export async function generateMetadata({
@@ -61,6 +62,13 @@ export default async function ChatPage({
 
   // Don't show conversations with banned/suspended users
   if (otherUser.status !== 'active' || otherUser.deactivated_at) redirect('/messages')
+
+  // Ignored conversations are dead to both sides — bounce back to inbox
+  if ((convo as any).status === 'ignored') redirect('/messages')
+
+  const isPendingRequest = (convo as any).status === 'request'
+  const isRequestRecipient = isPendingRequest && (convo as any).initiated_by !== user.id
+  const isRequestSender = isPendingRequest && (convo as any).initiated_by === user.id
 
   const { messages, hasMore } = await getMessages(conversationId)
 
@@ -134,6 +142,17 @@ export default async function ChatPage({
         </div>
       </div>
 
+      {/* Pending-request action bar (recipient only) */}
+      {isRequestRecipient && (
+        <div className="max-w-2xl mx-auto w-full">
+          <MessageRequestActions
+            conversationId={conversationId}
+            senderId={otherUser.id}
+            senderUsername={otherUser.username}
+          />
+        </div>
+      )}
+
       {/* Chat area — fills remaining height */}
       <div className="flex-1 overflow-hidden max-w-2xl mx-auto w-full flex flex-col">
         <ChatWindow
@@ -142,6 +161,13 @@ export default async function ChatPage({
           initialHasMore={hasMore}
           currentUserId={user.id}
           otherUser={otherUser}
+          composeDisabledReason={
+            isRequestRecipient
+              ? 'Accept this request to reply'
+              : isRequestSender
+                ? 'Waiting for a reply to your earlier message'
+                : null
+          }
         />
       </div>
     </div>

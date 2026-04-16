@@ -426,7 +426,7 @@ export default async function ProfilePage({
             )}
 
             {/* Action buttons — full-width row */}
-            <div className="flex gap-2 pt-1 [&>div]:flex-1 [&>div>button]:w-full">
+            <div className="flex gap-2 pt-4 [&>div]:flex-1 [&>div>button]:w-full">
               {isOwnProfile ? (
                 <Link
                   href="/settings"
@@ -607,7 +607,7 @@ export default async function ProfilePage({
           </div>
         </div>
 
-        <div className="h-3" />
+        <div className="h-6" />
       </div>
 
       {/* Tabs — sm:px-4 so wall posts go edge-to-edge on mobile like the feed */}

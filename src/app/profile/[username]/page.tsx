@@ -373,12 +373,12 @@ export default async function ProfilePage({
                 <span className="truncate">@{profile.username}</span>
                 {profile.phone_verified_at && <VerifiedBadge className="w-5 h-5 flex-shrink-0" />}
               </h1>
-              <div className="text-sm text-zinc-400 space-y-0.5">
+              <div className="text-sm text-zinc-400 space-y-1">
                 <Link
                   href={`/profile/${profile.username}?tab=Friends`}
                   className="block hover:text-white transition-colors"
                 >
-                  <span className="text-white font-semibold">{friendCount ?? 0}</span> Friends
+                  <span className="text-white font-semibold">{friendCount ?? 0}</span> {(friendCount ?? 0) === 1 ? 'Friend' : 'Friends'}
                 </Link>
                 {mutualFriends.length > 0 && (
                   <div>
@@ -389,36 +389,39 @@ export default async function ProfilePage({
                 <div>
                   Member since <span className="text-white">{memberSince}</span>
                 </div>
+                {(profile.gender || profile.date_of_birth || profile.relationship_status) && (
+                  <div className="flex flex-wrap items-center gap-x-1.5">
+                    {profile.gender && (
+                      <span>{profile.gender === 'male' ? 'Male' : 'Female'}</span>
+                    )}
+                    {profile.gender && profile.date_of_birth && <span className="text-zinc-600">·</span>}
+                    {profile.date_of_birth && (
+                      <span>{(() => {
+                        const today = new Date()
+                        const birth = new Date(profile.date_of_birth)
+                        let age = today.getFullYear() - birth.getFullYear()
+                        if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--
+                        return `${age}`
+                      })()}</span>
+                    )}
+                    {profile.date_of_birth && profile.relationship_status && <span className="text-zinc-600">·</span>}
+                    {profile.relationship_status && (
+                      <span>{relationshipLabel[profile.relationship_status]}</span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           {/* Below avatar — full-width bio, details, action buttons */}
           <div className="mt-3 space-y-2">
-            {/* Bio details */}
-            <div className="flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-400">
-              {(profile.city || profile.state) && (
-                <span>{[profile.city, profile.state].filter(Boolean).join(', ')}</span>
-              )}
-              {(profile.city || profile.state) && profile.gender && <span className="text-zinc-600">·</span>}
-              {profile.gender && (
-                <span>{profile.gender === 'male' ? 'Male' : 'Female'}</span>
-              )}
-              {profile.gender && profile.date_of_birth && <span className="text-zinc-600">·</span>}
-              {profile.date_of_birth && (
-                <span>{(() => {
-                  const today = new Date()
-                  const birth = new Date(profile.date_of_birth)
-                  let age = today.getFullYear() - birth.getFullYear()
-                  if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--
-                  return `${age}`
-                })()}</span>
-              )}
-              {profile.date_of_birth && profile.relationship_status && <span className="text-zinc-600">·</span>}
-              {profile.relationship_status && (
-                <span>{relationshipLabel[profile.relationship_status]}</span>
-              )}
-            </div>
+            {/* City/state — full-width row so long names don't squeeze against the avatar */}
+            {(profile.city || profile.state) && (
+              <div className="text-base text-zinc-300">
+                {[profile.city, profile.state].filter(Boolean).join(', ')}
+              </div>
+            )}
 
             {/* Bio text */}
             {profile.bio && (

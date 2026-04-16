@@ -55,39 +55,39 @@ export default function UserMenu({ username, displayName, avatarUrl, firstInitia
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-44 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 mt-2 w-52 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl z-50 overflow-hidden">
           <Link
             href={`/profile/${username}`}
             onClick={() => setOpen(false)}
-            className="block px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+            className="block px-4 py-3 text-base text-zinc-300 hover:bg-zinc-800 transition-colors"
           >
             My Profile
           </Link>
           <Link
             href="/friends"
             onClick={() => setOpen(false)}
-            className="block px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+            className="block px-4 py-3 text-base text-zinc-300 hover:bg-zinc-800 transition-colors"
           >
             Friends
           </Link>
           <Link
             href={`/profile/${username}?tab=Garage`}
             onClick={() => setOpen(false)}
-            className="block px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+            className="block px-4 py-3 text-base text-zinc-300 hover:bg-zinc-800 transition-colors"
           >
             My Garage
           </Link>
           <Link
             href="/classifieds"
             onClick={() => setOpen(false)}
-            className="block px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+            className="block px-4 py-3 text-base text-zinc-300 hover:bg-zinc-800 transition-colors"
           >
             Buy / Sell
           </Link>
           <Link
             href="/settings"
             onClick={() => setOpen(false)}
-            className="block px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+            className="block px-4 py-3 text-base text-zinc-300 hover:bg-zinc-800 transition-colors"
           >
             Settings
           </Link>
@@ -97,7 +97,7 @@ export default function UserMenu({ username, displayName, avatarUrl, firstInitia
               <Link
                 href="/admin"
                 onClick={() => setOpen(false)}
-                className="block px-4 py-2.5 text-sm text-orange-400 hover:bg-zinc-800 transition-colors"
+                className="block px-4 py-3 text-base text-orange-400 hover:bg-zinc-800 transition-colors"
               >
                 Admin Panel
               </Link>
@@ -107,7 +107,7 @@ export default function UserMenu({ username, displayName, avatarUrl, firstInitia
           <button
             onClick={handleLogout}
             disabled={loggingOut}
-            className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-zinc-800 transition-colors disabled:opacity-50"
+            className="w-full text-left px-4 py-3 text-base text-red-400 hover:bg-zinc-800 transition-colors disabled:opacity-50"
           >
             {loggingOut ? 'Signing out…' : 'Sign Out'}
           </button>

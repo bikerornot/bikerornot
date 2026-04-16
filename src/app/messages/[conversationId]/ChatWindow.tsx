@@ -169,6 +169,9 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
 
   function handleTextChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setText(e.target.value)
+    // Auto-resize: reset to auto, then grow to scrollHeight (CSS max-h-32 caps it)
+    e.target.style.height = 'auto'
+    e.target.style.height = `${e.target.scrollHeight}px`
     broadcastTyping(true)
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
     typingTimeoutRef.current = setTimeout(() => broadcastTyping(false), 2000)
@@ -183,6 +186,8 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
 
     setSending(true)
     setText('')
+    // Reset textarea height back to one row after send
+    if (inputRef.current) inputRef.current.style.height = 'auto'
 
     // Force scroll to bottom when sending
     isNearBottom.current = true
@@ -340,7 +345,10 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
       </div>
 
       {/* Input area */}
-      <div className="border-t border-zinc-800 bg-zinc-900 px-4 py-3">
+      <div
+        className="border-t border-zinc-800 bg-zinc-900 px-4 py-3"
+        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+      >
         <div className="flex items-end gap-3">
           <textarea
             ref={inputRef}

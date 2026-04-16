@@ -13,7 +13,6 @@ import NotificationBell from '@/app/components/NotificationBell'
 import LastSeenTracker from '@/app/components/LastSeenTracker'
 import MessagesLink from '@/app/components/MessagesLink'
 import FindRidersLink from '@/app/components/FindRidersLink'
-import BottomNav from '@/app/components/BottomNav'
 import VerifiedBadge from '@/app/components/VerifiedBadge'
 import OnlineIndicator from '@/app/components/OnlineIndicator'
 import ContentMenu from '@/app/components/ContentMenu'
@@ -75,10 +74,10 @@ export default async function ChatPage({
     : null
 
   return (
-    <div className="h-dvh bg-zinc-950 flex flex-col overflow-hidden pb-20 sm:pb-0">
+    <div className="h-dvh bg-zinc-950 flex flex-col overflow-hidden">
       <LastSeenTracker />
-      {/* Main nav header */}
-      <header className="bg-zinc-900 border-b border-zinc-800 flex-shrink-0 z-40">
+      {/* Main nav header — hidden on mobile to free up vertical space inside a conversation */}
+      <header className="hidden sm:block bg-zinc-900 border-b border-zinc-800 flex-shrink-0 z-40">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <Logo />
           <div className="flex items-center gap-4">
@@ -145,7 +144,6 @@ export default async function ChatPage({
           otherUser={otherUser}
         />
       </div>
-      <BottomNav />
     </div>
   )
 }

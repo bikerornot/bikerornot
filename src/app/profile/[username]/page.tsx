@@ -17,6 +17,7 @@ import LastSeenTracker from '@/app/components/LastSeenTracker'
 import MessagesLink from '@/app/components/MessagesLink'
 import FindRidersLink from '@/app/components/FindRidersLink'
 import MessageButton from '@/app/components/MessageButton'
+import MessageRequestButton from '@/app/components/MessageRequestButton'
 import ContentMenu from '@/app/components/ContentMenu'
 import { getMutualFriends } from '@/app/actions/suggestions'
 import BottomNav from '@/app/components/BottomNav'
@@ -441,9 +442,15 @@ export default async function ProfilePage({
                       initialStatus={friendshipStatus}
                     />
                   )}
-                  {friendshipStatus === 'accepted' && (
+                  {friendshipStatus === 'accepted' ? (
                     <MessageButton profileId={profile.id} locked={!viewerHasPublicActivity} />
-                  )}
+                  ) : user ? (
+                    <MessageRequestButton
+                      profileId={profile.id}
+                      username={profile.username}
+                      friendsOnly={profile.message_privacy === 'friends_only'}
+                    />
+                  ) : null}
                   {user && (
                     <ContentMenu
                       reportType="profile"
@@ -496,9 +503,15 @@ export default async function ProfilePage({
                         initialStatus={friendshipStatus}
                       />
                     )}
-                    {friendshipStatus === 'accepted' && (
+                    {friendshipStatus === 'accepted' ? (
                       <MessageButton profileId={profile.id} locked={!viewerHasPublicActivity} />
-                    )}
+                    ) : user ? (
+                      <MessageRequestButton
+                        profileId={profile.id}
+                        username={profile.username}
+                        friendsOnly={profile.message_privacy === 'friends_only'}
+                      />
+                    ) : null}
                     {user && (
                       <ContentMenu
                         reportType="profile"

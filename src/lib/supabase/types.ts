@@ -206,7 +206,7 @@ export interface Comment {
 export interface Notification {
   id: string
   user_id: string
-  type: 'friend_request' | 'friend_accepted' | 'post_like' | 'post_comment' | 'comment_reply' | 'comment_like' | 'group_invite' | 'wall_post' | 'dmca_takedown' | 'mention' | 'event_invite' | 'event_rsvp' | 'event_reminder' | 'event_cancelled' | 'event_update'
+  type: 'friend_request' | 'friend_accepted' | 'post_like' | 'post_comment' | 'comment_reply' | 'comment_like' | 'group_invite' | 'wall_post' | 'dmca_takedown' | 'mention' | 'event_invite' | 'event_rsvp' | 'event_reminder' | 'event_cancelled' | 'event_update' | 'message_request'
   actor_id: string
   post_id: string | null
   comment_id: string | null

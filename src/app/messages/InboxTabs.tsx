@@ -8,10 +8,11 @@ interface Props {
   initialConversations: ConversationSummary[]
   initialRequests: ConversationSummary[]
   currentUserId: string
+  initialTab?: 'messages' | 'requests'
 }
 
-export default function InboxTabs({ initialConversations, initialRequests, currentUserId }: Props) {
-  const [tab, setTab] = useState<'messages' | 'requests'>('messages')
+export default function InboxTabs({ initialConversations, initialRequests, currentUserId, initialTab = 'messages' }: Props) {
+  const [tab, setTab] = useState<'messages' | 'requests'>(initialTab)
   const requestCount = initialRequests.length
 
   return (

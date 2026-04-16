@@ -51,6 +51,7 @@ function notificationMessage(n: Notification, onLinkClick: () => void) {
     case 'event_cancelled': return <>{contentLink(`${n.event?.title ?? 'An event'} has been cancelled`, eventHref)}</>
     case 'event_update':    return <>{contentLink(`${n.event?.title ?? 'An event'} has been updated`, eventHref)}</>
     case 'event_reminder':  return <>Reminder: {contentLink(`${n.event?.title ?? 'An event'} starts soon`, eventHref)}</>
+    case 'message_request': return <>{actorLink} {contentLink('sent you a message request', '/messages?tab=requests')}</>
     default:                return <>Notification from {actorLink}</>
   }
 }
@@ -80,6 +81,8 @@ function notificationHref(n: Notification, currentUsername: string): string {
     case 'event_update':
     case 'event_reminder':
       return n.event?.slug ? `/events/${n.event.slug}` : '/events'
+    case 'message_request':
+      return '/messages?tab=requests'
     default:
       return '/feed'
   }

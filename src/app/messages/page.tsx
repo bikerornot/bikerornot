@@ -12,7 +12,14 @@ import BottomNav from '@/app/components/BottomNav'
 
 export const metadata = { title: 'Messages — BikerOrNot' }
 
-export default async function MessagesPage() {
+export default async function MessagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
+  const { tab } = await searchParams
+  const initialTab = tab === 'requests' ? 'requests' : 'messages'
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -61,6 +68,7 @@ export default async function MessagesPage() {
           initialConversations={conversations}
           initialRequests={requests}
           currentUserId={user.id}
+          initialTab={initialTab}
         />
       </div>
       <BottomNav />

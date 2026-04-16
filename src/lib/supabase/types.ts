@@ -45,6 +45,7 @@ export interface Profile {
   phone_number: string | null
   phone_verified_at: string | null
   phone_verification_required: boolean
+  message_privacy: 'everyone' | 'friends_only'
 }
 
 export interface UserBike {
@@ -239,6 +240,8 @@ export interface DmcaCounterNotice {
   profile?: Profile | null
 }
 
+export type ConversationStatus = 'request' | 'active' | 'ignored'
+
 export interface Conversation {
   id: string
   participant1_id: string
@@ -246,6 +249,9 @@ export interface Conversation {
   last_message_at: string
   last_message_preview: string | null
   created_at: string
+  status: ConversationStatus
+  initiated_by: string | null
+  ignored_at: string | null
   participant1?: Profile
   participant2?: Profile
 }
@@ -256,6 +262,9 @@ export interface ConversationSummary {
   last_message_preview: string | null
   last_message_at: string
   unread_count: number
+  status: ConversationStatus
+  initiated_by: string | null
+  is_sent_request: boolean
 }
 
 export interface Message {

@@ -71,7 +71,8 @@ async function autoBanIfNeeded(admin: ReturnType<typeof getAdmin>, senderId: str
 export async function scanMessageForScam(
   messageId: string,
   senderId: string,
-  content: string
+  content: string,
+  isRequest = false,
 ): Promise<void> {
   try {
     // Skip scan for banned users — their content is shadow-hidden, saves OpenAI calls
@@ -80,7 +81,9 @@ export async function scanMessageForScam(
     if (sender?.status === 'banned') return
 
     const { score, reason } = await runScamScan(content, 'message')
-    if (score < 0.55) return
+    // Cold first messages from strangers have higher scam base rate, so flag at a lower threshold.
+    const flagThreshold = isRequest ? 0.45 : 0.55
+    if (score < flagThreshold) return
 
     await admin.from('content_flags').insert({
       message_id: messageId,

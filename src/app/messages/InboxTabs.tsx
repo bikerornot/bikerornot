@@ -21,7 +21,7 @@ export default function InboxTabs({ initialConversations, initialRequests, curre
         <button
           onClick={() => setTab('messages')}
           className={`flex-1 py-2 px-4 text-sm font-semibold rounded-lg transition-colors ${
-            tab === 'messages' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-200'
+            tab === 'messages' ? 'bg-orange-500 text-white' : 'text-zinc-400 hover:text-zinc-200'
           }`}
         >
           Messages
@@ -29,12 +29,14 @@ export default function InboxTabs({ initialConversations, initialRequests, curre
         <button
           onClick={() => setTab('requests')}
           className={`flex-1 py-2 px-4 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 ${
-            tab === 'requests' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-zinc-200'
+            tab === 'requests' ? 'bg-orange-500 text-white' : 'text-zinc-400 hover:text-zinc-200'
           }`}
         >
           Requests
           {requestCount > 0 && (
-            <span className="bg-orange-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">
+            <span className={`text-xs font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center ${
+              tab === 'requests' ? 'bg-white text-orange-600' : 'bg-orange-500 text-white'
+            }`}>
               {requestCount}
             </span>
           )}
@@ -42,9 +44,9 @@ export default function InboxTabs({ initialConversations, initialRequests, curre
       </div>
 
       {tab === 'messages' ? (
-        <ConversationList initialConversations={initialConversations} currentUserId={currentUserId} mode="inbox" />
+        <ConversationList key="messages" initialConversations={initialConversations} currentUserId={currentUserId} mode="inbox" />
       ) : (
-        <ConversationList initialConversations={initialRequests} currentUserId={currentUserId} mode="requests" />
+        <ConversationList key="requests" initialConversations={initialRequests} currentUserId={currentUserId} mode="requests" />
       )}
     </div>
   )

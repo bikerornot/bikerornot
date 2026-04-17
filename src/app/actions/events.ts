@@ -155,7 +155,6 @@ export interface CreateEventInput {
 
 export async function createEvent(
   input: CreateEventInput,
-  coverFile?: File | null,
   flyerFile?: File | null
 ): Promise<EventDetail> {
   const user = await requireAuth()
@@ -187,22 +186,6 @@ export async function createEvent(
   const { data: existing } = await admin.from('events').select('slug').eq('slug', slug).single()
   if (existing) {
     slug = `${base}-${randomSuffix()}`
-  }
-
-  // Upload cover photo
-  let cover_photo_url: string | null = null
-  if (coverFile && coverFile.size > 0) {
-    await validateImageFile(coverFile)
-    const ext = coverFile.name.split('.').pop() ?? 'jpg'
-    const path = `events/${user.id}/${slug}.${ext}`
-    const bytes = await coverFile.arrayBuffer()
-    const moderation = await moderateImage(bytes, coverFile.type)
-    if (moderation === 'rejected') throw new Error('This image was rejected by our content filter. Please choose a different photo.')
-    const { error: uploadErr } = await admin.storage
-      .from('covers')
-      .upload(path, bytes, { contentType: coverFile.type, upsert: true })
-    if (uploadErr) throw new Error(uploadErr.message)
-    cover_photo_url = path
   }
 
   // Upload flyer image
@@ -273,7 +256,6 @@ export async function createEvent(
       title: input.title.trim(),
       slug,
       description: input.description?.trim() || null,
-      cover_photo_url,
       flyer_url,
       category: input.category || null,
       starts_at: input.starts_at,
@@ -331,11 +313,6 @@ export async function createEvent(
   // Generate recurrence instances
   if (input.recurrence_rule) {
     await generateRecurrenceInstances(event.id, input.recurrence_rule, admin)
-  }
-
-  // If flyer uploaded but no cover photo, use flyer as cover too
-  if (flyer_url && !cover_photo_url) {
-    await admin.from('events').update({ cover_photo_url: flyer_url }).eq('id', event.id)
   }
 
   // Auto-create a feed post for this event
@@ -628,7 +605,6 @@ export async function getUserEvents(): Promise<EventDetail[]> {
 export async function updateEvent(
   eventId: string,
   input: Partial<CreateEventInput>,
-  coverFile?: File | null,
   flyerFile?: File | null
 ): Promise<void> {
   const supabase = await createClient()
@@ -728,21 +704,6 @@ export async function updateEvent(
       )
       await admin.from('event_stops').insert(stopRows)
     }
-  }
-
-  // Cover photo update
-  if (coverFile && coverFile.size > 0) {
-    await validateImageFile(coverFile)
-    const ext = coverFile.name.split('.').pop() ?? 'jpg'
-    const path = `events/${user.id}/${eventId}.${ext}`
-    const bytes = await coverFile.arrayBuffer()
-    const moderation = await moderateImage(bytes, coverFile.type)
-    if (moderation === 'rejected') throw new Error('This image was rejected by our content filter.')
-    const { error: uploadErr } = await admin.storage
-      .from('covers')
-      .upload(path, bytes, { contentType: coverFile.type, upsert: true })
-    if (uploadErr) throw new Error(uploadErr.message)
-    updates.cover_photo_url = path
   }
 
   // Flyer upload

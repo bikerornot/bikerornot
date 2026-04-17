@@ -2,7 +2,6 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import { updateEvent, type EventDetail, type EventCategory } from '@/app/actions/events'
 import { getImageUrl } from '@/lib/supabase/image'
 import { compressImage } from '@/lib/compress'
@@ -53,13 +52,6 @@ export default function EditEventForm({ event }: Props) {
   )
   const [maxAttendees, setMaxAttendees] = useState(event.max_attendees?.toString() ?? '')
 
-  // Cover photo
-  const [coverFile, setCoverFile] = useState<File | null>(null)
-  const [coverPreview, setCoverPreview] = useState<string | null>(
-    event.cover_photo_url ? getImageUrl('covers', event.cover_photo_url) : null
-  )
-  const fileRef = useRef<HTMLInputElement>(null)
-
   // Flyer
   const [flyerFile, setFlyerFile] = useState<File | null>(null)
   const [flyerPreview, setFlyerPreview] = useState<string | null>(
@@ -71,25 +63,6 @@ export default function EditEventForm({ event }: Props) {
   const [error, setError] = useState<string | null>(null)
 
   const categories = event.type === 'ride' ? RIDE_CATEGORIES : EVENT_CATEGORIES
-
-  async function handleCoverSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.target.value = ''
-    setError(null)
-    try {
-      const compressed = await compressImage(file, 1, 1920)
-      if (compressed.size > 3 * 1024 * 1024) {
-        setError('Image is too large. Please choose a smaller file.')
-        return
-      }
-      if (coverPreview && coverPreview.startsWith('blob:')) URL.revokeObjectURL(coverPreview)
-      setCoverFile(compressed)
-      setCoverPreview(URL.createObjectURL(compressed))
-    } catch {
-      setError('Failed to process image')
-    }
-  }
 
   async function handleFlyerSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -142,7 +115,7 @@ export default function EditEventForm({ event }: Props) {
         end_zip_code: event.type === 'ride' ? (endZipCode.trim() || null) : undefined,
         stops: event.type === 'ride' ? stops.filter((s) => s.address.trim()) : undefined,
         max_attendees: maxAttendees ? parseInt(maxAttendees) : null,
-      }, coverFile, flyerFile)
+      }, flyerFile)
       router.push(`/events/${event.slug}`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to update event')
@@ -152,39 +125,8 @@ export default function EditEventForm({ event }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Cover photo + Flyer side by side */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">Cover Photo</label>
-          {coverPreview ? (
-            <div className="relative h-32 rounded-xl overflow-hidden bg-zinc-800">
-              <Image src={coverPreview} alt="Cover preview" fill className="object-cover" unoptimized={coverPreview.startsWith('blob:')} />
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="absolute top-1.5 right-1.5 bg-black/70 text-white rounded-full px-2.5 py-0.5 text-sm hover:bg-black"
-              >
-                Change
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="w-full h-32 rounded-xl border-2 border-dashed border-zinc-700 hover:border-orange-500 text-zinc-500 hover:text-orange-400 transition-colors flex flex-col items-center justify-center gap-1.5 text-sm"
-            >
-              <span>Add cover photo</span>
-            </button>
-          )}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={handleCoverSelect}
-          />
-        </div>
-        <div>
+      {/* Flyer */}
+      <div>
           <label className="block text-sm font-medium text-zinc-300 mb-2">Event Flyer</label>
           {flyerPreview ? (
             <div className="relative h-32 rounded-xl overflow-hidden bg-zinc-800">
@@ -206,14 +148,13 @@ export default function EditEventForm({ event }: Props) {
               <span>Upload flyer</span>
             </button>
           )}
-          <input
-            ref={flyerRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={handleFlyerSelect}
-          />
-        </div>
+        <input
+          ref={flyerRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleFlyerSelect}
+        />
       </div>
 
       {/* Title */}

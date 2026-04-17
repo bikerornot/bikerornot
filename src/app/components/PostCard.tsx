@@ -207,7 +207,12 @@ function SharedPostEmbed({ post }: { post: Omit<Post, 'shared_post'> }) {
           <PostImages images={post.images} />
         </div>
       )}
-      {!post.content && (!post.images || post.images.length === 0) && (
+      {post.event && (
+        <div className="px-3 pb-3 pt-2 bg-zinc-800/30">
+          <EventCard event={post.event as any} />
+        </div>
+      )}
+      {!post.content && (!post.images || post.images.length === 0) && !post.event && (
         <div className="px-3 py-2 bg-zinc-800/30">
           <p className="text-zinc-500 text-sm italic">No content</p>
         </div>

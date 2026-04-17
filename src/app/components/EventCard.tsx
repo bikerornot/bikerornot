@@ -11,6 +11,7 @@ interface Props {
     title: string
     slug: string
     cover_photo_url: string | null
+    flyer_url?: string | null
     starts_at: string
     city: string | null
     state: string | null
@@ -46,7 +47,10 @@ function formatCardDate(dateStr: string): string {
 export default function EventCard({ event }: Props) {
   const location = [event.venue_name, [event.city, event.state].filter(Boolean).join(', ')].filter(Boolean).join(' — ')
   const isCancelled = event.status === 'cancelled'
-  const coverUrl = event.cover_photo_url ? getImageUrl('covers', event.cover_photo_url) : null
+  // Thumbnail prefers the flyer (portrait, designed artwork) over the cover
+  // when both exist. Falls back to whichever is set.
+  const thumbPath = event.flyer_url || event.cover_photo_url
+  const coverUrl = thumbPath ? getImageUrl('covers', thumbPath) : null
 
   return (
     <Link

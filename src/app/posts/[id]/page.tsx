@@ -62,7 +62,7 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
     post.shared_post_id
       ? supabase
           .from('posts')
-          .select('*, author:profiles!author_id(*), images:post_images(*)')
+          .select('*, author:profiles!author_id(*), images:post_images(*), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status)')
           .eq('id', post.shared_post_id)
           .single()
       : Promise.resolve({ data: null }),

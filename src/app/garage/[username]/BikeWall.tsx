@@ -73,7 +73,7 @@ export default function BikeWall({
           sharedPostIds.length > 0
             ? supabase
                 .from('posts')
-                .select('*, author:profiles!author_id(*), images:post_images(*)')
+                .select('*, author:profiles!author_id(*), images:post_images(*), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status)')
                 .in('id', sharedPostIds)
             : Promise.resolve({ data: [] }),
         ])

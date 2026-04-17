@@ -1,5 +1,4 @@
 import { notFound, redirect } from 'next/navigation'
-import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getImageUrl } from '@/lib/supabase/image'
@@ -63,9 +62,6 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
     ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
     : null
 
-  const coverUrl = event.cover_photo_url
-    ? getImageUrl('covers', event.cover_photo_url)
-    : null
 
   return (
     <div className="min-h-screen bg-zinc-950 pb-20 sm:pb-0">
@@ -89,15 +85,6 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
       </header>
 
       <div className="max-w-2xl mx-auto">
-        {/* Cover photo */}
-        {coverUrl ? (
-          <div className="relative w-full aspect-[3/1] bg-zinc-800">
-            <Image src={coverUrl} alt={event.title} fill className="object-cover" sizes="(max-width: 640px) 100vw, 672px" />
-          </div>
-        ) : (
-          <div className="w-full h-32 bg-gradient-to-r from-orange-500/20 to-zinc-900" />
-        )}
-
         <EventDetailClient
           event={event}
           currentUserId={user.id}

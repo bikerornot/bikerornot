@@ -62,11 +62,6 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
   // Ride stops
   const [stops, setStops] = useState<{ label: string; address: string; zip_code: string }[]>([])
 
-  // Cover photo
-  const [coverFile, setCoverFile] = useState<File | null>(null)
-  const [coverPreview, setCoverPreview] = useState<string | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
-
   // Flyer image
   const [flyerFile, setFlyerFile] = useState<File | null>(null)
   const [flyerPreview, setFlyerPreview] = useState<string | null>(null)
@@ -77,31 +72,6 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
   const [extracting, setExtracting] = useState(false)
   const [flyerSkipped, setFlyerSkipped] = useState(false)
   const extractRef = useRef<HTMLInputElement>(null)
-
-  async function handleCoverSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.target.value = ''
-    setError(null)
-    try {
-      const compressed = await compressImage(file, 1, 1920)
-      if (compressed.size > 3 * 1024 * 1024) {
-        setError('Image is too large. Please choose a smaller file.')
-        return
-      }
-      if (coverPreview) URL.revokeObjectURL(coverPreview)
-      setCoverFile(compressed)
-      setCoverPreview(URL.createObjectURL(compressed))
-    } catch {
-      setError('Failed to process image')
-    }
-  }
-
-  function removeCover() {
-    if (coverPreview) URL.revokeObjectURL(coverPreview)
-    setCoverFile(null)
-    setCoverPreview(null)
-  }
 
   async function handleFlyerSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -225,7 +195,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
         end_address: type === 'ride' ? (endAddress.trim() || null) : null,
         end_zip_code: type === 'ride' ? (endZipCode.trim() || null) : null,
         stops: type === 'ride' ? stops.filter((s) => s.address.trim()) : undefined,
-      }, coverFile, flyerFile)
+      }, flyerFile)
       router.push(`/events/${event.slug}`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create event')
@@ -589,44 +559,12 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
         )}
       </div>
 
-      {/* ── Section 5: Photos (optional) ───────────────────────── */}
+      {/* ── Section 5: Flyer (optional) ────────────────────────── */}
       <div className="space-y-4">
-        <h2 className="text-lg font-bold text-white">Photos <span className="text-zinc-500 font-normal text-base">(optional)</span></h2>
-        <p className="text-zinc-400 text-sm -mt-2">Add a cover photo or flyer to make your {isRide ? 'ride' : 'event'} stand out.</p>
+        <h2 className="text-lg font-bold text-white">Flyer <span className="text-zinc-500 font-normal text-base">(optional)</span></h2>
+        <p className="text-zinc-400 text-sm -mt-2">Upload the event flyer. It&apos;ll show in the feed and on the {isRide ? 'ride' : 'event'} page.</p>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <p className="text-sm font-medium text-zinc-400 mb-2">Cover Photo</p>
-            {coverPreview ? (
-              <div className="relative h-36 rounded-xl overflow-hidden bg-zinc-800">
-                <Image src={coverPreview} alt="Cover preview" fill className="object-cover" />
-                <button
-                  type="button"
-                  onClick={removeCover}
-                  className="absolute top-1.5 right-1.5 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-black"
-                >
-                  <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="w-full h-36 rounded-xl border-2 border-dashed border-zinc-700 hover:border-orange-500 text-zinc-500 hover:text-orange-400 transition-colors flex flex-col items-center justify-center gap-2 text-base"
-              >
-                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
-                </svg>
-                <span>Add photo</span>
-              </button>
-            )}
-            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleCoverSelect} />
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-zinc-400 mb-2">Flyer</p>
+        <div>
             {flyerPreview ? (
               <div className="relative h-36 rounded-xl overflow-hidden bg-zinc-800">
                 <img src={flyerPreview} alt="Flyer preview" className="w-full h-full object-cover" />
@@ -652,8 +590,7 @@ export default function CreateEventForm({ userGroups, preselectedGroupId, initia
                 <span>Add flyer</span>
               </button>
             )}
-            <input ref={flyerRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFlyerSelect} />
-          </div>
+          <input ref={flyerRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFlyerSelect} />
         </div>
       </div>
 

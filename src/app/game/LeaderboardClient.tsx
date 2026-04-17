@@ -16,8 +16,6 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
   const sorted = [...leaderboard]
     .sort((a, b) => b.accuracyPercent - a.accuracyPercent)
 
-  const myRank = sorted.findIndex((e) => e.userId === currentUserId) + 1
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -60,9 +58,23 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
             </div>
           </div>
         )}
-        {myRank > 0 && (
+        {myStats.totalPlayed > 0 && (
           <p className="text-sm text-zinc-400 mt-3 border-t border-zinc-800 pt-3">
-            You're ranked <span className="text-orange-400 font-semibold">#{myRank}</span> on the leaderboard
+            {myStats.rank != null ? (
+              <>
+                You&apos;re ranked{' '}
+                <span className="text-orange-400 font-semibold">#{myStats.rank}</span>
+                {myStats.totalRanked > 0 && (
+                  <> of <span className="text-zinc-300 font-semibold">{myStats.totalRanked}</span></>
+                )}
+              </>
+            ) : (
+              <>
+                Play{' '}
+                <span className="text-orange-400 font-semibold">{myStats.gamesNeededToRank}</span>{' '}
+                more {myStats.gamesNeededToRank === 1 ? 'game' : 'games'} to appear on the leaderboard
+              </>
+            )}
           </p>
         )}
         {myStats.totalPlayed > 0 && (

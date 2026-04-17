@@ -160,11 +160,26 @@ export async function restoreGamePhoto(bikePhotoId: string): Promise<void> {
   const admin = getServiceClient()
   await admin.from('bike_photos').update({ game_approved: true }).eq('id', bikePhotoId)
   await resolveAllFor(bikePhotoId, 'restored', user.id)
+  // Un-void any answers we voided earlier for this photo. Only touches rows
+  // we flagged as 'misclassified' so unrelated voids (future reasons) survive.
+  await admin
+    .from('game_answers')
+    .update({ voided_at: null, voided_reason: null })
+    .eq('bike_photo_id', bikePhotoId)
+    .eq('voided_reason', 'misclassified')
 }
 
 export async function keepOutGamePhoto(bikePhotoId: string): Promise<void> {
   const user = await requireAdmin()
-  // game_approved is already false (auto-quarantine set it). Just mark reports resolved.
+  const admin = getServiceClient()
+  // game_approved is already false (auto-quarantine set it). Mark reports resolved.
   await resolveAllFor(bikePhotoId, 'kept_out', user.id)
+  // Void every answer on this photo so stats and leaderboard rankings ignore
+  // the bad data. Guarded by voided_at IS NULL so re-runs are idempotent.
+  await admin
+    .from('game_answers')
+    .update({ voided_at: new Date().toISOString(), voided_reason: 'misclassified' })
+    .eq('bike_photo_id', bikePhotoId)
+    .is('voided_at', null)
 }
 

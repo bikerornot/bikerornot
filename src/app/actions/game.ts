@@ -340,6 +340,7 @@ async function fetchUserAnswers(
       .from('game_answers')
       .select('is_correct, created_at')
       .eq('user_id', userId)
+      .is('voided_at', null)
       .order('created_at', { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
     if (cutoff) q = q.gte('created_at', cutoff)
@@ -364,6 +365,7 @@ async function fetchAllAnswers(
     let q = admin
       .from('game_answers')
       .select('user_id, is_correct')
+      .is('voided_at', null)
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
     if (cutoff) q = q.gte('created_at', cutoff)
     const { data: chunk } = await q

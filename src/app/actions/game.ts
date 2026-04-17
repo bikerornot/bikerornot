@@ -167,15 +167,19 @@ export interface GameRound {
   correctIndex: number    // which option is correct (0-3)
 }
 
+export type LeaderboardWindow = 'week' | 'all'
+
 export interface GameStats {
-  totalPlayed: number
-  correctAnswers: number
+  totalPlayed: number             // within the active window
+  correctAnswers: number          // within the active window
   accuracyPercent: number
-  currentStreak: number
-  bestStreak: number
-  rank: number | null             // null when player has <10 games (not qualified)
-  totalRanked: number             // total qualified players (>=10 games)
+  currentStreak: number           // always all-time (streaks don't segment well)
+  bestStreak: number              // always all-time
+  rank: number | null             // null when player is below the min-games threshold
+  totalRanked: number             // total qualified players in this window
   gamesNeededToRank: number       // 0 when already qualified
+  window: LeaderboardWindow
+  minGamesToRank: number
 }
 
 export interface LeaderboardEntry {
@@ -315,45 +319,94 @@ export async function submitGameAnswer(
   })
 }
 
-export async function getMyGameStats(): Promise<GameStats> {
-  const user = await requireAuth()
-  const admin = getServiceClient()
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000
+const MIN_GAMES: Record<LeaderboardWindow, number> = { week: 20, all: 10 }
 
+function windowCutoffIso(window: LeaderboardWindow): string | null {
+  return window === 'week' ? new Date(Date.now() - WEEK_MS).toISOString() : null
+}
+
+// Paginated fetch of one user's answers, optionally bounded to a recent window.
+async function fetchUserAnswers(
+  userId: string,
+  cutoff: string | null
+): Promise<{ is_correct: boolean; created_at: string }[]> {
+  const admin = getServiceClient()
   const answers: { is_correct: boolean; created_at: string }[] = []
   let page = 0
   const PAGE_SIZE = 1000
   while (true) {
-    const { data: chunk } = await admin
+    let q = admin
       .from('game_answers')
       .select('is_correct, created_at')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+    if (cutoff) q = q.gte('created_at', cutoff)
+    const { data: chunk } = await q
     if (!chunk || chunk.length === 0) break
     answers.push(...chunk)
     if (chunk.length < PAGE_SIZE) break
     page++
   }
+  return answers
+}
 
-  if (answers.length === 0) {
-    return { totalPlayed: 0, correctAnswers: 0, accuracyPercent: 0, currentStreak: 0, bestStreak: 0, rank: null, totalRanked: 0, gamesNeededToRank: MIN_GAMES_TO_RANK }
+// Paginated fetch of every player's answers, optionally bounded to a window.
+async function fetchAllAnswers(
+  cutoff: string | null
+): Promise<{ user_id: string; is_correct: boolean }[]> {
+  const admin = getServiceClient()
+  const all: { user_id: string; is_correct: boolean }[] = []
+  let page = 0
+  const PAGE_SIZE = 1000
+  while (true) {
+    let q = admin
+      .from('game_answers')
+      .select('user_id, is_correct')
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+    if (cutoff) q = q.gte('created_at', cutoff)
+    const { data: chunk } = await q
+    if (!chunk || chunk.length === 0) break
+    all.push(...chunk)
+    if (chunk.length < PAGE_SIZE) break
+    page++
   }
+  return all
+}
 
-  const totalPlayed = answers.length
-  const correctAnswers = answers.filter((a) => a.is_correct).length
-  const accuracyPercent = Math.round((correctAnswers / totalPlayed) * 100)
-
-  // Calculate streaks (answers are sorted newest first)
-  let currentStreak = 0
+function aggregateByUser(
+  answers: { user_id: string; is_correct: boolean }[]
+): Record<string, { correct: number; total: number }> {
+  const stats: Record<string, { correct: number; total: number }> = {}
   for (const a of answers) {
+    if (!stats[a.user_id]) stats[a.user_id] = { correct: 0, total: 0 }
+    stats[a.user_id].total++
+    if (a.is_correct) stats[a.user_id].correct++
+  }
+  return stats
+}
+
+export async function getMyGameStats(window: LeaderboardWindow = 'all'): Promise<GameStats> {
+  const user = await requireAuth()
+  const cutoff = windowCutoffIso(window)
+  const minGamesToRank = MIN_GAMES[window]
+
+  // Streaks always all-time — partial-window streaks are confusing.
+  const [windowAnswers, allTimeAnswers] = await Promise.all([
+    fetchUserAnswers(user.id, cutoff),
+    cutoff ? fetchUserAnswers(user.id, null) : Promise.resolve(null),
+  ])
+
+  const streakSource = allTimeAnswers ?? windowAnswers
+  let currentStreak = 0
+  for (const a of streakSource) {
     if (a.is_correct) currentStreak++
     else break
   }
-
   let bestStreak = 0
   let streak = 0
-  // Reverse to go oldest first for best streak calculation
-  for (const a of [...answers].reverse()) {
+  for (const a of [...streakSource].reverse()) {
     if (a.is_correct) {
       streak++
       if (streak > bestStreak) bestStreak = streak
@@ -362,56 +415,36 @@ export async function getMyGameStats(): Promise<GameStats> {
     }
   }
 
-  // Compute rank against all qualified players (same ordering as getLeaderboard).
-  // Qualified = >= MIN_GAMES_TO_RANK games. Tie-break by raw correct count.
-  const { rank, totalRanked } = await computeRankFor(user.id, totalPlayed, correctAnswers)
-  const gamesNeededToRank = Math.max(0, MIN_GAMES_TO_RANK - totalPlayed)
+  const totalPlayed = windowAnswers.length
+  const correctAnswers = windowAnswers.filter((a) => a.is_correct).length
+  const accuracyPercent = totalPlayed > 0 ? Math.round((correctAnswers / totalPlayed) * 100) : 0
 
-  return { totalPlayed, correctAnswers, accuracyPercent, currentStreak, bestStreak, rank, totalRanked, gamesNeededToRank }
+  const { rank, totalRanked } = await computeRankFor(user.id, totalPlayed, correctAnswers, window)
+  const gamesNeededToRank = Math.max(0, minGamesToRank - totalPlayed)
+
+  return {
+    totalPlayed, correctAnswers, accuracyPercent,
+    currentStreak, bestStreak,
+    rank, totalRanked, gamesNeededToRank,
+    window, minGamesToRank,
+  }
 }
-
-const MIN_GAMES_TO_RANK = 10
 
 async function computeRankFor(
   userId: string,
   userTotal: number,
-  userCorrect: number
+  userCorrect: number,
+  window: LeaderboardWindow
 ): Promise<{ rank: number | null; totalRanked: number }> {
-  const admin = getServiceClient()
+  const stats = aggregateByUser(await fetchAllAnswers(windowCutoffIso(window)))
+  const minGames = MIN_GAMES[window]
 
-  // Paginate all answers to avoid the 1000-row default cap.
-  const allAnswers: { user_id: string; is_correct: boolean }[] = []
-  let page = 0
-  const PAGE_SIZE = 1000
-  while (true) {
-    const { data: chunk } = await admin
-      .from('game_answers')
-      .select('user_id, is_correct')
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
-    if (!chunk || chunk.length === 0) break
-    allAnswers.push(...chunk)
-    if (chunk.length < PAGE_SIZE) break
-    page++
-  }
-
-  const stats: Record<string, { correct: number; total: number }> = {}
-  for (const a of allAnswers) {
-    if (!stats[a.user_id]) stats[a.user_id] = { correct: 0, total: 0 }
-    stats[a.user_id].total++
-    if (a.is_correct) stats[a.user_id].correct++
-  }
-
-  const qualified = Object.entries(stats)
-    .filter(([, s]) => s.total >= MIN_GAMES_TO_RANK)
+  const qualified = Object.entries(stats).filter(([, s]) => s.total >= minGames)
   const totalRanked = qualified.length
 
-  if (userTotal < MIN_GAMES_TO_RANK) {
-    return { rank: null, totalRanked }
-  }
+  if (userTotal < minGames) return { rank: null, totalRanked }
 
   const userAccuracy = userCorrect / userTotal
-  // Users ahead = strictly higher accuracy, OR equal accuracy with more correct.
-  // Mirrors getLeaderboard's sort so rank aligns with the visible list.
   const ahead = qualified.filter(([otherId, s]) => {
     if (otherId === userId) return false
     const otherAccuracy = s.correct / s.total
@@ -423,40 +456,21 @@ async function computeRankFor(
   return { rank: ahead + 1, totalRanked }
 }
 
-export async function getLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
+export async function getLeaderboard(
+  limit = 20,
+  window: LeaderboardWindow = 'all'
+): Promise<LeaderboardEntry[]> {
   await requireAuth()
   const admin = getServiceClient()
+  const minGames = MIN_GAMES[window]
 
-  // Paginate to get ALL game answers — default .select() caps at 1000 rows,
-  // which caused leaderboard totals to fluctuate as the table grew past 1000.
-  const allAnswers: { user_id: string; is_correct: boolean }[] = []
-  let page = 0
-  const PAGE_SIZE = 1000
-  while (true) {
-    const { data: chunk } = await admin
-      .from('game_answers')
-      .select('user_id, is_correct')
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
-    if (!chunk || chunk.length === 0) break
-    allAnswers.push(...chunk)
-    if (chunk.length < PAGE_SIZE) break
-    page++
-  }
+  const answers = await fetchAllAnswers(windowCutoffIso(window))
+  if (answers.length === 0) return []
+  const stats = aggregateByUser(answers)
 
-  if (allAnswers.length === 0) return []
-  const fullData = allAnswers
-
-  const stats: Record<string, { correct: number; total: number }> = {}
-  for (const a of fullData) {
-    if (!stats[a.user_id]) stats[a.user_id] = { correct: 0, total: 0 }
-    stats[a.user_id].total++
-    if (a.is_correct) stats[a.user_id].correct++
-  }
-
-  // Filter to 10+ games, sort by accuracy
   const ranked = Object.entries(stats)
     .map(([userId, s]) => ({ userId, ...s }))
-    .filter((s) => s.total >= 10)
+    .filter((s) => s.total >= minGames)
     .sort((a, b) => {
       const accA = a.total > 0 ? a.correct / a.total : 0
       const accB = b.total > 0 ? b.correct / b.total : 0
@@ -466,7 +480,6 @@ export async function getLeaderboard(limit = 20): Promise<LeaderboardEntry[]> {
 
   if (ranked.length === 0) return []
 
-  // Fetch profiles
   const userIds = ranked.map((r) => r.userId)
   const { data: profiles } = await admin
     .from('profiles')

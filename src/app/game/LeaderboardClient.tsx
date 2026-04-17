@@ -1,20 +1,38 @@
 'use client'
 
+import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getImageUrl } from '@/lib/supabase/image'
-import type { GameStats, LeaderboardEntry } from '@/app/actions/game'
+import type { GameStats, LeaderboardEntry, LeaderboardWindow } from '@/app/actions/game'
 import ShareStatsButton from './ShareStatsButton'
 
 interface Props {
-  myStats: GameStats
-  leaderboard: LeaderboardEntry[]
+  weekStats: GameStats
+  allStats: GameStats
+  weekLeaderboard: LeaderboardEntry[]
+  allLeaderboard: LeaderboardEntry[]
   currentUserId: string
 }
 
-export default function LeaderboardClient({ myStats, leaderboard, currentUserId }: Props) {
-  const sorted = [...leaderboard]
-    .sort((a, b) => b.accuracyPercent - a.accuracyPercent)
+export default function LeaderboardClient({
+  weekStats,
+  allStats,
+  weekLeaderboard,
+  allLeaderboard,
+  currentUserId,
+}: Props) {
+  const [window, setWindow] = useState<LeaderboardWindow>('week')
+  const stats = window === 'week' ? weekStats : allStats
+  const leaderboard = window === 'week' ? weekLeaderboard : allLeaderboard
+  const sorted = [...leaderboard].sort((a, b) => b.accuracyPercent - a.accuracyPercent)
+
+  const tabBtnCls = (active: boolean) =>
+    `flex-1 py-2.5 text-sm font-semibold rounded-lg transition-colors ${
+      active
+        ? 'bg-zinc-900 text-white shadow-sm'
+        : 'text-zinc-500 hover:text-zinc-300'
+    }`
 
   return (
     <div className="space-y-6">
@@ -25,7 +43,7 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
             <svg className="w-6 h-6 text-orange-400" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19.44 9.03L15.41 5H11v2h3.59l2 2H5c-2.8 0-5 2.2-5 5s2.2 5 5 5c2.46 0 4.45-1.69 4.9-4h1.65l2.77-2.77c-.21.54-.32 1.14-.32 1.77 0 2.8 2.2 5 5 5s5-2.2 5-5c0-2.8-2.2-5-5-5-1.09 0-2.09.35-2.91.93L14.4 9.03h5.04zM5 17c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3zm14 0c-1.65 0-3-1.35-3-3s1.35-3 3-3 3 1.35 3 3-1.35 3-3 3z" />
             </svg>
-            What's That Bike?
+            What&apos;s That Bike?
           </h1>
           <p className="text-zinc-400 text-sm mt-0.5">How well do you know your bikes?</p>
         </div>
@@ -37,47 +55,66 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
         </Link>
       </div>
 
+      {/* Window toggle */}
+      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-1 flex gap-1">
+        <button onClick={() => setWindow('week')} className={tabBtnCls(window === 'week')}>
+          This Week
+        </button>
+        <button onClick={() => setWindow('all')} className={tabBtnCls(window === 'all')}>
+          All-Time
+        </button>
+      </div>
+
       {/* My Stats */}
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-        <h2 className="text-base font-semibold text-zinc-300 uppercase tracking-wider mb-3">Your Stats</h2>
-        {myStats.totalPlayed === 0 ? (
-          <p className="text-zinc-500 text-sm">You haven't played yet. Find the game in your feed!</p>
+        <h2 className="text-base font-semibold text-zinc-300 uppercase tracking-wider mb-3">
+          Your Stats · {window === 'week' ? 'This Week' : 'All-Time'}
+        </h2>
+        {stats.totalPlayed === 0 ? (
+          <p className="text-zinc-500 text-sm">
+            {window === 'week'
+              ? "You haven't played this week yet. Jump in!"
+              : "You haven't played yet. Find the game in your feed!"}
+          </p>
         ) : (
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <p className="text-2xl font-bold text-white">{myStats.totalPlayed}</p>
+              <p className="text-2xl font-bold text-white">{stats.totalPlayed}</p>
               <p className="text-sm text-zinc-400 mt-0.5">Answered</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-emerald-400">{myStats.accuracyPercent}%</p>
+              <p className="text-2xl font-bold text-emerald-400">{stats.accuracyPercent}%</p>
               <p className="text-sm text-zinc-400 mt-0.5">Accuracy</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-orange-400">{myStats.bestStreak}</p>
+              <p className="text-2xl font-bold text-orange-400">{stats.bestStreak}</p>
               <p className="text-sm text-zinc-400 mt-0.5">Best Streak</p>
             </div>
           </div>
         )}
-        {myStats.totalPlayed > 0 && (
+        {stats.totalPlayed > 0 && (
           <p className="text-sm text-zinc-400 mt-3 border-t border-zinc-800 pt-3">
-            {myStats.rank != null ? (
+            {stats.rank != null ? (
               <>
                 You&apos;re ranked{' '}
-                <span className="text-orange-400 font-semibold">#{myStats.rank}</span>
-                {myStats.totalRanked > 0 && (
-                  <> of <span className="text-zinc-300 font-semibold">{myStats.totalRanked}</span></>
+                <span className="text-orange-400 font-semibold">#{stats.rank}</span>
+                {stats.totalRanked > 0 && (
+                  <> of <span className="text-zinc-300 font-semibold">{stats.totalRanked}</span></>
                 )}
+                {window === 'week' ? ' this week' : ' all-time'}
               </>
             ) : (
               <>
                 Play{' '}
-                <span className="text-orange-400 font-semibold">{myStats.gamesNeededToRank}</span>{' '}
-                more {myStats.gamesNeededToRank === 1 ? 'game' : 'games'} to appear on the leaderboard
+                <span className="text-orange-400 font-semibold">{stats.gamesNeededToRank}</span>{' '}
+                more {stats.gamesNeededToRank === 1 ? 'game' : 'games'} to appear on the{' '}
+                {window === 'week' ? 'weekly' : 'all-time'} leaderboard
+                {window === 'week' && <span className="text-zinc-500"> (resets every 7 days)</span>}
               </>
             )}
           </p>
         )}
-        {myStats.totalPlayed > 0 && (
+        {stats.totalPlayed > 0 && (
           <div className="mt-3 border-t border-zinc-800 pt-3">
             <ShareStatsButton />
           </div>
@@ -87,21 +124,34 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
       {/* Top 3 podium */}
       {sorted.length >= 3 && (
         <div className="flex items-end justify-center gap-3 py-2">
-          {/* 2nd place */}
           <PodiumCard entry={sorted[1]} rank={2} />
-          {/* 1st place */}
           <PodiumCard entry={sorted[0]} rank={1} />
-          {/* 3rd place */}
           <PodiumCard entry={sorted[2]} rank={3} />
         </div>
       )}
 
       {/* Leaderboard list */}
-      <h2 className="text-lg font-bold text-white">Leaderboard</h2>
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-lg font-bold text-white">
+          {window === 'week' ? 'This Week' : 'All-Time'} Leaderboard
+        </h2>
+        {window === 'week' && (
+          <p className="text-xs text-zinc-500">
+            Last 7 days · min {weekStats.minGamesToRank} games
+          </p>
+        )}
+        {window === 'all' && (
+          <p className="text-xs text-zinc-500">Min {allStats.minGamesToRank} games</p>
+        )}
+      </div>
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
         {sorted.length === 0 ? (
           <div className="p-8 text-center">
-            <p className="text-zinc-500 text-sm">No scores yet. Be the first to play!</p>
+            <p className="text-zinc-500 text-sm">
+              {window === 'week'
+                ? 'No qualifying scores this week yet. Be the first!'
+                : 'No scores yet. Be the first to play!'}
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-zinc-800">
@@ -117,14 +167,12 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
                   key={entry.userId}
                   className={`flex items-center gap-3 px-4 py-3 ${isMe ? 'bg-orange-500/5' : ''}`}
                 >
-                  {/* Rank */}
                   <div className={`w-7 text-center font-bold text-base flex-shrink-0 ${
                     rank === 1 ? 'text-yellow-400' : rank === 2 ? 'text-zinc-400' : rank === 3 ? 'text-amber-600' : 'text-zinc-500'
                   }`}>
                     {rank}
                   </div>
 
-                  {/* Avatar */}
                   <Link href={`/profile/${entry.username}`} className="flex-shrink-0">
                     <div className="w-10 h-10 rounded-full bg-zinc-700 overflow-hidden">
                       {avatarUrl ? (
@@ -137,7 +185,6 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
                     </div>
                   </Link>
 
-                  {/* Name + games */}
                   <div className="flex-1 min-w-0">
                     <Link href={`/profile/${entry.username}`} className="text-base font-semibold text-white hover:text-orange-400 transition-colors truncate block">
                       @{entry.username ?? 'unknown'}
@@ -146,7 +193,6 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
                     <p className="text-sm text-zinc-400">{entry.totalGames} answered</p>
                   </div>
 
-                  {/* Score */}
                   <p className="text-base font-bold text-orange-400 flex-shrink-0">{entry.accuracyPercent}%</p>
                 </div>
               )
@@ -154,7 +200,6 @@ export default function LeaderboardClient({ myStats, leaderboard, currentUserId 
           </div>
         )}
       </div>
-
     </div>
   )
 }

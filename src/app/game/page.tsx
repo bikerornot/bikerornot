@@ -27,9 +27,11 @@ export default async function GamePage() {
 
   if (!profile?.onboarding_complete) redirect('/onboarding')
 
-  const [myStats, leaderboard] = await Promise.all([
-    getMyGameStats(),
-    getLeaderboard(50),
+  const [weekStats, allStats, weekLeaderboard, allLeaderboard] = await Promise.all([
+    getMyGameStats('week'),
+    getMyGameStats('all'),
+    getLeaderboard(50, 'week'),
+    getLeaderboard(50, 'all'),
   ])
 
   const avatarUrl = profile.profile_photo_url
@@ -59,8 +61,10 @@ export default async function GamePage() {
 
       <div className="max-w-2xl mx-auto px-4 py-6">
         <LeaderboardClient
-          myStats={myStats}
-          leaderboard={leaderboard}
+          weekStats={weekStats}
+          allStats={allStats}
+          weekLeaderboard={weekLeaderboard}
+          allLeaderboard={allLeaderboard}
           currentUserId={user.id}
         />
       </div>

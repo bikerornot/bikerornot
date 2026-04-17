@@ -155,29 +155,28 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
       {(state.status === 'playing' || state.status === 'answered') && (
         <>
           {/* Bike photo */}
-          <div className="relative aspect-video bg-zinc-800">
-            <Image
-              src={bikePhotoUrl(state.round.storagePath)}
-              alt="Guess this bike"
-              fill
-              className="object-cover"
-              sizes="(max-width: 640px) 100vw, 640px"
-            />
-            {state.status === 'answered' && (
-              <div className={`absolute inset-x-0 bottom-0 px-4 pb-3 pt-8 bg-gradient-to-t ${
-                state.isCorrect ? 'from-emerald-900/80' : 'from-red-900/80'
-              } to-transparent`}>
-                <p className="text-white text-lg font-bold">
-                  {state.isCorrect ? 'Correct!' : 'Not quite!'}
-                </p>
-                {!state.isCorrect && (
-                  <p className="text-zinc-200 text-sm mt-0.5">
-                    It's a {state.round.options[state.round.correctIndex]}
+          <PhotoCarousel
+            photos={state.round.photos ?? [{ storagePath: state.round.storagePath }]}
+            photoId={state.round.photoId}
+            overlay={
+              state.status === 'answered' ? (
+                <div
+                  className={`absolute inset-x-0 bottom-0 px-4 pb-3 pt-8 bg-gradient-to-t ${
+                    state.isCorrect ? 'from-emerald-900/80' : 'from-red-900/80'
+                  } to-transparent pointer-events-none`}
+                >
+                  <p className="text-white text-lg font-bold">
+                    {state.isCorrect ? 'Correct!' : 'Not quite!'}
                   </p>
-                )}
-              </div>
-            )}
-          </div>
+                  {!state.isCorrect && (
+                    <p className="text-zinc-200 text-sm mt-0.5">
+                      It&apos;s a {state.round.options[state.round.correctIndex]}
+                    </p>
+                  )}
+                </div>
+              ) : null
+            }
+          />
 
           {/* Answer buttons */}
           <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -300,6 +299,92 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+function PhotoCarousel({
+  photos,
+  photoId,
+  overlay,
+}: {
+  photos: { storagePath: string }[]
+  photoId: string
+  overlay: React.ReactNode
+}) {
+  const [idx, setIdx] = useState(0)
+  const touchStartX = useRef<number | null>(null)
+
+  // Reset when the round changes (photoId is the canonical quiz image key).
+  useEffect(() => {
+    setIdx(0)
+  }, [photoId])
+
+  const count = photos.length
+  const hasMore = count > 1
+  const go = (delta: number) => setIdx((i) => (i + delta + count) % count)
+
+  return (
+    <div
+      className="relative aspect-video bg-zinc-800 select-none"
+      onTouchStart={(e) => {
+        touchStartX.current = e.touches[0].clientX
+      }}
+      onTouchEnd={(e) => {
+        if (touchStartX.current == null) return
+        const delta = e.changedTouches[0].clientX - touchStartX.current
+        touchStartX.current = null
+        if (!hasMore || Math.abs(delta) < 40) return
+        go(delta < 0 ? 1 : -1)
+      }}
+    >
+      <Image
+        key={idx}
+        src={bikePhotoUrl(photos[idx].storagePath)}
+        alt={idx === 0 ? 'Guess this bike' : `Alternate angle ${idx}`}
+        fill
+        className="object-cover"
+        sizes="(max-width: 640px) 100vw, 640px"
+      />
+
+      {hasMore && (
+        <>
+          <button
+            type="button"
+            aria-label="Previous photo"
+            onClick={() => go(-1)}
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/45 hover:bg-black/65 text-white flex items-center justify-center transition-colors backdrop-blur-sm"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            aria-label="Next photo"
+            onClick={() => go(1)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/45 hover:bg-black/65 text-white flex items-center justify-center transition-colors backdrop-blur-sm"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* Dot indicator */}
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 flex gap-1.5 bg-black/45 px-2 py-1 rounded-full backdrop-blur-sm">
+            {photos.map((_, i) => (
+              <span
+                key={i}
+                className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                  i === idx ? 'bg-white' : 'bg-white/35'
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {overlay}
     </div>
   )
 }

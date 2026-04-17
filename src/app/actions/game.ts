@@ -163,6 +163,10 @@ export async function unapproveGamePhotos(ids: string[]): Promise<void> {
 export interface GameRound {
   photoId: string
   storagePath: string
+  // Extra photos of the same bike — may include non-approved photos. Shown as
+  // context via arrows / swipe after the main photo. photoId + storagePath
+  // remain the canonical quiz image (photos[0]).
+  photos: { storagePath: string }[]
   options: string[]       // 4 options like "2019 Street Glide"
   correctIndex: number    // which option is correct (0-3)
 }
@@ -209,7 +213,7 @@ export async function getGameRound(): Promise<GameRound | null> {
   // Get all approved photos with bike info
   const { data: approvedPhotos } = await admin
     .from('bike_photos')
-    .select('id, storage_path, bike:user_bikes!bike_id(year, model)')
+    .select('id, storage_path, bike_id, bike:user_bikes!bike_id(year, model)')
     .eq('game_approved', true)
 
   if (!approvedPhotos || approvedPhotos.length === 0) return null
@@ -281,9 +285,25 @@ export async function getGameRound(): Promise<GameRound | null> {
     ;[options[i], options[j]] = [options[j], options[i]]
   }
 
+  // Pull every photo of this bike so the UI can offer alternate-angle context
+  // via arrows/swipe. Non-approved photos are OK here — they're not the quiz
+  // image, just supporting views. Main photo stays at photos[0].
+  const { data: bikePhotos } = await admin
+    .from('bike_photos')
+    .select('id, storage_path, is_primary, created_at')
+    .eq('bike_id', pick.bike_id)
+    .order('is_primary', { ascending: false })
+    .order('created_at', { ascending: true })
+
+  const extras = (bikePhotos ?? [])
+    .filter((p) => p.id !== pick.id)
+    .map((p) => ({ storagePath: p.storage_path }))
+  const photos = [{ storagePath: pick.storage_path }, ...extras]
+
   return {
     photoId: pick.id,
     storagePath: pick.storage_path,
+    photos,
     options,
     correctIndex: options.indexOf(correctAnswer),
   }

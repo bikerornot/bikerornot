@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import Link from 'next/link'
 import { toggleAdsEnabled } from '@/app/actions/ads'
 
@@ -16,158 +16,215 @@ interface Props {
   initialAdsEnabled: boolean
 }
 
-const navItems = [
+// ─── Icons ───────────────────────────────────────────────────────────
+const Icon = {
+  dashboard: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+  ),
+  users: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+  shield: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+    </svg>
+  ),
+  image: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 15l-5-5L5 21" />
+    </svg>
+  ),
+  megaphone: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+    </svg>
+  ),
+  game: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7 12h4m-2-2v4" />
+      <circle cx="16" cy="11" r="1" />
+      <circle cx="18" cy="13" r="1" />
+    </svg>
+  ),
+  business: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 21h18M5 21V8l7-4v17M19 21V12l-7-4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 10v0M9 14v0M9 18v0" />
+    </svg>
+  ),
+  error: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  back: (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+    </svg>
+  ),
+  hamburger: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  ),
+  close: (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  ),
+}
+
+// ─── Nav config ──────────────────────────────────────────────────────
+type Badges = { reports: number; dmca: number; flags: number; watchlist: number }
+
+type NavSubItem = {
+  href: string
+  label: string
+  exact?: boolean
+  getBadge?: (b: Badges) => number
+  trailing?: 'adsToggle'
+}
+
+type NavRootItem = NavSubItem & { icon: ReactNode }
+
+type NavGroup = {
+  key: string
+  label: string
+  icon: ReactNode
+  items: NavSubItem[]
+}
+
+const rootTop: NavRootItem[] = [
+  { href: '/admin', label: 'Dashboard', exact: true, icon: Icon.dashboard },
+  { href: '/admin/users', label: 'Users', icon: Icon.users },
+]
+
+const groups: NavGroup[] = [
   {
-    href: '/admin',
-    label: 'Dashboard',
-    exact: true,
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-      </svg>
-    ),
+    key: 'safety',
+    label: 'Safety Center',
+    icon: Icon.shield,
+    items: [
+      { href: '/admin/safety', label: 'Overview', exact: true },
+      { href: '/admin/reports', label: 'Reports', getBadge: (b) => b.reports },
+      { href: '/admin/flags', label: 'AI Flags', getBadge: (b) => b.flags },
+      { href: '/admin/watchlist', label: 'Watchlist', getBadge: (b) => b.watchlist },
+      { href: '/admin/ai-analysis', label: 'AI Analysis' },
+      { href: '/admin/dmca', label: 'DMCA', getBadge: (b) => b.dmca },
+    ],
   },
   {
-    href: '/admin/users',
-    label: 'Users',
-    exact: false,
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
+    key: 'content',
+    label: 'Content',
+    icon: Icon.image,
+    items: [
+      { href: '/admin/images', label: 'Images' },
+      { href: '/admin/messages', label: 'Messages' },
+    ],
   },
   {
-    href: '/admin/images',
-    label: 'Images',
-    exact: false,
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <circle cx="8.5" cy="8.5" r="1.5" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 15l-5-5L5 21" />
-      </svg>
-    ),
+    key: 'marketing',
+    label: 'Marketing',
+    icon: Icon.megaphone,
+    items: [
+      { href: '/admin/banners', label: 'Banners' },
+      { href: '/admin/ads', label: 'Ads', trailing: 'adsToggle' },
+      { href: '/admin/analytics', label: 'Analytics' },
+      { href: '/admin/kpis', label: 'KPIs' },
+    ],
   },
   {
-    href: '/admin/messages',
-    label: 'Messages',
-    exact: false,
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-      </svg>
-    ),
+    key: 'game',
+    label: 'Game',
+    icon: Icon.game,
+    items: [
+      { href: '/admin/game-photos', label: 'Game Photos' },
+      { href: '/admin/game-reports', label: 'Game Reports' },
+    ],
   },
   {
-    href: '/admin/dmca',
-    label: 'DMCA',
-    exact: false,
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ),
-  },
-  {
-    href: '/admin/analytics',
-    label: 'Analytics',
-    exact: false,
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7 16l4-4 4 4 5-5" />
-      </svg>
-    ),
-  },
-  {
-    href: '/admin/kpis',
-    label: 'KPIs',
-    exact: false,
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" />
-      </svg>
-    ),
-  },
-  {
-    href: '/admin/ads',
-    label: 'Ads',
-    exact: false,
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-      </svg>
-    ),
-  },
-  {
-    href: '/admin/banners',
-    label: 'Banners',
-    exact: false,
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-      </svg>
-    ),
-  },
-  {
-    href: '/admin/errors',
-    label: 'Errors',
-    exact: false,
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
-  {
-    href: '/admin/game-photos',
-    label: 'Game Photos',
-    exact: false,
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.401.604-.401.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.959.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 01-.61-.58v0z" />
-      </svg>
-    ),
-  },
-  {
-    href: '/admin/game-reports',
-    label: 'Game Reports',
-    exact: false,
-    icon: (
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 3l3.55 11.47a2 2 0 001.94 1.53H17.5a2 2 0 002-1.8L21 7H6M9 21a1 1 0 11-2 0 1 1 0 012 0zm10 0a1 1 0 11-2 0 1 1 0 012 0z" />
-      </svg>
-    ),
+    key: 'business',
+    label: 'Business',
+    icon: Icon.business,
+    items: [
+      { href: '/admin/dealers', label: 'HD Dealers' },
+    ],
   },
 ]
 
-export default function AdminSidebar({ username, role, pendingReports, pendingDmca, pendingFlags, watchlistCount, initialActiveUsers, initialAdsEnabled }: Props) {
+const rootBottom: NavRootItem[] = [
+  { href: '/admin/errors', label: 'Errors', icon: Icon.error },
+]
+
+function matchesPath(item: { href: string; exact?: boolean }, pathname: string): boolean {
+  return item.exact ? pathname === item.href : pathname.startsWith(item.href)
+}
+
+function groupIsActive(g: NavGroup, pathname: string): boolean {
+  return g.items.some((i) => matchesPath(i, pathname))
+}
+
+function groupTotalBadge(g: NavGroup, b: Badges): number {
+  return g.items.reduce((sum, it) => sum + (it.getBadge ? it.getBadge(b) : 0), 0)
+}
+
+// ─── Component ───────────────────────────────────────────────────────
+export default function AdminSidebar({
+  username,
+  role,
+  pendingReports,
+  pendingDmca,
+  pendingFlags,
+  watchlistCount,
+  initialActiveUsers,
+  initialAdsEnabled,
+}: Props) {
   const pathname = usePathname()
   const [activeUsers, setActiveUsers] = useState(initialActiveUsers)
   const [menuOpen, setMenuOpen] = useState(false)
-  const isSafetyPage = pathname.startsWith('/admin/safety') || pathname.startsWith('/admin/reports') || pathname.startsWith('/admin/flags') || pathname.startsWith('/admin/watchlist') || pathname.startsWith('/admin/ai-analysis')
-  const [safetyOpen, setSafetyOpen] = useState(isSafetyPage)
   const [adsEnabled, setAdsEnabled] = useState(initialAdsEnabled)
   const [adsToggling, setAdsToggling] = useState(false)
+
+  const badges: Badges = {
+    reports: pendingReports || 0,
+    dmca: pendingDmca || 0,
+    flags: pendingFlags || 0,
+    watchlist: watchlistCount || 0,
+  }
+
+  // Each group opens when the current path is inside it.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {}
+    for (const g of groups) initial[g.key] = groupIsActive(g, pathname)
+    return initial
+  })
+
+  function toggleGroup(key: string) {
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }))
+  }
 
   async function handleAdsToggle(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
     setAdsToggling(true)
-    const newValue = await toggleAdsEnabled()
-    setAdsEnabled(newValue)
+    const nextVal = await toggleAdsEnabled()
+    setAdsEnabled(nextVal)
     setAdsToggling(false)
   }
 
-  useEffect(() => {
-    setMenuOpen(false)
-  }, [pathname])
+  useEffect(() => { setMenuOpen(false) }, [pathname])
 
   useEffect(() => {
     function refresh() {
@@ -180,21 +237,41 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
     return () => clearInterval(interval)
   }, [])
 
+  const mobileIndicator = badges.reports + badges.dmca + badges.flags + badges.watchlist > 0
+
+  const navBody = (variant: 'desktop' | 'mobile') => (
+    <>
+      {rootTop.map((item) => (
+        <RootLink key={item.href} item={item} pathname={pathname} variant={variant} />
+      ))}
+      {groups.map((g) => (
+        <NavGroupSection
+          key={g.key}
+          group={g}
+          open={openGroups[g.key]}
+          onToggle={() => toggleGroup(g.key)}
+          pathname={pathname}
+          badges={badges}
+          variant={variant}
+          adsEnabled={adsEnabled}
+          adsToggling={adsToggling}
+          onAdsToggle={handleAdsToggle}
+        />
+      ))}
+      {rootBottom.map((item) => (
+        <RootLink key={item.href} item={item} pathname={pathname} variant={variant} />
+      ))}
+    </>
+  )
+
   return (
     <>
       {/* Desktop sidebar */}
       <aside className="hidden md:flex w-56 min-h-screen bg-zinc-900 border-r border-zinc-800 flex-col sticky top-0 h-screen">
         <div className="p-5 border-b border-zinc-800">
-          <Link href="/feed" className="text-lg font-bold text-white tracking-tight">
-            BikerOrNot
-          </Link>
-          <p className="text-orange-400 text-xs font-semibold mt-0.5 uppercase tracking-wider">
-            Admin Panel
-          </p>
-          <Link
-            href="/admin/online"
-            className="flex items-center gap-1.5 mt-2 group w-fit"
-          >
+          <Link href="/feed" className="text-lg font-bold text-white tracking-tight">BikerOrNot</Link>
+          <p className="text-orange-400 text-xs font-semibold mt-0.5 uppercase tracking-wider">Admin Panel</p>
+          <Link href="/admin/online" className="flex items-center gap-1.5 mt-2 group w-fit">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
             <span className="text-xs text-zinc-400 group-hover:text-zinc-200 transition-colors">
               <span className="text-emerald-400 font-semibold">{activeUsers}</span> online now
@@ -202,126 +279,20 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
           </Link>
         </div>
 
-        <nav className="flex-1 p-3 space-y-0.5">
-          {/* Safety Center — collapsible group */}
-          {(() => {
-            const safetyBadge = (pendingReports || 0) + (pendingFlags || 0) + (watchlistCount || 0)
-            const safetySubItems = [
-              { href: '/admin/safety', label: 'Overview', badge: 0 },
-              { href: '/admin/reports', label: 'Reports', badge: pendingReports },
-              { href: '/admin/flags', label: 'AI Flags', badge: pendingFlags },
-              { href: '/admin/watchlist', label: 'Watchlist', badge: watchlistCount },
-              { href: '/admin/ai-analysis', label: 'AI Analysis', badge: 0 },
-            ]
-            return (
-              <div>
-                <button
-                  onClick={() => setSafetyOpen(!safetyOpen)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                    isSafetyPage ? 'bg-orange-500/15 text-orange-400' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-                  }`}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                    </svg>
-                    Safety Center
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    {safetyBadge > 0 && (
-                      <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
-                        {safetyBadge > 99 ? '99+' : safetyBadge}
-                      </span>
-                    )}
-                    <svg className={`w-3.5 h-3.5 text-zinc-500 transition-transform ${safetyOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </span>
-                </button>
-                {safetyOpen && (
-                  <div className="ml-4 mt-0.5 space-y-0.5">
-                    {safetySubItems.map((sub) => {
-                      const subActive = sub.href === '/admin/safety' ? pathname === sub.href : pathname.startsWith(sub.href)
-                      return (
-                        <Link
-                          key={sub.href}
-                          href={sub.href}
-                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            subActive ? 'bg-orange-500/10 text-orange-400' : 'text-zinc-500 hover:text-white hover:bg-zinc-800/50'
-                          }`}
-                        >
-                          {sub.label}
-                          {sub.badge > 0 && (
-                            <span className="bg-orange-500/80 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
-                              {sub.badge > 99 ? '99+' : sub.badge}
-                            </span>
-                          )}
-                        </Link>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )
-          })()}
-
-          {navItems.map((item) => {
-            const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
-            const badge = item.href === '/admin/dmca' && pendingDmca > 0 ? pendingDmca
-              : null
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-orange-500/15 text-orange-400'
-                    : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-                }`}
-              >
-                <span className="flex items-center gap-2.5">
-                  {item.icon}
-                  {item.label}
-                </span>
-                {badge != null && (
-                  <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
-                    {badge > 99 ? '99+' : badge}
-                  </span>
-                )}
-                {item.href === '/admin/ads' && (
-                  <button
-                    onClick={handleAdsToggle}
-                    disabled={adsToggling}
-                    className={`relative w-8 h-[18px] rounded-full transition-colors flex-shrink-0 ${
-                      adsEnabled ? 'bg-emerald-500' : 'bg-zinc-600'
-                    }`}
-                    title={adsEnabled ? 'Ads are live — click to pause all' : 'Ads are paused — click to resume'}
-                  >
-                    <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-transform ${
-                      adsEnabled ? 'left-[15px]' : 'left-[2px]'
-                    }`} />
-                  </button>
-                )}
-              </Link>
-            )
-          })}
+        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+          {navBody('desktop')}
         </nav>
 
         <div className="p-3 border-t border-zinc-800">
           <p className="text-zinc-600 text-xs px-3 mb-1.5">
             @{username}
-            <span className="ml-1.5 bg-zinc-800 text-zinc-500 text-xs px-1.5 py-0.5 rounded font-medium">
-              {role}
-            </span>
+            <span className="ml-1.5 bg-zinc-800 text-zinc-500 text-xs px-1.5 py-0.5 rounded font-medium">{role}</span>
           </p>
           <Link
             href="/feed"
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
+            {Icon.back}
             Back to feed
           </Link>
         </div>
@@ -346,143 +317,30 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
             onClick={() => setMenuOpen((v) => !v)}
             className="relative p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
           >
-            {menuOpen ? (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
-            {!menuOpen && (pendingReports + pendingDmca + pendingFlags) > 0 && (
+            {menuOpen ? Icon.close : Icon.hamburger}
+            {!menuOpen && mobileIndicator && (
               <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-orange-500" />
             )}
           </button>
         </div>
 
-        {/* Dropdown menu */}
         {menuOpen && (
           <>
             <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-            <div className="relative z-40 bg-zinc-900 border-b border-zinc-800 shadow-xl">
+            <div className="relative z-40 bg-zinc-900 border-b border-zinc-800 shadow-xl max-h-[calc(100vh-72px)] overflow-y-auto">
               <nav className="py-2">
-                {/* Safety Center — collapsible group (mobile) */}
-                {(() => {
-                  const safetyBadge = (pendingReports || 0) + (pendingFlags || 0) + (watchlistCount || 0)
-                  const safetySubItems = [
-                    { href: '/admin/safety', label: 'Overview', badge: 0 },
-                    { href: '/admin/reports', label: 'Reports', badge: pendingReports },
-                    { href: '/admin/flags', label: 'AI Flags', badge: pendingFlags },
-                    { href: '/admin/watchlist', label: 'Watchlist', badge: watchlistCount },
-                    { href: '/admin/ai-analysis', label: 'AI Analysis', badge: 0 },
-                  ]
-                  return (
-                    <div>
-                      <button
-                        onClick={() => setSafetyOpen(!safetyOpen)}
-                        className={`w-full flex items-center justify-between px-5 py-3 text-sm font-medium transition-colors ${
-                          isSafetyPage ? 'bg-orange-500/10 text-orange-400' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-                        }`}
-                      >
-                        <span className="flex items-center gap-3">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                          </svg>
-                          Safety Center
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          {safetyBadge > 0 && (
-                            <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
-                              {safetyBadge > 99 ? '99+' : safetyBadge}
-                            </span>
-                          )}
-                          <svg className={`w-3.5 h-3.5 text-zinc-500 transition-transform ${safetyOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                          </svg>
-                        </span>
-                      </button>
-                      {safetyOpen && (
-                        <div className="bg-zinc-950/50">
-                          {safetySubItems.map((sub) => {
-                            const subActive = sub.href === '/admin/safety' ? pathname === sub.href : pathname.startsWith(sub.href)
-                            return (
-                              <Link
-                                key={sub.href}
-                                href={sub.href}
-                                className={`flex items-center justify-between pl-12 pr-5 py-2.5 text-sm font-medium transition-colors ${
-                                  subActive ? 'bg-orange-500/10 text-orange-400' : 'text-zinc-500 hover:text-white hover:bg-zinc-800/50'
-                                }`}
-                              >
-                                {sub.label}
-                                {sub.badge > 0 && (
-                                  <span className="bg-orange-500/80 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
-                                    {sub.badge > 99 ? '99+' : sub.badge}
-                                  </span>
-                                )}
-                              </Link>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })()}
-
-                {navItems.map((item) => {
-                  const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
-                  const badge = item.href === '/admin/dmca' && pendingDmca > 0 ? pendingDmca
-                    : null
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center justify-between px-5 py-3 text-sm font-medium transition-colors ${
-                        isActive
-                          ? 'bg-orange-500/10 text-orange-400'
-                          : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
-                      }`}
-                    >
-                      <span className="flex items-center gap-3">
-                        {item.icon}
-                        {item.label}
-                      </span>
-                      {badge != null && (
-                        <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
-                          {badge > 99 ? '99+' : badge}
-                        </span>
-                      )}
-                      {item.href === '/admin/ads' && (
-                        <button
-                          onClick={handleAdsToggle}
-                          disabled={adsToggling}
-                          className={`relative w-8 h-[18px] rounded-full transition-colors flex-shrink-0 ${
-                            adsEnabled ? 'bg-emerald-500' : 'bg-zinc-600'
-                          }`}
-                        >
-                          <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-transform ${
-                            adsEnabled ? 'left-[15px]' : 'left-[2px]'
-                          }`} />
-                        </button>
-                      )}
-                    </Link>
-                  )
-                })}
+                {navBody('mobile')}
               </nav>
               <div className="border-t border-zinc-800 px-5 py-3">
                 <p className="text-zinc-600 text-xs mb-2">
                   @{username}
-                  <span className="ml-1.5 bg-zinc-800 text-zinc-500 text-xs px-1.5 py-0.5 rounded font-medium">
-                    {role}
-                  </span>
+                  <span className="ml-1.5 bg-zinc-800 text-zinc-500 text-xs px-1.5 py-0.5 rounded font-medium">{role}</span>
                 </p>
                 <Link
                   href="/feed"
                   className="flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
+                  {Icon.back}
                   Back to feed
                 </Link>
               </div>
@@ -491,5 +349,135 @@ export default function AdminSidebar({ username, role, pendingReports, pendingDm
         )}
       </div>
     </>
+  )
+}
+
+// ─── Subcomponents ───────────────────────────────────────────────────
+function RootLink({
+  item,
+  pathname,
+  variant,
+}: {
+  item: NavRootItem
+  pathname: string
+  variant: 'desktop' | 'mobile'
+}) {
+  const active = matchesPath(item, pathname)
+  const cls =
+    variant === 'desktop'
+      ? `flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+          active ? 'bg-orange-500/15 text-orange-400' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+        }`
+      : `flex items-center justify-between px-5 py-3 text-sm font-medium transition-colors ${
+          active ? 'bg-orange-500/10 text-orange-400' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+        }`
+  const gapCls = variant === 'desktop' ? 'gap-2.5' : 'gap-3'
+  return (
+    <Link href={item.href} className={cls}>
+      <span className={`flex items-center ${gapCls}`}>
+        {item.icon}
+        {item.label}
+      </span>
+    </Link>
+  )
+}
+
+function NavGroupSection({
+  group,
+  open,
+  onToggle,
+  pathname,
+  badges,
+  variant,
+  adsEnabled,
+  adsToggling,
+  onAdsToggle,
+}: {
+  group: NavGroup
+  open: boolean
+  onToggle: () => void
+  pathname: string
+  badges: Badges
+  variant: 'desktop' | 'mobile'
+  adsEnabled: boolean
+  adsToggling: boolean
+  onAdsToggle: (e: React.MouseEvent) => void
+}) {
+  const hasActive = groupIsActive(group, pathname)
+  const totalBadge = groupTotalBadge(group, badges)
+
+  const headerCls =
+    variant === 'desktop'
+      ? `w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+          hasActive ? 'bg-orange-500/15 text-orange-400' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+        }`
+      : `w-full flex items-center justify-between px-5 py-3 text-sm font-medium transition-colors ${
+          hasActive ? 'bg-orange-500/10 text-orange-400' : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+        }`
+  const iconGap = variant === 'desktop' ? 'gap-2.5' : 'gap-3'
+
+  return (
+    <div>
+      <button onClick={onToggle} className={headerCls}>
+        <span className={`flex items-center ${iconGap}`}>
+          {group.icon}
+          {group.label}
+        </span>
+        <span className="flex items-center gap-1.5">
+          {totalBadge > 0 && (
+            <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
+              {totalBadge > 99 ? '99+' : totalBadge}
+            </span>
+          )}
+          <svg className={`w-3.5 h-3.5 text-zinc-500 transition-transform ${open ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </span>
+      </button>
+      {open && (
+        <div className={variant === 'desktop' ? 'ml-4 mt-0.5 space-y-0.5' : 'bg-zinc-950/50'}>
+          {group.items.map((sub) => {
+            const active = matchesPath(sub, pathname)
+            const badge = sub.getBadge ? sub.getBadge(badges) : 0
+            const subCls =
+              variant === 'desktop'
+                ? `flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    active ? 'bg-orange-500/10 text-orange-400' : 'text-zinc-500 hover:text-white hover:bg-zinc-800/50'
+                  }`
+                : `flex items-center justify-between pl-12 pr-5 py-2.5 text-sm font-medium transition-colors ${
+                    active ? 'bg-orange-500/10 text-orange-400' : 'text-zinc-500 hover:text-white hover:bg-zinc-800/50'
+                  }`
+            return (
+              <Link key={sub.href} href={sub.href} className={subCls}>
+                <span>{sub.label}</span>
+                <span className="flex items-center gap-2">
+                  {badge > 0 && (
+                    <span className="bg-orange-500/80 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center leading-none">
+                      {badge > 99 ? '99+' : badge}
+                    </span>
+                  )}
+                  {sub.trailing === 'adsToggle' && (
+                    <button
+                      onClick={onAdsToggle}
+                      disabled={adsToggling}
+                      className={`relative w-8 h-[18px] rounded-full transition-colors flex-shrink-0 ${
+                        adsEnabled ? 'bg-emerald-500' : 'bg-zinc-600'
+                      }`}
+                      title={adsEnabled ? 'Ads are live — click to pause all' : 'Ads are paused — click to resume'}
+                    >
+                      <span
+                        className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-transform ${
+                          adsEnabled ? 'left-[15px]' : 'left-[2px]'
+                        }`}
+                      />
+                    </button>
+                  )}
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }

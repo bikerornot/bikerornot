@@ -241,13 +241,14 @@ export async function getGameRound(): Promise<GameRound | null> {
     .gte('year', correctYear - 5)
     .lte('year', correctYear + 5)
 
-  // Build pool of unique "year model" combos that differ from the correct answer
+  // Build pool of unique "year model" combos. Never include the correct
+  // answer's model — distinguishing two years of the same model is a trap
+  // only a handful of experts can solve (e.g., 2018 vs 2019 Street Glide).
   const wrongPool = new Map<string, string>()
   for (const m of allModels ?? []) {
+    if (m.model === correctModel) continue
     const label = `${m.year} ${m.model}`
-    if (label !== correctAnswer && !wrongPool.has(label)) {
-      wrongPool.set(label, label)
-    }
+    if (!wrongPool.has(label)) wrongPool.set(label, label)
   }
 
   let wrongAnswers = Array.from(wrongPool.values())
@@ -263,10 +264,9 @@ export async function getGameRound(): Promise<GameRound | null> {
       .limit(200)
 
     for (const m of fallbackModels ?? []) {
+      if (m.model === correctModel) continue
       const label = `${m.year} ${m.model}`
-      if (label !== correctAnswer && !wrongPool.has(label)) {
-        wrongPool.set(label, label)
-      }
+      if (!wrongPool.has(label)) wrongPool.set(label, label)
     }
     wrongAnswers = Array.from(wrongPool.values())
   }

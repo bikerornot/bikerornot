@@ -104,7 +104,7 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
     loadRound()
   }
 
-  if (dismissed || state.status === 'empty') return null
+  if (dismissed) return null
 
   const remaining = TOTAL_ROUNDS - totalPlayed
 
@@ -148,6 +148,27 @@ export default function GuessTheHarleyCard({ currentUserId }: Props) {
       {state.status === 'loading' && (
         <div className="aspect-video bg-zinc-800 flex items-center justify-center">
           <p className="text-zinc-500 text-sm">Loading...</p>
+        </div>
+      )}
+
+      {/* Out of bikes — user has exhausted the pool within the 24h no-repeat window */}
+      {state.status === 'empty' && (
+        <div className="px-6 py-8 text-center">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-orange-500/15 flex items-center justify-center">
+            <svg className="w-6 h-6 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <p className="text-white text-base font-semibold">You&apos;ve guessed every bike we have!</p>
+          <p className="text-zinc-400 text-sm mt-1.5 max-w-xs mx-auto">
+            New bikes cycle in as you play. Check back in a bit — or help grow the pool by adding your own bikes to the garage.
+          </p>
+          <Link
+            href="/garage"
+            className="inline-block mt-4 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-5 py-2 rounded-xl transition-colors"
+          >
+            Go to my garage
+          </Link>
         </div>
       )}
 

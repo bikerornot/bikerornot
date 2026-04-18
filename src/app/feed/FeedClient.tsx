@@ -240,35 +240,41 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
     })
   }, [posts, hasMore, loading])
 
-  // Track which post is currently at the top of the viewport. rootMargin
-  // -80% bottom means only posts whose top has entered the upper 20% of the
-  // screen are considered "visible"; we pick the topmost one in DOM order as
-  // the anchor for scroll restoration.
+  // Track which post is currently at the top of the viewport. rAF-throttled
+  // scroll listener that picks the first post whose bottom edge is below the
+  // header line — i.e. the post the user is actually reading. More precise
+  // than an IntersectionObserver with a 20% zone, which lagged behind small
+  // scrolls and caused the "restored to the previous click" bug.
   useEffect(() => {
     if (loading || posts.length === 0) return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          const id = entry.target.getAttribute('data-post-id')
-          if (!id) continue
-          if (entry.isIntersecting) visibleSetRef.current.add(id)
-          else visibleSetRef.current.delete(id)
+    const THRESHOLD = 80 // just below the sticky header
+    let frame = 0
+
+    function recompute() {
+      frame = 0
+      for (const p of posts) {
+        const el = document.getElementById(`post-${p.id}`)
+        if (!el) continue
+        const rect = el.getBoundingClientRect()
+        if (rect.bottom > THRESHOLD) {
+          lastVisiblePostIdRef.current = p.id
+          updateLastVisiblePostId(p.id)
+          return
         }
-        for (const p of posts) {
-          if (visibleSetRef.current.has(p.id)) {
-            lastVisiblePostIdRef.current = p.id
-            updateLastVisiblePostId(p.id)
-            break
-          }
-        }
-      },
-      { rootMargin: '0px 0px -80% 0px' }
-    )
-    const elements = posts
-      .map((p) => document.getElementById(`post-${p.id}`))
-      .filter((el): el is HTMLElement => el != null)
-    elements.forEach((el) => observer.observe(el))
-    return () => observer.disconnect()
+      }
+    }
+
+    function onScroll() {
+      if (frame) return
+      frame = requestAnimationFrame(recompute)
+    }
+
+    recompute() // seed once
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (frame) cancelAnimationFrame(frame)
+    }
   }, [posts, loading])
 
   // Fetch ad exactly once — ref guard prevents StrictMode double-fire

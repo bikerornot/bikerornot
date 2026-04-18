@@ -49,6 +49,11 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
   const sentinelRef = useRef<HTMLDivElement>(null)
   const lastVisiblePostIdRef = useRef<string | null>(initialSnapshot?.lastVisiblePostId ?? null)
   const visibleSetRef = useRef<Set<string>>(new Set())
+  // True while we're actively pinning scroll to the restored anchor. During
+  // this window the scroll tracker must NOT write new anchors to storage —
+  // the layout is still shifting as images load above, and the top-of-viewport
+  // post would be a stale read. Cleared by user intent or timeout.
+  const restoringRef = useRef<boolean>(false)
 
   const fetchPosts = useCallback(
     async (cursor?: string): Promise<{ posts: Post[]; rawCursor: string | null; rawFull: boolean }> => {
@@ -155,51 +160,81 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       .finally(() => setLoading(false))
   }, [fetchPosts])
 
-  // Scroll restoration. Runs once before first paint — that alone works on
-  // most paths. The later phases (rAF, setTimeout) are *conditional* rescues
-  // that only fire if the browser clobbered our scroll back to the top; if
-  // our first scroll stuck, we leave the user alone. This fixes the "lands
-  // right, then jumps wrong" behavior caused by images loading between the
-  // initial scroll and the later rescues (the later rescues were re-computing
-  // a now-different anchor position).
+  // Scroll restoration with a settle loop. Images loading above the anchor
+  // shift layout after the initial scrollIntoView, which used to leave the
+  // user on the WRONG post (the one that ended up at the top after layout
+  // shift). We now re-scroll repeatedly for up to 1.5 seconds, or until the
+  // user does something scroll-intenty (wheel / touchmove / keydown), keeping
+  // the anchor pinned through the layout shifts.
   useLayoutEffect(() => {
     if (!didHydrateRef.current) return
 
-    // Take manual control away from the browser while we're on /feed.
     const prevRestore = typeof history !== 'undefined' ? history.scrollRestoration : undefined
     if (typeof history !== 'undefined') history.scrollRestoration = 'manual'
 
     const id = lastVisiblePostIdRef.current
     if (!id) return
 
-    feedDebug('restore: useLayoutEffect phase 1', { anchor: id, scrollY_before: window.scrollY })
+    const HEADER_OFFSET = 64 // matches scroll-mt-16 on post wrappers
+    const DRIFT_TOLERANCE = 5
+    const SETTLE_MS = 1500
 
-    const scrollToAnchor = () => {
+    feedDebug('restore: begin', { anchor: id })
+    restoringRef.current = true
+
+    function scrollToAnchor() {
       const el = document.getElementById(`post-${id}`)
-      if (el) {
-        el.scrollIntoView({ block: 'start' })
-        feedDebug('restore: scrollIntoView', { anchor: id, scrollY_after: window.scrollY })
-      } else {
-        feedDebug('restore: element not found', { anchor: id })
-      }
+      if (!el) return
+      const targetY = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET
+      window.scrollTo(0, Math.max(0, targetY))
     }
 
-    // Phase 1: before first paint. Usually sufficient on desktop.
+    // Phase 1: immediate (pre-paint).
     scrollToAnchor()
+    feedDebug('restore: initial scroll', { scrollY: window.scrollY })
 
-    // Phase 2 + 3: rescues. Only re-scroll if the browser overrode us and
-    // landed us at (or very near) the top — otherwise the user's already in
-    // the right place and re-scrolling would just shift them again as images
-    // finish loading above.
-    const rescueIfNeeded = () => {
-      if (window.scrollY < 80) scrollToAnchor()
+    function stopRestoring(reason: string) {
+      if (!restoringRef.current) return
+      restoringRef.current = false
+      feedDebug('restore: stop', { reason })
     }
-    const raf = requestAnimationFrame(rescueIfNeeded)
-    const late = window.setTimeout(rescueIfNeeded, 120)
+
+    function onUserIntent() {
+      stopRestoring('user intent')
+    }
+
+    window.addEventListener('wheel', onUserIntent, { passive: true })
+    window.addEventListener('touchmove', onUserIntent, { passive: true })
+    window.addEventListener('keydown', onUserIntent)
+
+    // Settle loop: correct layout shifts by re-scrolling toward the anchor.
+    const interval = window.setInterval(() => {
+      if (!restoringRef.current) {
+        window.clearInterval(interval)
+        return
+      }
+      const el = document.getElementById(`post-${id}`)
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const drift = rect.top - HEADER_OFFSET
+      if (Math.abs(drift) > DRIFT_TOLERANCE) {
+        window.scrollBy(0, drift)
+        feedDebug('restore: drift correction', { drift, scrollY: window.scrollY })
+      }
+    }, 80)
+
+    const stopTimer = window.setTimeout(() => {
+      window.clearInterval(interval)
+      stopRestoring('timeout')
+    }, SETTLE_MS)
 
     return () => {
-      cancelAnimationFrame(raf)
-      window.clearTimeout(late)
+      window.clearInterval(interval)
+      window.clearTimeout(stopTimer)
+      window.removeEventListener('wheel', onUserIntent)
+      window.removeEventListener('touchmove', onUserIntent)
+      window.removeEventListener('keydown', onUserIntent)
+      restoringRef.current = false
       if (typeof history !== 'undefined' && prevRestore) {
         history.scrollRestoration = prevRestore
       }
@@ -264,6 +299,11 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
     function recompute() {
       frame = 0
+      // Don't track anchors while restoration is actively pinning the scroll —
+      // the viewport shows whatever image-loading happened to push to the top,
+      // not what the user actually wants. Restoration ref clears on user intent
+      // or settle timeout.
+      if (restoringRef.current) return
       for (const p of posts) {
         const el = document.getElementById(`post-${p.id}`)
         if (!el) continue

@@ -17,6 +17,7 @@ import {
   writeFeedSnapshot,
   clearFeedSnapshot,
   updateLastVisiblePostId,
+  flushFeedSnapshot,
 } from '@/lib/stores/feedStore'
 
 const PAGE_SIZE = 10
@@ -153,16 +154,68 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       .finally(() => setLoading(false))
   }, [fetchPosts])
 
-  // Scroll restoration. useLayoutEffect runs synchronously after DOM commit but
-  // before paint, so we can scroll to the anchor post without a visible flash
-  // at the top. Runs once, on mount.
+  // Scroll restoration. Fires multiple times because the browser can override
+  // our scroll in several ways on back-nav — especially on iOS Safari which
+  // aggressively re-scrolls to top after paint. We scroll once before paint
+  // (useLayoutEffect), again after paint (rAF), and once more after a short
+  // delay to catch late browser restorations. Only runs when we hydrated.
   useLayoutEffect(() => {
     if (!didHydrateRef.current) return
+
+    // Take manual control away from the browser while we're on /feed.
+    const prevRestore = typeof history !== 'undefined' ? history.scrollRestoration : undefined
+    if (typeof history !== 'undefined') history.scrollRestoration = 'manual'
+
     const id = lastVisiblePostIdRef.current
     if (!id) return
-    const el = document.getElementById(`post-${id}`)
-    if (el) el.scrollIntoView({ block: 'start' })
+
+    const scrollToAnchor = () => {
+      const el = document.getElementById(`post-${id}`)
+      if (el) el.scrollIntoView({ block: 'start' })
+    }
+
+    // Phase 1: before first paint.
+    scrollToAnchor()
+    // Phase 2: after first paint.
+    const raf = requestAnimationFrame(scrollToAnchor)
+    // Phase 3: safety net for late browser scroll-to-top (mobile Safari).
+    const late = window.setTimeout(scrollToAnchor, 120)
+
+    return () => {
+      cancelAnimationFrame(raf)
+      window.clearTimeout(late)
+      if (typeof history !== 'undefined' && prevRestore) {
+        history.scrollRestoration = prevRestore
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Re-try restoration when the page is restored from the back-forward cache
+  // (common on iOS Safari). The page's DOM is already there, but our store
+  // state may or may not be — we just re-read and re-scroll.
+  useEffect(() => {
+    function onPageShow(e: PageTransitionEvent) {
+      if (!e.persisted) return
+      const snap = readFeedSnapshot()
+      const id = snap?.lastVisiblePostId ?? lastVisiblePostIdRef.current
+      if (!id) return
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`post-${id}`)
+        if (el) el.scrollIntoView({ block: 'start' })
+      })
+    }
+    // pagehide fires when the user navigates away — flush the latest anchor to
+    // sessionStorage so bfcache-miss reloads can still rehydrate.
+    function onPageHide() {
+      flushFeedSnapshot()
+    }
+    window.addEventListener('pageshow', onPageShow)
+    window.addEventListener('pagehide', onPageHide)
+    return () => {
+      window.removeEventListener('pageshow', onPageShow)
+      window.removeEventListener('pagehide', onPageHide)
+    }
   }, [])
 
   // Persist snapshot whenever loaded posts / pagination state changes so the
@@ -304,7 +357,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       )}
 
       {posts.map((post, idx) => (
-        <div key={post.id} id={`post-${post.id}`} data-post-id={post.id}>
+        <div key={post.id} id={`post-${post.id}`} data-post-id={post.id} className="scroll-mt-16">
           <PostCard
             post={post}
             currentUserId={currentUserId}

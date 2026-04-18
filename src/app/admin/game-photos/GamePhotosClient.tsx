@@ -92,10 +92,10 @@ export default function GamePhotosClient({ initialPhotos, initialStats }: Props)
           <p className="text-xs text-zinc-500 uppercase tracking-wider">Approved</p>
           <p className="text-lg font-bold text-emerald-400 underline decoration-emerald-400/30 underline-offset-2">{stats.approved}</p>
         </Link>
-        <div>
+        <Link href="/admin/game-photos/rejected" className="hover:bg-zinc-800/50 rounded-lg px-2 py-1 -mx-2 -my-1 transition-colors">
           <p className="text-xs text-zinc-500 uppercase tracking-wider">Rejected</p>
-          <p className="text-lg font-bold text-red-400">{stats.rejected}</p>
-        </div>
+          <p className="text-lg font-bold text-red-400 underline decoration-red-400/30 underline-offset-2">{stats.rejected}</p>
+        </Link>
         <div>
           <p className="text-xs text-zinc-500 uppercase tracking-wider">Remaining</p>
           <p className="text-lg font-bold text-orange-400">{stats.remaining}</p>

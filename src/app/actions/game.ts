@@ -158,6 +158,53 @@ export async function unapproveGamePhotos(ids: string[]): Promise<void> {
     .in('id', ids)
 }
 
+// Rejected Harley photos — for re-review when we want to grow the pool.
+export async function getRejectedGamePhotos(page = 1, pageSize = 40): Promise<{ photos: GamePhoto[]; total: number }> {
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  const from = (page - 1) * pageSize
+  const to = from + pageSize - 1
+
+  const { data, count } = await admin
+    .from('bike_photos')
+    .select(
+      'id, storage_path, bike_id, bike:user_bikes!bike_id(year, make, model, user_id), user:user_bikes!bike_id(user:profiles!user_id(username))',
+      { count: 'exact' }
+    )
+    .eq('game_approved', false)
+    .not('game_reviewed_at', 'is', null)
+    .order('game_reviewed_at', { ascending: false })
+    .range(from, to)
+
+  // Filter to Harley only since the game currently quizzes Harleys.
+  const harleyOnly = ((data ?? []) as any[]).filter((p) => p.bike?.make === 'Harley-Davidson')
+
+  const photos: GamePhoto[] = harleyOnly.map((p) => ({
+    id: p.id,
+    storage_path: p.storage_path,
+    bike_id: p.bike_id,
+    year: p.bike?.year ?? null,
+    make: p.bike?.make ?? null,
+    model: p.bike?.model ?? null,
+    username: p.user?.user?.username ?? null,
+  }))
+
+  return { photos, total: count ?? 0 }
+}
+
+// Flip selected photos back to approved so they re-enter the game rotation.
+export async function restoreRejectedPhotos(ids: string[]): Promise<void> {
+  if (ids.length === 0) return
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  await admin
+    .from('bike_photos')
+    .update({ game_approved: true, game_reviewed_at: new Date().toISOString() })
+    .in('id', ids)
+}
+
 // ─── Game Engine Types ─────────────────────────────────────
 
 export interface GameRound {

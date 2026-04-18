@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Post, Profile } from '@/lib/supabase/types'
 import PostCard from '@/app/components/PostCard'
@@ -12,6 +12,12 @@ import GuessTheHarleyCard from '@/app/components/GuessTheHarleyCard'
 import RidersWidget from '@/app/components/RidersWidget'
 import { getNextAd, type AdData } from '@/app/actions/ads'
 import type { RiderSuggestion } from '@/app/actions/suggestions'
+import {
+  readFeedSnapshot,
+  writeFeedSnapshot,
+  clearFeedSnapshot,
+  updateLastVisiblePostId,
+} from '@/lib/stores/feedStore'
 
 const PAGE_SIZE = 10
 
@@ -25,14 +31,22 @@ interface Props {
 }
 
 export default function FeedClient({ currentUserId, currentUserProfile, userGroupIds = [], blockedUserIds = [], initialRiders = [], friendCount = 0 }: Props) {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
+  // Hydrate from the snapshot if one is fresh. This is what lets feed → profile
+  // → back restore the user's scroll position and loaded pages instead of
+  // dumping them at the top with an empty feed.
+  const initialSnapshot = typeof window === 'undefined' ? null : readFeedSnapshot()
+  const didHydrateRef = useRef(!!initialSnapshot)
+
+  const [posts, setPosts] = useState<Post[]>(initialSnapshot?.posts ?? [])
+  const [loading, setLoading] = useState(!initialSnapshot)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState(true)
+  const [hasMore, setHasMore] = useState(initialSnapshot?.hasMore ?? true)
   const [newPostCount, setNewPostCount] = useState(0)
   const [ad, setAd] = useState<AdData | null>(null)
-  const cursorRef = useRef<string | null>(null)
+  const cursorRef = useRef<string | null>(initialSnapshot?.cursor ?? null)
   const sentinelRef = useRef<HTMLDivElement>(null)
+  const lastVisiblePostIdRef = useRef<string | null>(initialSnapshot?.lastVisiblePostId ?? null)
+  const visibleSetRef = useRef<Set<string>>(new Set())
 
   const fetchPosts = useCallback(
     async (cursor?: string): Promise<{ posts: Post[]; rawCursor: string | null; rawFull: boolean }> => {
@@ -126,7 +140,9 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
     [currentUserId, userGroupIds.join(','), blockedUserIds.join(',')]
   )
 
+  // Initial fetch — only when we didn't hydrate from a snapshot.
   useEffect(() => {
+    if (didHydrateRef.current) return
     fetchPosts()
       .then(({ posts, rawCursor, rawFull }) => {
         setPosts(posts)
@@ -136,6 +152,63 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       .catch((err) => console.error('Feed fetch error:', err))
       .finally(() => setLoading(false))
   }, [fetchPosts])
+
+  // Scroll restoration. useLayoutEffect runs synchronously after DOM commit but
+  // before paint, so we can scroll to the anchor post without a visible flash
+  // at the top. Runs once, on mount.
+  useLayoutEffect(() => {
+    if (!didHydrateRef.current) return
+    const id = lastVisiblePostIdRef.current
+    if (!id) return
+    const el = document.getElementById(`post-${id}`)
+    if (el) el.scrollIntoView({ block: 'start' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Persist snapshot whenever loaded posts / pagination state changes so the
+  // next mount can rehydrate. lastVisiblePostIdRef is captured live via the
+  // IntersectionObserver below.
+  useEffect(() => {
+    if (loading) return
+    if (posts.length === 0) return
+    writeFeedSnapshot({
+      posts,
+      cursor: cursorRef.current,
+      hasMore,
+      lastVisiblePostId: lastVisiblePostIdRef.current,
+    })
+  }, [posts, hasMore, loading])
+
+  // Track which post is currently at the top of the viewport. rootMargin
+  // -80% bottom means only posts whose top has entered the upper 20% of the
+  // screen are considered "visible"; we pick the topmost one in DOM order as
+  // the anchor for scroll restoration.
+  useEffect(() => {
+    if (loading || posts.length === 0) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const id = entry.target.getAttribute('data-post-id')
+          if (!id) continue
+          if (entry.isIntersecting) visibleSetRef.current.add(id)
+          else visibleSetRef.current.delete(id)
+        }
+        for (const p of posts) {
+          if (visibleSetRef.current.has(p.id)) {
+            lastVisiblePostIdRef.current = p.id
+            updateLastVisiblePostId(p.id)
+            break
+          }
+        }
+      },
+      { rootMargin: '0px 0px -80% 0px' }
+    )
+    const elements = posts
+      .map((p) => document.getElementById(`post-${p.id}`))
+      .filter((el): el is HTMLElement => el != null)
+    elements.forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [posts, loading])
 
   // Fetch ad exactly once — ref guard prevents StrictMode double-fire
   const adFetchedRef = useRef(false)
@@ -170,6 +243,11 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
   async function refresh() {
     setNewPostCount(0)
+    // User explicitly asked for a fresh feed — throw away the snapshot so we
+    // don't restore an old anchor on the next navigation.
+    clearFeedSnapshot()
+    lastVisiblePostIdRef.current = null
+    visibleSetRef.current.clear()
     const { posts, rawCursor, rawFull } = await fetchPosts()
     setPosts(posts)
     cursorRef.current = rawCursor
@@ -226,7 +304,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       )}
 
       {posts.map((post, idx) => (
-        <div key={post.id}>
+        <div key={post.id} id={`post-${post.id}`} data-post-id={post.id}>
           <PostCard
             post={post}
             currentUserId={currentUserId}

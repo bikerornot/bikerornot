@@ -12,6 +12,9 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '25mb',
     },
+    // Restores Y-scroll on browser back for pages that don't have special
+    // rehydration logic. Feed uses a custom anchor-based store instead.
+    scrollRestoration: true,
   },
   images: {
     remotePatterns: [

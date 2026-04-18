@@ -200,7 +200,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
   }, [loadMore])
 
   return (
-    <div className="space-y-2 sm:space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <PostComposer currentUserProfile={currentUserProfile} onPostCreated={refresh} />
 
       {newPostCount > 0 && (

@@ -535,7 +535,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
         {currentUserId && !post.shared_post_id && (
           <button
             onClick={() => setShowShareModal(true)}
-            className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors ml-auto"
+            className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
             title="Share"
           >
             <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

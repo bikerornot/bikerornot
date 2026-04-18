@@ -9,6 +9,27 @@ import type { Post } from '@/lib/supabase/types'
 // bfcache (thanks to React effects and realtime websockets), which wipes
 // module state on back navigation. sessionStorage survives those reloads.
 
+// Temporary debug logging for the scroll-restoration bug. Enable by visiting
+// /feed?debug=feed (persists via sessionStorage for the rest of the session).
+const DEBUG_FLAG = 'bon.feedDebug'
+function isDebug(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    if (window.sessionStorage.getItem(DEBUG_FLAG) === '1') return true
+    if (new URLSearchParams(window.location.search).get('debug') === 'feed') {
+      window.sessionStorage.setItem(DEBUG_FLAG, '1')
+      return true
+    }
+  } catch {}
+  return false
+}
+export function feedDebug(...args: unknown[]): void {
+  if (isDebug()) {
+    // eslint-disable-next-line no-console
+    console.log('[feed]', ...args)
+  }
+}
+
 export interface FeedSnapshot {
   posts: Post[]
   cursor: string | null
@@ -58,21 +79,32 @@ function ensureHydrated(): void {
 
 export function readFeedSnapshot(): FeedSnapshot | null {
   ensureHydrated()
-  if (!snapshot) return null
+  if (!snapshot) {
+    feedDebug('readFeedSnapshot → null (no snapshot)')
+    return null
+  }
   if (Date.now() - snapshot.savedAt > STALE_MS) {
+    feedDebug('readFeedSnapshot → null (stale)', { age_ms: Date.now() - snapshot.savedAt })
     snapshot = null
     writeStorage(null)
     return null
   }
+  feedDebug('readFeedSnapshot → hit', {
+    anchor: snapshot.lastVisiblePostId,
+    posts: snapshot.posts.length,
+    age_ms: Date.now() - snapshot.savedAt,
+  })
   return snapshot
 }
 
 export function writeFeedSnapshot(next: Omit<FeedSnapshot, 'savedAt'>): void {
+  feedDebug('writeFeedSnapshot', { anchor: next.lastVisiblePostId, posts: next.posts.length })
   snapshot = { ...next, savedAt: Date.now() }
   writeStorage(snapshot)
 }
 
 export function clearFeedSnapshot(): void {
+  feedDebug('clearFeedSnapshot')
   snapshot = null
   writeStorage(null)
 }
@@ -85,6 +117,7 @@ export function clearFeedSnapshot(): void {
 export function updateLastVisiblePostId(id: string | null): void {
   if (!snapshot) return
   if (snapshot.lastVisiblePostId === id) return
+  feedDebug('anchor change', { from: snapshot.lastVisiblePostId, to: id })
   snapshot.lastVisiblePostId = id
   snapshot.savedAt = Date.now()
   writeStorage(snapshot)
@@ -93,5 +126,8 @@ export function updateLastVisiblePostId(id: string | null): void {
 // Called from the FeedClient unmount path and pagehide handler so we flush
 // the latest anchor id to storage before the page goes away.
 export function flushFeedSnapshot(): void {
-  if (snapshot) writeStorage(snapshot)
+  if (snapshot) {
+    feedDebug('flushFeedSnapshot', { anchor: snapshot.lastVisiblePostId })
+    writeStorage(snapshot)
+  }
 }

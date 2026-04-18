@@ -18,6 +18,7 @@ import {
   clearFeedSnapshot,
   updateLastVisiblePostId,
   flushFeedSnapshot,
+  feedDebug,
 } from '@/lib/stores/feedStore'
 
 const PAGE_SIZE = 10
@@ -171,9 +172,16 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
     const id = lastVisiblePostIdRef.current
     if (!id) return
 
+    feedDebug('restore: useLayoutEffect phase 1', { anchor: id, scrollY_before: window.scrollY })
+
     const scrollToAnchor = () => {
       const el = document.getElementById(`post-${id}`)
-      if (el) el.scrollIntoView({ block: 'start' })
+      if (el) {
+        el.scrollIntoView({ block: 'start' })
+        feedDebug('restore: scrollIntoView', { anchor: id, scrollY_after: window.scrollY })
+      } else {
+        feedDebug('restore: element not found', { anchor: id })
+      }
     }
 
     // Phase 1: before first paint. Usually sufficient on desktop.
@@ -273,6 +281,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
         cancelAnimationFrame(frame)
         frame = 0
       }
+      feedDebug('pointerdown flush', { scrollY: window.scrollY })
       recompute()
     }
 

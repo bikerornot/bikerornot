@@ -177,7 +177,11 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
     const HEADER_OFFSET = 64 // matches scroll-mt-16 on post wrappers
     const DRIFT_TOLERANCE = 5
-    const SETTLE_MS = 5000 // give image-loading layout shifts time to finish
+    // No fixed timeout — we pin the anchor forever until the user interacts
+    // (wheel/touch/key/pointerdown), plus a hard safety cap. Layout shifts
+    // from image loading can continue well past any short timeout deep in
+    // the feed, so time-based give-up strands users on the wrong post.
+    const SAFETY_MAX_MS = 30000
 
     feedDebug('restore: begin', { anchor: id })
     restoringRef.current = true
@@ -236,14 +240,15 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
     }, 80)
 
     const resizeObserver = new ResizeObserver(() => {
+      feedDebug('restore: resize observed')
       correctDriftIfNeeded()
     })
     resizeObserver.observe(document.documentElement)
 
     const stopTimer = window.setTimeout(() => {
       window.clearInterval(interval)
-      stopRestoring('timeout')
-    }, SETTLE_MS)
+      stopRestoring('safety-cap')
+    }, SAFETY_MAX_MS)
 
     return () => {
       window.clearInterval(interval)

@@ -177,7 +177,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
     const HEADER_OFFSET = 64 // matches scroll-mt-16 on post wrappers
     const DRIFT_TOLERANCE = 5
-    const SETTLE_MS = 1500
+    const SETTLE_MS = 5000 // give image-loading layout shifts time to finish
 
     feedDebug('restore: begin', { anchor: id })
     restoringRef.current = true
@@ -187,6 +187,18 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       if (!el) return
       const targetY = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET
       window.scrollTo(0, Math.max(0, targetY))
+    }
+
+    function correctDriftIfNeeded() {
+      if (!restoringRef.current) return
+      const el = document.getElementById(`post-${id}`)
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const drift = rect.top - HEADER_OFFSET
+      if (Math.abs(drift) > DRIFT_TOLERANCE) {
+        window.scrollBy(0, drift)
+        feedDebug('restore: drift correction', { drift, scrollY: window.scrollY })
+      }
     }
 
     // Phase 1: immediate (pre-paint).
@@ -203,25 +215,30 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       stopRestoring('user intent')
     }
 
+    // pointerdown included so clicks during restoration stop the settle loop
+    // and let the scroll tracker / pointerdown flush capture the real anchor.
+    // Capture phase on window so we fire before the scroll-listener effect's
+    // document-level capture handler.
     window.addEventListener('wheel', onUserIntent, { passive: true })
     window.addEventListener('touchmove', onUserIntent, { passive: true })
     window.addEventListener('keydown', onUserIntent)
+    window.addEventListener('pointerdown', onUserIntent, { capture: true, passive: true })
 
-    // Settle loop: correct layout shifts by re-scrolling toward the anchor.
+    // Polling loop + ResizeObserver. Polling catches post-height growth from
+    // images already decoding; ResizeObserver catches later image loads and
+    // fires as soon as document height changes instead of waiting for tick.
     const interval = window.setInterval(() => {
       if (!restoringRef.current) {
         window.clearInterval(interval)
         return
       }
-      const el = document.getElementById(`post-${id}`)
-      if (!el) return
-      const rect = el.getBoundingClientRect()
-      const drift = rect.top - HEADER_OFFSET
-      if (Math.abs(drift) > DRIFT_TOLERANCE) {
-        window.scrollBy(0, drift)
-        feedDebug('restore: drift correction', { drift, scrollY: window.scrollY })
-      }
+      correctDriftIfNeeded()
     }, 80)
+
+    const resizeObserver = new ResizeObserver(() => {
+      correctDriftIfNeeded()
+    })
+    resizeObserver.observe(document.documentElement)
 
     const stopTimer = window.setTimeout(() => {
       window.clearInterval(interval)
@@ -231,9 +248,11 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
     return () => {
       window.clearInterval(interval)
       window.clearTimeout(stopTimer)
+      resizeObserver.disconnect()
       window.removeEventListener('wheel', onUserIntent)
       window.removeEventListener('touchmove', onUserIntent)
       window.removeEventListener('keydown', onUserIntent)
+      window.removeEventListener('pointerdown', onUserIntent, { capture: true })
       restoringRef.current = false
       if (typeof history !== 'undefined' && prevRestore) {
         history.scrollRestoration = prevRestore

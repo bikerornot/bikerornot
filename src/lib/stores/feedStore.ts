@@ -77,15 +77,17 @@ export function clearFeedSnapshot(): void {
   writeStorage(null)
 }
 
-// Updated on every scroll tick — too noisy for sessionStorage. Memory only;
-// the id is flushed to storage on the next writeFeedSnapshot call when state
-// changes (which happens often enough that a back-nav after scrolling still
-// has a recent enough id).
+// Called on every scroll frame. We short-circuit when the id hasn't changed
+// so sessionStorage only gets written on actual anchor transitions — typically
+// once every couple of seconds of scrolling, not every frame. Writing on each
+// change guarantees freshness if module state gets wiped between navigations
+// (iOS Safari sometimes does this even on client-side Next.js Link nav).
 export function updateLastVisiblePostId(id: string | null): void {
-  if (snapshot) {
-    snapshot.lastVisiblePostId = id
-    snapshot.savedAt = Date.now()
-  }
+  if (!snapshot) return
+  if (snapshot.lastVisiblePostId === id) return
+  snapshot.lastVisiblePostId = id
+  snapshot.savedAt = Date.now()
+  writeStorage(snapshot)
 }
 
 // Called from the FeedClient unmount path and pagehide handler so we flush

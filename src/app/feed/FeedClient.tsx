@@ -154,11 +154,13 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       .finally(() => setLoading(false))
   }, [fetchPosts])
 
-  // Scroll restoration. Fires multiple times because the browser can override
-  // our scroll in several ways on back-nav — especially on iOS Safari which
-  // aggressively re-scrolls to top after paint. We scroll once before paint
-  // (useLayoutEffect), again after paint (rAF), and once more after a short
-  // delay to catch late browser restorations. Only runs when we hydrated.
+  // Scroll restoration. Runs once before first paint — that alone works on
+  // most paths. The later phases (rAF, setTimeout) are *conditional* rescues
+  // that only fire if the browser clobbered our scroll back to the top; if
+  // our first scroll stuck, we leave the user alone. This fixes the "lands
+  // right, then jumps wrong" behavior caused by images loading between the
+  // initial scroll and the later rescues (the later rescues were re-computing
+  // a now-different anchor position).
   useLayoutEffect(() => {
     if (!didHydrateRef.current) return
 
@@ -174,12 +176,18 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       if (el) el.scrollIntoView({ block: 'start' })
     }
 
-    // Phase 1: before first paint.
+    // Phase 1: before first paint. Usually sufficient on desktop.
     scrollToAnchor()
-    // Phase 2: after first paint.
-    const raf = requestAnimationFrame(scrollToAnchor)
-    // Phase 3: safety net for late browser scroll-to-top (mobile Safari).
-    const late = window.setTimeout(scrollToAnchor, 120)
+
+    // Phase 2 + 3: rescues. Only re-scroll if the browser overrode us and
+    // landed us at (or very near) the top — otherwise the user's already in
+    // the right place and re-scrolling would just shift them again as images
+    // finish loading above.
+    const rescueIfNeeded = () => {
+      if (window.scrollY < 80) scrollToAnchor()
+    }
+    const raf = requestAnimationFrame(rescueIfNeeded)
+    const late = window.setTimeout(rescueIfNeeded, 120)
 
     return () => {
       cancelAnimationFrame(raf)

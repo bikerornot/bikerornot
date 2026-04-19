@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Profile, UserBike } from '@/lib/supabase/types'
@@ -83,15 +83,40 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
     : null
   const displayName = currentUserProfile.username ?? 'Unknown'
 
-  const placeholder = useMemo(() => {
-    if (bikeId) return "Share something about this ride…"
-    if (wallOwnerUsername) return `Share something with @${wallOwnerUsername}…`
+  const contextPlaceholder = bikeId
+    ? 'Share something about this ride…'
+    : wallOwnerUsername
+    ? `Share something with @${wallOwnerUsername}…`
+    : null
+
+  const [rotatedPlaceholder, setRotatedPlaceholder] = useState(() => {
     const firstName = currentUserProfile.first_name ?? 'rider'
-    return Math.random() < 0.7
-      ? `What's going on, ${firstName}?`
-      : 'Share something with the crew…'
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return `What's up, ${firstName}?`
+  })
+
+  useEffect(() => {
+    if (contextPlaceholder) return
+    const firstName = currentUserProfile.first_name ?? 'rider'
+    const mobilePool = [
+      "What's the word?",
+      'Tell the crew…',
+      "What's shakin'?",
+      'Share the ride…',
+      `What's up, ${firstName}?`,
+    ]
+    const desktopPool = [
+      `What's going on, ${firstName}?`,
+      'Share something with the crew…',
+    ]
+    const isMobile =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(max-width: 639px)').matches
+    const pool = isMobile ? mobilePool : desktopPool
+    setRotatedPlaceholder(pool[Math.floor(Math.random() * pool.length)])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const placeholder = contextPlaceholder ?? rotatedPlaceholder
 
   async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])

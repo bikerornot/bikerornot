@@ -218,14 +218,10 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
   }, [posts, hasMore, loading])
 
   // Track which post is currently at the top of the viewport. rAF-throttled
-  // scroll listener that picks the first post whose bottom edge is below the
-  // header line — i.e. the post the user is actually reading.
-  //
-  // Pointerdown (capture phase) also flushes synchronously so that if a user
-  // clicks a profile link while an rAF is still pending, we commit the latest
-  // scroll position *before* navigation starts. Without this, the cleanup
-  // cancels the pending rAF and the anchor stays one scroll stale — which
-  // manifested as back-nav landing on the previous click's post.
+  // scroll listener only — no pointerdown interception. The document-level
+  // capture pointerdown listener was interfering with comment expansion on
+  // mobile Safari. Anchor freshness loses a tiny edge case (fast click right
+  // after a scroll) but is way better than breaking interactions.
   useEffect(() => {
     if (loading || posts.length === 0) return
     const THRESHOLD = 80 // just below the sticky header
@@ -233,11 +229,6 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
     function recompute() {
       frame = 0
-      // Don't track anchors while restoration is actively pinning the scroll —
-      // the viewport shows whatever image-loading happened to push to the top,
-      // not what the user actually wants. Restoration ref clears on user intent
-      // or settle timeout.
-      if (restoringRef.current) return
       for (const p of posts) {
         const el = document.getElementById(`post-${p.id}`)
         if (!el) continue
@@ -250,15 +241,6 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       }
     }
 
-    function flushNow() {
-      if (frame) {
-        cancelAnimationFrame(frame)
-        frame = 0
-      }
-      feedDebug('pointerdown flush', { scrollY: window.scrollY })
-      recompute()
-    }
-
     function onScroll() {
       if (frame) return
       frame = requestAnimationFrame(recompute)
@@ -266,11 +248,8 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
     recompute() // seed once
     window.addEventListener('scroll', onScroll, { passive: true })
-    // Capture phase so we run before the Link's own click handler navigates.
-    document.addEventListener('pointerdown', flushNow, true)
     return () => {
       window.removeEventListener('scroll', onScroll)
-      document.removeEventListener('pointerdown', flushNow, true)
       if (frame) cancelAnimationFrame(frame)
     }
   }, [posts, loading])

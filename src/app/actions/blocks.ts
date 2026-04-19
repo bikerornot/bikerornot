@@ -53,3 +53,36 @@ export async function unblockUser(blockedId: string): Promise<void> {
     .eq('blocker_id', user.id)
     .eq('blocked_id', blockedId)
 }
+
+export interface BlockedProfile {
+  id: string
+  username: string | null
+  first_name: string | null
+  last_name: string | null
+  profile_photo_url: string | null
+  blocked_at: string
+}
+
+export async function getMyBlockedUsers(): Promise<BlockedProfile[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const admin = getServiceClient()
+  const { data } = await admin
+    .from('blocks')
+    .select('blocked_id, created_at, blocked:profiles!blocked_id(id, username, first_name, last_name, profile_photo_url)')
+    .eq('blocker_id', user.id)
+    .order('created_at', { ascending: false })
+
+  return (data ?? [])
+    .filter((row: any) => row.blocked)
+    .map((row: any) => ({
+      id: row.blocked.id,
+      username: row.blocked.username,
+      first_name: row.blocked.first_name,
+      last_name: row.blocked.last_name,
+      profile_photo_url: row.blocked.profile_photo_url,
+      blocked_at: row.created_at,
+    }))
+}

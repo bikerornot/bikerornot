@@ -436,7 +436,7 @@ export default async function ProfilePage({
           <div className="mt-3 space-y-2">
             {/* Bio text */}
             {profile.bio && (
-              <p className="text-zinc-300 text-sm leading-relaxed">{profile.bio}</p>
+              <p className="text-zinc-300 text-base leading-relaxed">{profile.bio}</p>
             )}
 
             {/* Mutual friends row — its own banner with a divider, hidden when 0 */}
@@ -672,7 +672,7 @@ export default async function ProfilePage({
 
             {/* Bio text */}
             {profile.bio && (
-              <p className="text-zinc-300 text-sm leading-relaxed mb-1">{profile.bio}</p>
+              <p className="text-zinc-300 text-base leading-relaxed mb-1">{profile.bio}</p>
             )}
           </div>
         </div>

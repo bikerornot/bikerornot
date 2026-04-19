@@ -213,6 +213,12 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       if (!restoringRef.current) return
       restoringRef.current = false
       feedDebug('restore: stop', { reason })
+      // Tear down observers/timers immediately — no reason to keep listening
+      // for layout shifts once the user has moved on. Also prevents any
+      // chance of interfering with later interactions (like comment expansion).
+      try { resizeObserver.disconnect() } catch {}
+      window.clearInterval(interval)
+      window.clearTimeout(stopTimer)
     }
 
     function onUserIntent() {

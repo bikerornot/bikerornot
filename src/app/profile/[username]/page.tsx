@@ -277,9 +277,11 @@ export default async function ProfilePage({
   }
 
   // Mutual friends (only when viewing someone else's profile)
-  const mutualFriends = user && !isOwnProfile
+  const mutualFriendsResult = user && !isOwnProfile
     ? await getMutualFriends(profile.id)
-    : []
+    : { friends: [], count: 0 }
+  const mutualFriends = mutualFriendsResult.friends
+  const mutualFriendCount = mutualFriendsResult.count
 
   const avatarUrl = profile.profile_photo_url
     ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
@@ -440,7 +442,7 @@ export default async function ProfilePage({
             )}
 
             {/* Mutual friends row — its own banner with a divider, hidden when 0 */}
-            {mutualFriends.length > 0 && !isOwnProfile && (
+            {mutualFriendCount > 0 && !isOwnProfile && (
               <Link
                 href={`/profile/${profile.username}?tab=Friends`}
                 className="flex items-center gap-3 py-2.5 border-t border-zinc-800 hover:bg-zinc-900/40 -mx-4 px-4 transition-colors"
@@ -464,8 +466,8 @@ export default async function ProfilePage({
                   })}
                 </div>
                 <span className="text-sm text-zinc-300 flex-1 min-w-0 truncate">
-                  <span className="font-semibold text-white">{mutualFriends.length}</span>{' '}
-                  mutual {mutualFriends.length === 1 ? 'friend' : 'friends'}
+                  <span className="font-semibold text-white">{mutualFriendCount}</span>{' '}
+                  mutual {mutualFriendCount === 1 ? 'friend' : 'friends'}
                 </span>
                 <span className="text-zinc-500 text-lg">›</span>
               </Link>
@@ -630,7 +632,7 @@ export default async function ProfilePage({
             </div>
 
             {/* Mutual friends — its own row with chevron, tappable */}
-            {mutualFriends.length > 0 && !isOwnProfile && (
+            {mutualFriendCount > 0 && !isOwnProfile && (
               <Link
                 href={`/profile/${profile.username}?tab=Friends`}
                 className="flex items-center gap-3 py-2 mt-2 border-t border-zinc-800 hover:bg-zinc-900/40 transition-colors -mx-1 px-1"
@@ -663,8 +665,8 @@ export default async function ProfilePage({
                   })}
                 </div>
                 <span className="text-sm text-zinc-300 flex-1 min-w-0">
-                  <span className="text-white font-semibold">{mutualFriends.length}</span>{' '}
-                  mutual {mutualFriends.length === 1 ? 'friend' : 'friends'}
+                  <span className="text-white font-semibold">{mutualFriendCount}</span>{' '}
+                  mutual {mutualFriendCount === 1 ? 'friend' : 'friends'}
                 </span>
                 <span className="text-zinc-500 text-lg">›</span>
               </Link>

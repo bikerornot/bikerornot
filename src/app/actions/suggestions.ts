@@ -34,10 +34,12 @@ export interface MutualFriend {
 
 
 
-export async function getMutualFriends(profileUserId: string): Promise<MutualFriend[]> {
+export async function getMutualFriends(
+  profileUserId: string
+): Promise<{ friends: MutualFriend[]; count: number }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user || user.id === profileUserId) return []
+  if (!user || user.id === profileUserId) return { friends: [], count: 0 }
 
   const admin = getServiceClient()
 
@@ -68,18 +70,24 @@ export async function getMutualFriends(profileUserId: string): Promise<MutualFri
     }
   }
 
-  if (mutualIds.length === 0) return []
+  if (mutualIds.length === 0) return { friends: [], count: 0 }
 
+  // Only fetch profile details for the avatars we'll actually display (first 10 for safety),
+  // but return the full mutual count so the UI shows the true total.
   const { data: profiles } = await admin
     .from('profiles')
-    .select('id, username, profile_photo_url')
+    .select('id, username, profile_photo_url, status')
     .in('id', mutualIds.slice(0, 10))
 
-  return (profiles ?? []).map((p) => ({
-    id: p.id,
-    username: p.username,
-    profile_photo_url: p.profile_photo_url,
-  }))
+  const friends = (profiles ?? [])
+    .filter((p) => p.status === 'active')
+    .map((p) => ({
+      id: p.id,
+      username: p.username,
+      profile_photo_url: p.profile_photo_url,
+    }))
+
+  return { friends, count: mutualIds.length }
 }
 
 export async function getNearbyRiders(): Promise<{ riders: RiderSuggestion[]; friendCount: number }> {

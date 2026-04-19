@@ -145,11 +145,15 @@ export default function CommentSection({ postId, postAuthorId, currentUserId, cu
     )
   }
 
-  // Group into top-level comments and a reply map
-  const topLevel = comments.filter((c) => !c.parent_comment_id)
+  // Group into top-level comments and a reply map. Replies whose parent
+  // comment was deleted/hidden out of the result are promoted to top-level
+  // so they don't disappear silently — otherwise the comment count includes
+  // them but nothing renders.
+  const commentIds = new Set(comments.map((c) => c.id))
+  const topLevel = comments.filter((c) => !c.parent_comment_id || !commentIds.has(c.parent_comment_id))
   const replyMap = new Map<string, Comment[]>()
   for (const c of comments) {
-    if (c.parent_comment_id) {
+    if (c.parent_comment_id && commentIds.has(c.parent_comment_id)) {
       const existing = replyMap.get(c.parent_comment_id) ?? []
       replyMap.set(c.parent_comment_id, [...existing, c])
     }

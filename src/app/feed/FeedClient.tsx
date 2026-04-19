@@ -101,7 +101,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
           supabase.from('post_likes').select('post_id, user:profiles!user_id(status)').in('post_id', postIds),
           supabase
             .from('comments')
-            .select('post_id, author:profiles!author_id(status)')
+            .select('post_id, author_id, hidden_at, author:profiles!author_id(status)')
             .in('post_id', postIds)
             .is('deleted_at', null),
           supabase
@@ -122,8 +122,13 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
         acc[r.post_id] = (acc[r.post_id] ?? 0) + 1
         return acc
       }, {})
+      const postAuthorMap = new Map<string, string>(filtered.map((p) => [p.id, p.author_id]))
       const commentMap = (commentCounts ?? []).reduce<Record<string, number>>((acc, r: any) => {
         if (['banned', 'suspended'].includes(r.author?.status)) return acc
+        if (blockedSet.has(r.author_id)) return acc
+        // Hidden comments are only visible to the post author and the comment author —
+        // skip from the count for everyone else so the badge matches what renders.
+        if (r.hidden_at && currentUserId !== postAuthorMap.get(r.post_id) && currentUserId !== r.author_id) return acc
         acc[r.post_id] = (acc[r.post_id] ?? 0) + 1
         return acc
       }, {})

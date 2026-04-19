@@ -378,7 +378,7 @@ export default async function ProfilePage({
                   size="lg"
                 />
               </div>
-              <div className="text-sm text-zinc-400 space-y-1">
+              <div className="text-base text-zinc-400 space-y-1">
                 {/* Demographics row — primary identity context */}
                 {(profile.gender || profile.date_of_birth || profile.relationship_status) && (
                   <div className="flex flex-wrap items-center gap-x-1.5">
@@ -415,9 +415,9 @@ export default async function ProfilePage({
 
                 {/* Meta line — friends + join date collapsed into one tertiary line */}
                 {(friendCount ?? 0) === 0 ? (
-                  <p className="text-xs text-zinc-500">Just Joined</p>
+                  <p className="text-sm text-zinc-500">Just Joined</p>
                 ) : (
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-sm text-zinc-500">
                     <Link
                       href={`/profile/${profile.username}?tab=Friends`}
                       className="hover:text-zinc-300 transition-colors"
@@ -579,7 +579,7 @@ export default async function ProfilePage({
 
             {/* Demographics inline */}
             {(profile.gender || profile.date_of_birth || profile.relationship_status) && (
-              <div className="flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-400 mb-1">
+              <div className="flex flex-wrap items-center gap-x-1.5 text-base text-zinc-400 mb-1">
                 {profile.gender && (
                   <span>{profile.gender === 'male' ? 'Male' : 'Female'}</span>
                 )}
@@ -602,7 +602,7 @@ export default async function ProfilePage({
 
             {/* Location with pin icon */}
             {(profile.city || profile.state) && (
-              <div className="flex items-center gap-1 text-sm text-zinc-400 mb-1 min-w-0">
+              <div className="flex items-center gap-1 text-base text-zinc-400 mb-1 min-w-0">
                 <svg className="w-3 h-3 flex-shrink-0 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
@@ -612,7 +612,7 @@ export default async function ProfilePage({
             )}
 
             {/* Meta line — friends + join date collapsed */}
-            <div className="text-xs text-zinc-500 mb-2">
+            <div className="text-sm text-zinc-500 mb-2">
               {(friendCount ?? 0) === 0 ? (
                 <span>Just Joined</span>
               ) : (

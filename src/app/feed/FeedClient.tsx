@@ -160,115 +160,19 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       .finally(() => setLoading(false))
   }, [fetchPosts])
 
-  // Scroll restoration with a settle loop. Images loading above the anchor
-  // shift layout after the initial scrollIntoView, which used to leave the
-  // user on the WRONG post (the one that ended up at the top after layout
-  // shift). We now re-scroll repeatedly for up to 1.5 seconds, or until the
-  // user does something scroll-intenty (wheel / touchmove / keydown), keeping
-  // the anchor pinned through the layout shifts.
+  // Scroll restoration — deliberately simple. We scroll to the anchor once
+  // in useLayoutEffect (pre-paint) and that's it. The earlier settle-loop
+  // / ResizeObserver / multi-phase approach was racing layout shifts from
+  // image loads and caused worse bugs than it solved (including blocking
+  // comment expansion). The real fix for shift-induced drift is making
+  // images reserve space at render time — separate work in progress.
   useLayoutEffect(() => {
     if (!didHydrateRef.current) return
-
-    const prevRestore = typeof history !== 'undefined' ? history.scrollRestoration : undefined
-    if (typeof history !== 'undefined') history.scrollRestoration = 'manual'
-
     const id = lastVisiblePostIdRef.current
     if (!id) return
-
-    const HEADER_OFFSET = 64 // matches scroll-mt-16 on post wrappers
-    const DRIFT_TOLERANCE = 5
-    // No fixed timeout — we pin the anchor forever until the user interacts
-    // (wheel/touch/key/pointerdown), plus a hard safety cap. Layout shifts
-    // from image loading can continue well past any short timeout deep in
-    // the feed, so time-based give-up strands users on the wrong post.
-    const SAFETY_MAX_MS = 30000
-
-    feedDebug('restore: begin', { anchor: id })
-    restoringRef.current = true
-
-    function scrollToAnchor() {
-      const el = document.getElementById(`post-${id}`)
-      if (!el) return
-      const targetY = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET
-      window.scrollTo(0, Math.max(0, targetY))
-    }
-
-    function correctDriftIfNeeded() {
-      if (!restoringRef.current) return
-      const el = document.getElementById(`post-${id}`)
-      if (!el) return
-      const rect = el.getBoundingClientRect()
-      const drift = rect.top - HEADER_OFFSET
-      if (Math.abs(drift) > DRIFT_TOLERANCE) {
-        window.scrollBy(0, drift)
-        feedDebug('restore: drift correction', { drift, scrollY: window.scrollY })
-      }
-    }
-
-    // Phase 1: immediate (pre-paint).
-    scrollToAnchor()
-    feedDebug('restore: initial scroll', { scrollY: window.scrollY })
-
-    function stopRestoring(reason: string) {
-      if (!restoringRef.current) return
-      restoringRef.current = false
-      feedDebug('restore: stop', { reason })
-      // Tear down observers/timers immediately — no reason to keep listening
-      // for layout shifts once the user has moved on. Also prevents any
-      // chance of interfering with later interactions (like comment expansion).
-      try { resizeObserver.disconnect() } catch {}
-      window.clearInterval(interval)
-      window.clearTimeout(stopTimer)
-    }
-
-    function onUserIntent() {
-      stopRestoring('user intent')
-    }
-
-    // pointerdown included so clicks during restoration stop the settle loop
-    // and let the scroll tracker / pointerdown flush capture the real anchor.
-    // Capture phase on window so we fire before the scroll-listener effect's
-    // document-level capture handler.
-    window.addEventListener('wheel', onUserIntent, { passive: true })
-    window.addEventListener('touchmove', onUserIntent, { passive: true })
-    window.addEventListener('keydown', onUserIntent)
-    window.addEventListener('pointerdown', onUserIntent, { capture: true, passive: true })
-
-    // Polling loop + ResizeObserver. Polling catches post-height growth from
-    // images already decoding; ResizeObserver catches later image loads and
-    // fires as soon as document height changes instead of waiting for tick.
-    const interval = window.setInterval(() => {
-      if (!restoringRef.current) {
-        window.clearInterval(interval)
-        return
-      }
-      correctDriftIfNeeded()
-    }, 80)
-
-    const resizeObserver = new ResizeObserver(() => {
-      feedDebug('restore: resize observed')
-      correctDriftIfNeeded()
-    })
-    resizeObserver.observe(document.documentElement)
-
-    const stopTimer = window.setTimeout(() => {
-      window.clearInterval(interval)
-      stopRestoring('safety-cap')
-    }, SAFETY_MAX_MS)
-
-    return () => {
-      window.clearInterval(interval)
-      window.clearTimeout(stopTimer)
-      resizeObserver.disconnect()
-      window.removeEventListener('wheel', onUserIntent)
-      window.removeEventListener('touchmove', onUserIntent)
-      window.removeEventListener('keydown', onUserIntent)
-      window.removeEventListener('pointerdown', onUserIntent, { capture: true })
-      restoringRef.current = false
-      if (typeof history !== 'undefined' && prevRestore) {
-        history.scrollRestoration = prevRestore
-      }
-    }
+    feedDebug('restore: scroll to anchor', { anchor: id })
+    const el = document.getElementById(`post-${id}`)
+    if (el) el.scrollIntoView({ block: 'start' })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

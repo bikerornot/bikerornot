@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Post, Profile } from '@/lib/supabase/types'
+import { Post, Profile, UserBike } from '@/lib/supabase/types'
 import PostCard from '@/app/components/PostCard'
 import PostComposer from '@/app/components/PostComposer'
 import AdCard from '@/app/components/AdCard'
@@ -30,9 +30,10 @@ interface Props {
   blockedUserIds?: string[]
   initialRiders?: RiderSuggestion[]
   friendCount?: number
+  userBikes?: UserBike[]
 }
 
-export default function FeedClient({ currentUserId, currentUserProfile, userGroupIds = [], blockedUserIds = [], initialRiders = [], friendCount = 0 }: Props) {
+export default function FeedClient({ currentUserId, currentUserProfile, userGroupIds = [], blockedUserIds = [], initialRiders = [], friendCount = 0, userBikes = [] }: Props) {
   // Hydrate from the snapshot if one is fresh. This is what lets feed → profile
   // → back restore the user's scroll position and loaded pages instead of
   // dumping them at the top with an empty feed.
@@ -64,7 +65,6 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
         .select('*, author:profiles!author_id(*), images:post_images(*), group:groups!group_id(name, slug), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status)')
         .is('deleted_at', null)
         .is('wall_owner_id', null)
-        .is('bike_id', null)
         .order('created_at', { ascending: false })
         .limit(PAGE_SIZE)
 
@@ -328,7 +328,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      <PostComposer currentUserProfile={currentUserProfile} onPostCreated={refresh} />
+      <PostComposer currentUserProfile={currentUserProfile} bikes={userBikes} onPostCreated={refresh} />
 
       {newPostCount > 0 && (
         <button

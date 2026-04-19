@@ -71,15 +71,21 @@ export default async function FeedPage() {
   // Fetch rider suggestions (only used when friendCount < 15)
   const { riders: nearbyRiders, friendCount } = await getNearbyRiders()
 
-  // Fetch blocked user IDs, friend birthdays, and site banners
-  const [blockedIds, friendBirthdays, activeBanners] = await Promise.all([
+  // Fetch blocked user IDs, friend birthdays, site banners, and user's garage bikes
+  const [blockedIds, friendBirthdays, activeBanners, userBikesResult] = await Promise.all([
     getBlockedIds(user.id, createServiceClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )),
     getFriendBirthdays(),
     getActiveBanners(),
+    supabase
+      .from('user_bikes')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false }),
   ])
+  const userBikes = userBikesResult.data ?? []
 
   const avatarUrl = profile.profile_photo_url
     ? getImageUrl('avatars', profile.profile_photo_url, undefined, profile.updated_at)
@@ -126,7 +132,7 @@ export default async function FeedPage() {
             <BirthdayCard birthdays={friendBirthdays} />
           </div>
         )}
-        <FeedClient currentUserId={user.id} currentUserProfile={profile} userGroupIds={userGroupIds} blockedUserIds={Array.from(blockedIds)} initialRiders={nearbyRiders} friendCount={friendCount} />
+        <FeedClient currentUserId={user.id} currentUserProfile={profile} userGroupIds={userGroupIds} blockedUserIds={Array.from(blockedIds)} initialRiders={nearbyRiders} friendCount={friendCount} userBikes={userBikes} />
       </div>
       <BottomNav />
     </div>

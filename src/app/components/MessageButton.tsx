@@ -7,9 +7,11 @@ import { getOrCreateConversation } from '@/app/actions/messages'
 export default function MessageButton({
   profileId,
   locked,
+  variant = 'primary',
 }: {
   profileId: string
   locked?: boolean
+  variant?: 'primary' | 'outlined'
 }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -44,13 +46,14 @@ export default function MessageButton({
     )
   }
 
+  const className =
+    variant === 'outlined'
+      ? 'bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors border border-zinc-700'
+      : 'bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors'
+
   return (
     <div>
-      <button
-        onClick={handleClick}
-        disabled={loading}
-        className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
-      >
+      <button onClick={handleClick} disabled={loading} className={className}>
         {loading ? '…' : 'Message'}
       </button>
       {error && (

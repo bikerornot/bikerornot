@@ -8,9 +8,10 @@ interface Props {
   profileId: string
   username: string | null
   friendsOnly: boolean
+  variant?: 'primary' | 'outlined'
 }
 
-export default function MessageRequestButton({ profileId, username, friendsOnly }: Props) {
+export default function MessageRequestButton({ profileId, username, friendsOnly, variant = 'primary' }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
@@ -47,7 +48,11 @@ export default function MessageRequestButton({ profileId, username, friendsOnly 
     <>
       <button
         onClick={() => setOpen(true)}
-        className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+        className={
+          variant === 'outlined'
+            ? 'bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors border border-zinc-700'
+            : 'bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors'
+        }
       >
         Message
       </button>

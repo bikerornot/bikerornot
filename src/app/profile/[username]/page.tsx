@@ -23,6 +23,7 @@ import { getMutualFriends } from '@/app/actions/suggestions'
 import BottomNav from '@/app/components/BottomNav'
 import { getBlockedIds } from '@/app/actions/blocks'
 import VerifiedBadge from '@/app/components/VerifiedBadge'
+import UserIdentity from '@/app/components/UserIdentity'
 
 export async function generateMetadata({
   params,
@@ -289,7 +290,7 @@ export default async function ProfilePage({
     : null
 
   const memberSince = new Date(profile.created_at).toLocaleDateString('en-US', {
-    month: 'long',
+    month: 'short',
     year: 'numeric',
   })
 
@@ -369,26 +370,16 @@ export default async function ProfilePage({
               />
             </div>
             <div className={`flex-1 min-w-0 ${coverUrl ? 'pt-20' : 'pt-0'}`}>
-              <h1 className="text-xl font-bold text-white flex items-center gap-1.5 min-w-0 mb-1.5">
-                <span className="truncate">@{profile.username}</span>
-                {profile.phone_verified_at && <VerifiedBadge className="w-5 h-5 flex-shrink-0" />}
-              </h1>
+              <div className="mb-1.5">
+                <UserIdentity
+                  username={profile.username}
+                  displayName={profile.display_name}
+                  verified={!!profile.phone_verified_at}
+                  size="lg"
+                />
+              </div>
               <div className="text-sm text-zinc-400 space-y-1">
-                <Link
-                  href={`/profile/${profile.username}?tab=Friends`}
-                  className="block hover:text-white transition-colors"
-                >
-                  <span className="text-white font-semibold">{friendCount ?? 0}</span> {(friendCount ?? 0) === 1 ? 'Friend' : 'Friends'}
-                </Link>
-                {mutualFriends.length > 0 && (
-                  <div>
-                    <span className="text-white font-medium">{mutualFriends.length}</span>{' '}
-                    mutual {mutualFriends.length === 1 ? 'friend' : 'friends'}
-                  </div>
-                )}
-                <div>
-                  Member since <span className="text-white">{memberSince}</span>
-                </div>
+                {/* Demographics row — primary identity context */}
                 {(profile.gender || profile.date_of_birth || profile.relationship_status) && (
                   <div className="flex flex-wrap items-center gap-x-1.5">
                     {profile.gender && (
@@ -410,22 +401,74 @@ export default async function ProfilePage({
                     )}
                   </div>
                 )}
+
+                {/* Location with pin icon */}
+                {(profile.city || profile.state) && (
+                  <div className="flex items-center gap-1 min-w-0">
+                    <svg className="w-3 h-3 flex-shrink-0 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    <span className="truncate">{[profile.city, profile.state].filter(Boolean).join(', ')}</span>
+                  </div>
+                )}
+
+                {/* Meta line — friends + join date collapsed into one tertiary line */}
+                {(friendCount ?? 0) === 0 ? (
+                  <p className="text-xs text-zinc-500">Just Joined</p>
+                ) : (
+                  <p className="text-xs text-zinc-500">
+                    <Link
+                      href={`/profile/${profile.username}?tab=Friends`}
+                      className="hover:text-zinc-300 transition-colors"
+                    >
+                      <span className="text-zinc-300 font-medium">{friendCount}</span> {friendCount === 1 ? 'friend' : 'friends'}
+                    </Link>
+                    <span className="text-zinc-600"> · </span>
+                    Joined {memberSince}
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Below avatar — full-width bio, details, action buttons */}
+          {/* Below avatar — full-width bio, mutual friends, action buttons */}
           <div className="mt-3 space-y-2">
-            {/* City/state — full-width row so long names don't squeeze against the avatar */}
-            {(profile.city || profile.state) && (
-              <div className="text-base text-zinc-300">
-                {[profile.city, profile.state].filter(Boolean).join(', ')}
-              </div>
-            )}
-
             {/* Bio text */}
             {profile.bio && (
               <p className="text-zinc-300 text-sm leading-relaxed">{profile.bio}</p>
+            )}
+
+            {/* Mutual friends row — its own banner with a divider, hidden when 0 */}
+            {mutualFriends.length > 0 && !isOwnProfile && (
+              <Link
+                href={`/profile/${profile.username}?tab=Friends`}
+                className="flex items-center gap-3 py-2.5 border-t border-zinc-800 hover:bg-zinc-900/40 -mx-4 px-4 transition-colors"
+              >
+                <div className="flex -space-x-2 flex-shrink-0">
+                  {mutualFriends.slice(0, 3).map((mf) => {
+                    const mfAvatarUrl = mf.profile_photo_url
+                      ? getImageUrl('avatars', mf.profile_photo_url)
+                      : null
+                    return (
+                      <div key={mf.id} className="w-7 h-7 rounded-full bg-zinc-700 border-2 border-zinc-950 overflow-hidden">
+                        {mfAvatarUrl ? (
+                          <Image src={mfAvatarUrl} alt={mf.username ?? ''} width={28} height={28} className="object-cover w-full h-full" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-zinc-400 text-xs font-bold">
+                            {(mf.username?.[0] ?? '?').toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                <span className="text-sm text-zinc-300 flex-1 min-w-0 truncate">
+                  <span className="font-semibold text-white">{mutualFriends.length}</span>{' '}
+                  mutual {mutualFriends.length === 1 ? 'friend' : 'friends'}
+                </span>
+                <span className="text-zinc-500 text-lg">›</span>
+              </Link>
             )}
 
             {/* Action buttons — full-width row */}
@@ -452,6 +495,7 @@ export default async function ProfilePage({
                       profileId={profile.id}
                       username={profile.username}
                       friendsOnly={profile.message_privacy === 'friends_only'}
+                      variant="outlined"
                     />
                   ) : null}
                   {user && (
@@ -485,10 +529,14 @@ export default async function ProfilePage({
           <div className={`flex-1 min-w-0 ${coverUrl ? 'pt-20' : 'pt-2'}`}>
             {/* Username + buttons row */}
             <div className="flex items-center justify-between gap-3 mb-2">
-              <h1 className="text-xl font-bold text-white flex items-center gap-1.5 min-w-0">
-                <span className="truncate">@{profile.username}</span>
-                {profile.phone_verified_at && <VerifiedBadge className="w-5 h-5 flex-shrink-0" />}
-              </h1>
+              <div className="min-w-0">
+                <UserIdentity
+                  username={profile.username}
+                  displayName={profile.display_name}
+                  verified={!!profile.phone_verified_at}
+                  size="md"
+                />
+              </div>
 
               <div className="flex gap-2 flex-shrink-0">
                 {isOwnProfile ? (
@@ -513,6 +561,7 @@ export default async function ProfilePage({
                         profileId={profile.id}
                         username={profile.username}
                         friendsOnly={profile.message_privacy === 'friends_only'}
+                        variant="outlined"
                       />
                     ) : null}
                     {user && (
@@ -528,48 +577,65 @@ export default async function ProfilePage({
               </div>
             </div>
 
-            {/* Bio details — compact inline on desktop */}
-            <div className="flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-400 mb-2">
-              {(profile.city || profile.state) && (
-                <span>{[profile.city, profile.state].filter(Boolean).join(', ')}</span>
-              )}
-              {(profile.city || profile.state) && profile.gender && <span className="text-zinc-600">·</span>}
-              {profile.gender && (
-                <span>{profile.gender === 'male' ? 'Male' : 'Female'}</span>
-              )}
-              {profile.gender && profile.date_of_birth && <span className="text-zinc-600">·</span>}
-              {profile.date_of_birth && (
-                <span>{(() => {
-                  const today = new Date()
-                  const birth = new Date(profile.date_of_birth)
-                  let age = today.getFullYear() - birth.getFullYear()
-                  if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--
-                  return `${age}`
-                })()}</span>
-              )}
-              {profile.date_of_birth && profile.relationship_status && <span className="text-zinc-600">·</span>}
-              {profile.relationship_status && (
-                <span>{relationshipLabel[profile.relationship_status]}</span>
+            {/* Demographics inline */}
+            {(profile.gender || profile.date_of_birth || profile.relationship_status) && (
+              <div className="flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-400 mb-1">
+                {profile.gender && (
+                  <span>{profile.gender === 'male' ? 'Male' : 'Female'}</span>
+                )}
+                {profile.gender && profile.date_of_birth && <span className="text-zinc-600">·</span>}
+                {profile.date_of_birth && (
+                  <span>{(() => {
+                    const today = new Date()
+                    const birth = new Date(profile.date_of_birth)
+                    let age = today.getFullYear() - birth.getFullYear()
+                    if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--
+                    return `${age}`
+                  })()}</span>
+                )}
+                {profile.date_of_birth && profile.relationship_status && <span className="text-zinc-600">·</span>}
+                {profile.relationship_status && (
+                  <span>{relationshipLabel[profile.relationship_status]}</span>
+                )}
+              </div>
+            )}
+
+            {/* Location with pin icon */}
+            {(profile.city || profile.state) && (
+              <div className="flex items-center gap-1 text-sm text-zinc-400 mb-1 min-w-0">
+                <svg className="w-3 h-3 flex-shrink-0 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <span className="truncate">{[profile.city, profile.state].filter(Boolean).join(', ')}</span>
+              </div>
+            )}
+
+            {/* Meta line — friends + join date collapsed */}
+            <div className="text-xs text-zinc-500 mb-2">
+              {(friendCount ?? 0) === 0 ? (
+                <span>Just Joined</span>
+              ) : (
+                <>
+                  <Link
+                    href={`/profile/${profile.username}?tab=Friends`}
+                    className="hover:text-zinc-300 transition-colors"
+                  >
+                    <span className="text-zinc-300 font-medium">{friendCount}</span> {friendCount === 1 ? 'friend' : 'friends'}
+                  </Link>
+                  <span className="text-zinc-600"> · </span>
+                  Joined {memberSince}
+                </>
               )}
             </div>
 
-            {/* Stats + mutual friends */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-400 mb-2">
+            {/* Mutual friends — its own row with chevron, tappable */}
+            {mutualFriends.length > 0 && !isOwnProfile && (
               <Link
                 href={`/profile/${profile.username}?tab=Friends`}
-                className="hover:text-white transition-colors"
+                className="flex items-center gap-3 py-2 mt-2 border-t border-zinc-800 hover:bg-zinc-900/40 transition-colors -mx-1 px-1"
               >
-                <span className="text-white font-semibold">{friendCount ?? 0}</span> Friends
-              </Link>
-              <span>
-                Member since <span className="text-white">{memberSince}</span>
-              </span>
-            </div>
-
-            {/* Mutual friends */}
-            {mutualFriends.length > 0 && (
-              <div className="flex items-center gap-2 mb-2">
-                <div className="flex -space-x-2">
+                <div className="flex -space-x-2 flex-shrink-0">
                   {mutualFriends.slice(0, 3).map((mf) => {
                     const mfAvatarUrl = mf.profile_photo_url
                       ? getImageUrl('avatars', mf.profile_photo_url)
@@ -577,14 +643,14 @@ export default async function ProfilePage({
                     return (
                       <div
                         key={mf.id}
-                        className="w-6 h-6 rounded-full border-2 border-zinc-950 bg-zinc-700 overflow-hidden flex-shrink-0"
+                        className="w-7 h-7 rounded-full border-2 border-zinc-950 bg-zinc-700 overflow-hidden flex-shrink-0"
                       >
                         {mfAvatarUrl ? (
                           <Image
                             src={mfAvatarUrl}
                             alt={mf.username ?? ''}
-                            width={24}
-                            height={24}
+                            width={28}
+                            height={28}
                             className="object-cover w-full h-full"
                           />
                         ) : (
@@ -596,11 +662,12 @@ export default async function ProfilePage({
                     )
                   })}
                 </div>
-                <span className="text-sm text-zinc-400">
-                  <span className="text-white font-medium">{mutualFriends.length}</span>{' '}
+                <span className="text-sm text-zinc-300 flex-1 min-w-0">
+                  <span className="text-white font-semibold">{mutualFriends.length}</span>{' '}
                   mutual {mutualFriends.length === 1 ? 'friend' : 'friends'}
                 </span>
-              </div>
+                <span className="text-zinc-500 text-lg">›</span>
+              </Link>
             )}
 
             {/* Bio text */}

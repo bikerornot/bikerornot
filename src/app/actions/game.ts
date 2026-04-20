@@ -387,7 +387,7 @@ export async function submitGameAnswer(
 }
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000
-const MIN_GAMES: Record<LeaderboardWindow, number> = { week: 20, all: 10 }
+const MIN_GAMES: Record<LeaderboardWindow, number> = { week: 20, all: 30 }
 
 function windowCutoffIso(window: LeaderboardWindow): string | null {
   return window === 'week' ? new Date(Date.now() - WEEK_MS).toISOString() : null

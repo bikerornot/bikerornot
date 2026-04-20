@@ -141,7 +141,7 @@ export default function LeaderboardClient({
           </p>
         )}
         {window === 'all' && (
-          <p className="text-xs text-zinc-500">Min {allStats.minGamesToRank} games</p>
+          <p className="text-xs text-zinc-500">Min {allStats.minGamesToRank} answered</p>
         )}
       </div>
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">

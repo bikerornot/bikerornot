@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist } from 'next/font/google'
 import Script from 'next/script'
 import Heartbeat from '@/app/components/Heartbeat'
@@ -10,6 +10,31 @@ const geist = Geist({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'BikerOrNot — The Motorcycle Enthusiast Network',
   description: 'Connect with fellow riders, share your rides, and find your community.',
+  applicationName: 'BikerOrNot',
+  manifest: '/manifest.webmanifest',
+  formatDetection: { telephone: false },
+  appleWebApp: {
+    capable: true,
+    title: 'BikerOrNot',
+    statusBarStyle: 'black-translucent',
+  },
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#09090b',
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

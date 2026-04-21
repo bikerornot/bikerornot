@@ -27,7 +27,7 @@ export async function moderateImage(
 
   const form = new FormData()
   form.append('media', new Blob([bytes], { type: contentType }), 'image')
-  form.append('models', 'nudity,gore,weapon')
+  form.append('models', 'nudity,gore,weapon,type')
   form.append('api_user', apiUser)
   form.append('api_secret', apiSecret)
 
@@ -51,6 +51,8 @@ export async function moderateImage(
   const nudityExplicit = data.nudity?.erotica ?? 0
   const gore = data.gore?.prob ?? 0
   const weapon = data.weapon?.prob ?? 0
+  const illustration = data.type?.illustration ?? 0
+  const isIllustration = illustration > 0.5
 
   // ── Hard rejections ────────────────────────────────────────────────────────
   if (
@@ -60,7 +62,9 @@ export async function moderateImage(
     nudityExplicit > 0.4 ||
     gore > 0.6
   ) {
-    return 'rejected'
+    // Cartoons/memes get routed to human review instead of auto-reject —
+    // nudity classifiers over-index on cartoon skin tones (e.g. Simpsons memes).
+    return isIllustration ? 'pending' : 'rejected'
   }
 
   // ── Flag for human review (borderline) ───────────────────────────────────

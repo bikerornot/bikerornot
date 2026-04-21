@@ -315,6 +315,13 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
     setPosts((prev) => prev.map((p) => (p.id === postId && p.comment_count !== count ? { ...p, comment_count: count } : p)))
   }, [])
 
+  // Drop the post from the array so the persisted snapshot doesn't resurrect
+  // it on the next navigation. PostCard hides itself locally too, but that
+  // only covers the current mount.
+  const handleDelete = useCallback((postId: string) => {
+    setPosts((prev) => prev.filter((p) => p.id !== postId))
+  }, [])
+
   const loadMore = useCallback(async () => {
     if (!hasMore || loadingMore || !cursorRef.current) return
     setLoadingMore(true)
@@ -373,6 +380,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
             userGroupIds={userGroupIds}
             onLikeChange={handleLikeChange}
             onCommentCountChange={handleCommentCountChange}
+            onDelete={handleDelete}
           />
           {idx === 0 && initialRiders.length > 0 && (
             <div className="mt-2 sm:mt-4">

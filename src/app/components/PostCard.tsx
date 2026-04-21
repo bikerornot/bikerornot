@@ -26,6 +26,7 @@ interface Props {
   userGroupIds?: string[]
   onLikeChange?: (postId: string, liked: boolean, likeCount: number) => void
   onCommentCountChange?: (postId: string, commentCount: number) => void
+  onDelete?: (postId: string) => void
 }
 
 const GARAGE_REGEX = /^Added a (.+) to my garage! 🏍️/
@@ -223,7 +224,7 @@ function SharedPostEmbed({ post }: { post: Omit<Post, 'shared_post'> }) {
   )
 }
 
-export default function PostCard({ post, currentUserId, currentUserProfile, initialShowComments, wallOwnerId, blockedUserIds, userGroupIds, onLikeChange, onCommentCountChange }: Props) {
+export default function PostCard({ post, currentUserId, currentUserProfile, initialShowComments, wallOwnerId, blockedUserIds, userGroupIds, onLikeChange, onCommentCountChange, onDelete }: Props) {
   const [liked, setLiked] = useState(post.is_liked_by_me ?? false)
   const [likeCount, setLikeCount] = useState(post.like_count ?? 0)
   const [commentCount, setCommentCount] = useState(post.comment_count ?? 0)
@@ -274,6 +275,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
 
   async function handleDelete() {
     setDeleted(true)
+    onDelete?.(post.id)
     await deletePost(post.id)
   }
 

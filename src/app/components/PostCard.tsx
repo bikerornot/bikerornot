@@ -24,6 +24,8 @@ interface Props {
   wallOwnerId?: string
   blockedUserIds?: string[]
   userGroupIds?: string[]
+  onLikeChange?: (postId: string, liked: boolean, likeCount: number) => void
+  onCommentCountChange?: (postId: string, commentCount: number) => void
 }
 
 const GARAGE_REGEX = /^Added a (.+) to my garage! 🏍️/
@@ -221,7 +223,7 @@ function SharedPostEmbed({ post }: { post: Omit<Post, 'shared_post'> }) {
   )
 }
 
-export default function PostCard({ post, currentUserId, currentUserProfile, initialShowComments, wallOwnerId, blockedUserIds, userGroupIds }: Props) {
+export default function PostCard({ post, currentUserId, currentUserProfile, initialShowComments, wallOwnerId, blockedUserIds, userGroupIds, onLikeChange, onCommentCountChange }: Props) {
   const [liked, setLiked] = useState(post.is_liked_by_me ?? false)
   const [likeCount, setLikeCount] = useState(post.like_count ?? 0)
   const [commentCount, setCommentCount] = useState(post.comment_count ?? 0)
@@ -251,14 +253,23 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
   async function handleLike() {
     if (!currentUserId) return
     if (liked) {
+      const nextCount = Math.max(0, likeCount - 1)
       setLiked(false)
-      setLikeCount((c) => c - 1)
+      setLikeCount(nextCount)
+      onLikeChange?.(post.id, false, nextCount)
       await unlikePost(post.id)
     } else {
+      const nextCount = likeCount + 1
       setLiked(true)
-      setLikeCount((c) => c + 1)
+      setLikeCount(nextCount)
+      onLikeChange?.(post.id, true, nextCount)
       await likePost(post.id)
     }
+  }
+
+  function updateCommentCount(next: number) {
+    setCommentCount(next)
+    onCommentCountChange?.(post.id, next)
   }
 
   async function handleDelete() {
@@ -519,10 +530,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
 
         {/* Comment group: bubble + count */}
         <button
-          onClick={() => {
-            setShowComments(!showComments)
-            setCommentCount((c) => c)
-          }}
+          onClick={() => setShowComments(!showComments)}
           className="flex items-center gap-2 min-h-[44px] px-2 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
         >
           <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -596,6 +604,7 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
             currentUserId={currentUserId}
             currentUserProfile={currentUserProfile}
             blockedUserIds={blockedUserIds}
+            onVisibleCountChange={updateCommentCount}
           />
         </div>
       )}

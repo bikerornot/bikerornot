@@ -16,9 +16,10 @@ interface Props {
   currentUserId?: string
   currentUserProfile?: Profile | null
   blockedUserIds?: string[]
+  onVisibleCountChange?: (count: number) => void
 }
 
-export default function CommentSection({ postId, postAuthorId, currentUserId, currentUserProfile, blockedUserIds = [] }: Props) {
+export default function CommentSection({ postId, postAuthorId, currentUserId, currentUserProfile, blockedUserIds = [], onVisibleCountChange }: Props) {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
   const [text, setText] = useState('')
@@ -50,6 +51,14 @@ export default function CommentSection({ postId, postAuthorId, currentUserId, cu
   }, [])
 
   const mention = useMention(text, cursorPos, handleMentionSelect)
+
+  // Sync the visible count up so the parent PostCard's badge stays accurate
+  // after users add/remove comments. Only fires after the initial load settles
+  // so we don't flash 0 on mount.
+  useEffect(() => {
+    if (loading) return
+    onVisibleCountChange?.(comments.length)
+  }, [loading, comments.length, onVisibleCountChange])
 
   useEffect(() => {
     const supabase = createClient()

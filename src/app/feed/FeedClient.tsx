@@ -304,6 +304,17 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  // When a user likes/unlikes or adds a comment on a PostCard, reflect that in
+  // the posts array so the sessionStorage snapshot stays current. Without this
+  // the snapshot keeps pre-click state and the indicator "resets" on refresh.
+  const handleLikeChange = useCallback((postId: string, liked: boolean, likeCount: number) => {
+    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, is_liked_by_me: liked, like_count: likeCount } : p)))
+  }, [])
+
+  const handleCommentCountChange = useCallback((postId: string, count: number) => {
+    setPosts((prev) => prev.map((p) => (p.id === postId && p.comment_count !== count ? { ...p, comment_count: count } : p)))
+  }, [])
+
   const loadMore = useCallback(async () => {
     if (!hasMore || loadingMore || !cursorRef.current) return
     setLoadingMore(true)
@@ -360,6 +371,8 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
             currentUserProfile={currentUserProfile}
             blockedUserIds={blockedUserIds}
             userGroupIds={userGroupIds}
+            onLikeChange={handleLikeChange}
+            onCommentCountChange={handleCommentCountChange}
           />
           {idx === 0 && initialRiders.length > 0 && (
             <div className="mt-2 sm:mt-4">

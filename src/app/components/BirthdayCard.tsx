@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getImageUrl } from '@/lib/supabase/image'
@@ -10,8 +10,27 @@ interface Props {
   birthdays: BirthdayFriend[]
 }
 
+function getDismissKey(birthdays: BirthdayFriend[]) {
+  const today = new Date().toISOString().slice(0, 10)
+  const ids = birthdays.map((b) => b.id).sort().join(',')
+  return `birthdayCard:dismissed:${today}:${ids}`
+}
+
 export default function BirthdayCard({ birthdays }: Props) {
-  const [dismissed, setDismissed] = useState(false)
+  const dismissKey = useMemo(() => getDismissKey(birthdays), [birthdays])
+  const [dismissed, setDismissed] = useState(true)
+
+  useEffect(() => {
+    if (birthdays.length === 0) return
+    setDismissed(localStorage.getItem(dismissKey) === '1')
+  }, [dismissKey, birthdays.length])
+
+  const handleDismiss = () => {
+    try {
+      localStorage.setItem(dismissKey, '1')
+    } catch {}
+    setDismissed(true)
+  }
 
   if (birthdays.length === 0 || dismissed) return null
 
@@ -27,7 +46,7 @@ export default function BirthdayCard({ birthdays }: Props) {
           </p>
         </div>
         <button
-          onClick={() => setDismissed(true)}
+          onClick={handleDismiss}
           className="text-zinc-600 hover:text-zinc-400 transition-colors flex-shrink-0"
           aria-label="Dismiss"
         >

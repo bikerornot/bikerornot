@@ -1,11 +1,25 @@
 package com.bikerornot.app;
 
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Message;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.browser.customtabs.CustomTabColorSchemeParams;
+import androidx.browser.customtabs.CustomTabsClient;
+import androidx.browser.customtabs.CustomTabsIntent;
 
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebChromeClient;
+import com.getcapacitor.BridgeWebViewClient;
 
 public class MainActivity extends BridgeActivity {
 
@@ -29,6 +43,8 @@ public class MainActivity extends BridgeActivity {
                 handleBack();
             }
         });
+
+        setupExternalLinkHandling();
     }
 
     // Fallback for any code path that still calls through to the legacy
@@ -54,5 +70,149 @@ public class MainActivity extends BridgeActivity {
         }
         lastBackPressMs = now;
         Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show();
+    }
+
+    // External links (anything outside bikerornot.com / Supabase) open in a
+    // Chrome Custom Tab rather than the full Chrome app, so users stay "in"
+    // BikerOrNot — one tap dismisses the tab and returns to the feed.
+    //
+    // Two hooks needed:
+    //   1. shouldOverrideUrlLoading handles plain anchor clicks.
+    //   2. onCreateWindow handles target="_blank" and window.open(); Capacitor
+    //      doesn't override this, so without it those links silently do
+    //      nothing in the WebView.
+    private void setupExternalLinkHandling() {
+        if (bridge == null || bridge.getWebView() == null) return;
+        WebView webView = bridge.getWebView();
+
+        webView.getSettings().setSupportMultipleWindows(true);
+        webView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
+
+        webView.setWebViewClient(new BridgeWebViewClient(bridge) {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri url = request.getUrl();
+                if (isInternalUrl(url)) {
+                    return super.shouldOverrideUrlLoading(view, request);
+                }
+                openInCustomTab(url);
+                return true;
+            }
+        });
+
+        webView.setWebChromeClient(new BridgeWebChromeClient(bridge) {
+            @Override
+            public boolean onCreateWindow(WebView view, boolean isDialog,
+                                          boolean isUserGesture, Message resultMsg) {
+                // The OS hasn't told us the target URL yet — it passes that
+                // through a transient WebView whose first navigation attempt
+                // surfaces the href. Intercept, capture, and send to Custom Tab.
+                WebView sink = new WebView(view.getContext());
+                sink.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest req) {
+                        openInCustomTab(req.getUrl());
+                        v.destroy();
+                        return true;
+                    }
+                });
+                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+                transport.setWebView(sink);
+                resultMsg.sendToTarget();
+                return true;
+            }
+        });
+    }
+
+    // Hosts the WebView should load internally. Mirrors the allowNavigation
+    // list in capacitor.config.ts — kept here in Java because the WebView
+    // callback fires before the Bridge has a chance to consult its own config
+    // through the path we want (launchIntent opens a plain ACTION_VIEW Intent,
+    // not a Custom Tab).
+    private boolean isInternalUrl(Uri url) {
+        String scheme = url.getScheme();
+        if ("data".equals(scheme) || "blob".equals(scheme) || "javascript".equals(scheme)) {
+            return true;
+        }
+        // Non-http schemes (tel:, mailto:, sms:, intent:) should be handled by
+        // the system as-is, not forced into a browser tab.
+        if (scheme == null || !(scheme.equals("http") || scheme.equals("https"))) {
+            return false;
+        }
+        String host = url.getHost();
+        if (host == null) return true;
+        return host.equals("bikerornot.com")
+                || host.endsWith(".bikerornot.com")
+                || host.endsWith(".supabase.co")
+                || host.endsWith(".supabase.in");
+    }
+
+    private void openInCustomTab(Uri url) {
+        String scheme = url.getScheme();
+        if (scheme != null && !scheme.equals("http") && !scheme.equals("https")) {
+            // tel:, mailto:, sms:, intent:, market: — hand to the system so
+            // the right app (dialer, mail client, Play Store) takes over.
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, url));
+            } catch (ActivityNotFoundException e) {
+                // no handler installed — nothing we can do, fail silently
+            }
+            return;
+        }
+
+        CustomTabColorSchemeParams colorParams = new CustomTabColorSchemeParams.Builder()
+                .setToolbarColor(Color.parseColor("#09090b"))
+                .setNavigationBarColor(Color.parseColor("#09090b"))
+                .build();
+
+        CustomTabsIntent intent = new CustomTabsIntent.Builder()
+                .setDefaultColorSchemeParams(colorParams)
+                .setColorScheme(CustomTabsIntent.COLOR_SCHEME_DARK)
+                .setShowTitle(true)
+                .setUrlBarHidingEnabled(true)
+                .build();
+
+        // Bind the intent to a browser package so URL-intercepting apps (the
+        // Facebook/Instagram/YouTube apps all register as handlers for their
+        // own domains via Android App Links) can't steal the tap and pull
+        // the user out of BikerOrNot. Order of preference:
+        //   1. CustomTabsClient.getPackageName — the user's default browser
+        //      if it supports Custom Tabs. Returns null on Android 11+ if the
+        //      <queries> entry in AndroidManifest is missing.
+        //   2. Chrome stable/beta/dev by package name, checked with the
+        //      PackageManager so we only pin a package that's actually
+        //      installed (setPackage on a missing package = ActivityNotFound).
+        //   3. Unfiltered launch — the one path where URL-grabbing apps can
+        //      still win. Rare: it means no browser with Custom Tabs support
+        //      is installed, and nothing we do will avoid an app intercept.
+        String browserPackage = CustomTabsClient.getPackageName(this, null);
+        if (browserPackage == null) {
+            String[] chromePackages = {
+                    "com.android.chrome",
+                    "com.chrome.beta",
+                    "com.chrome.dev",
+                    "com.chrome.canary",
+            };
+            for (String pkg : chromePackages) {
+                try {
+                    getPackageManager().getPackageInfo(pkg, 0);
+                    browserPackage = pkg;
+                    break;
+                } catch (PackageManager.NameNotFoundException ignored) {}
+            }
+        }
+        if (browserPackage != null) {
+            intent.intent.setPackage(browserPackage);
+        }
+
+        try {
+            intent.launchUrl(this, url);
+        } catch (ActivityNotFoundException e) {
+            // Chrome and all Custom-Tabs-capable browsers are missing; fall back
+            // to a plain Intent.ACTION_VIEW so something still opens.
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, url));
+            } catch (ActivityNotFoundException ignored) {}
+        }
     }
 }

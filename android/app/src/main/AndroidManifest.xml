@@ -39,4 +39,19 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Android 11+ package visibility for Custom Tabs. Without this,
+         CustomTabsClient.getPackageName() returns null and we cannot pin
+         the browser, letting URL-intercepting apps (Facebook, YouTube,
+         Instagram) hijack external-link taps. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="androidx.browser.customtabs.action.CustomTabsService" />
+        </intent>
+    </queries>
 </manifest>

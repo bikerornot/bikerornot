@@ -73,6 +73,16 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
     markConversationRead(conversationId)
   }, [conversationId, messages.length])
 
+  // Auto-grow textarea — runs on value change instead of inside onChange
+  // to avoid triggering layout recalculations that can fire additional
+  // change events and cause an infinite loop (React error #185) on iOS Safari.
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [text])
+
   // Scroll when new messages arrive or typing indicator changes
   useEffect(() => {
     if (initialScrollDone.current) {
@@ -170,9 +180,9 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
 
   function handleTextChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setText(e.target.value)
-    // Auto-resize: reset to auto, then grow to scrollHeight (CSS max-h-32 caps it)
-    e.target.style.height = 'auto'
-    e.target.style.height = `${e.target.scrollHeight}px`
+    // Auto-resize happens in a useEffect keyed on `text` (below) — mutating
+    // the input's style inline here triggered React error #185 on iOS Safari
+    // when the layout recalc fired additional change events mid-keystroke.
     broadcastTyping(true)
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
     typingTimeoutRef.current = setTimeout(() => broadcastTyping(false), 2000)

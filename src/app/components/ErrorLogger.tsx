@@ -43,6 +43,11 @@ export default function ErrorLogger() {
       // React DOM race during unmount — not actionable, usually benign
       "Failed to execute 'removeChild' on 'Node'",
       "reading 'removeChild'",
+      // Next.js production wrapper — real error is scrubbed, zero signal.
+      // The actual issue (when there is one) shows up in Vercel runtime logs.
+      'An error occurred in the Server Components render',
+      // MetaMask browser extension failing to connect — not our code
+      'Failed to connect to MetaMask',
     ]
 
     // Bare rejection with no real info — Safari often swallows the details

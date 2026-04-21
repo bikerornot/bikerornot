@@ -11,9 +11,21 @@ const config: CapacitorConfig = {
   appName: 'BikerOrNot',
   webDir: 'public',
   server: {
-    url: 'https://bikerornot.com',
+    // Point at the canonical www host directly — the apex returns a 307
+    // redirect and Capacitor treats the redirected host as a foreign
+    // navigation target, which produces a black screen in the WebView.
+    url: 'https://www.bikerornot.com',
     androidScheme: 'https',
     cleartext: false,
+    // Allow navigation between apex and www, and to common off-site auth /
+    // storage hosts the site links to. Anything outside this list gets
+    // handed off to the system browser.
+    allowNavigation: [
+      'bikerornot.com',
+      '*.bikerornot.com',
+      '*.supabase.co',
+      '*.supabase.in',
+    ],
   },
 }
 

@@ -107,13 +107,20 @@ export async function sendFriendRequest(addresseeId: string): Promise<{ error?: 
     .eq('id', user.id)
     .single()
   const requesterName = requesterPush?.full_name?.trim() || requesterPush?.username || 'Someone'
-  after(() =>
-    sendPushToUser(addresseeId, {
+  console.log('[push] friend request trigger queued', { addresseeId, requesterName })
+  // DIAGNOSTIC: synchronous await like we did for sendMessage during
+  // Phase 2 bring-up. First end-to-end test didn't reach the phone and
+  // Vercel logs show no sendPushToUser internals — same after() swallow
+  // pattern. Verify the pipeline, then revert to after().
+  try {
+    await sendPushToUser(addresseeId, {
       title: 'New friend request',
       body: `${requesterName} wants to be friends`,
       data: { type: 'friend_request', actorId: user.id },
-    }).catch((err) => console.warn('[push] friend request trigger failed', err))
-  )
+    })
+  } catch (err) {
+    console.warn('[push] friend request trigger failed', err)
+  }
 
   return {}
 }

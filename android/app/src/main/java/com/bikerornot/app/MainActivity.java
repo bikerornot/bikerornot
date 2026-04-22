@@ -85,23 +85,43 @@ public class MainActivity extends BridgeActivity {
 
     // FCM push payloads include a `data` object; Android copies every entry
     // into the launch intent's extras when the user taps the notification.
-    // We look for a conversationId and, if present, navigate the WebView
-    // straight to /messages/<id>. The URL load works in every lifecycle
-    // state — cold start (Bridge is wired but the first server.url load is
-    // in flight, our loadUrl replaces it), warm start, and foreground.
+    // Route to the right in-app URL based on the `type` field set by the
+    // server-side push sender. The URL load works in every lifecycle state —
+    // cold start (Bridge is wired but the first server.url load is in flight,
+    // our loadUrl replaces it), warm start, and foreground.
     private void handleNotificationIntent(Intent intent) {
         if (intent == null || intent.getExtras() == null) return;
-        String conversationId = intent.getStringExtra("conversationId");
-        if (conversationId == null || conversationId.isEmpty()) return;
         if (bridge == null || bridge.getWebView() == null) return;
 
-        String target = "https://www.bikerornot.com/messages/" + Uri.encode(conversationId);
+        String type = intent.getStringExtra("type");
+        String target = null;
+
+        if ("dm".equals(type)) {
+            String conversationId = intent.getStringExtra("conversationId");
+            if (conversationId != null && !conversationId.isEmpty()) {
+                target = "https://www.bikerornot.com/messages/" + Uri.encode(conversationId);
+            }
+        } else if ("friend_request".equals(type) || "friend_accepted".equals(type)) {
+            target = "https://www.bikerornot.com/friends";
+        } else if ("post_comment".equals(type) || "comment_reply".equals(type) || "comment_like".equals(type)) {
+            String postId = intent.getStringExtra("postId");
+            if (postId != null && !postId.isEmpty()) {
+                target = "https://www.bikerornot.com/posts/" + Uri.encode(postId);
+            }
+        }
+
+        if (target == null) return;
+
         Log.d(TAG, "Deep-link from notification → " + target);
         bridge.getWebView().loadUrl(target);
 
         // Clear so a subsequent unrelated onNewIntent (e.g. share) doesn't
         // re-trigger the navigation with stale data.
+        intent.removeExtra("type");
         intent.removeExtra("conversationId");
+        intent.removeExtra("postId");
+        intent.removeExtra("commentId");
+        intent.removeExtra("actorId");
     }
 
     // Android 15+ with target SDK 35+ enforces edge-to-edge: the OS ignores

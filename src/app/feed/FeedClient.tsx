@@ -166,6 +166,41 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
       .finally(() => setLoading(false))
   }, [fetchPosts])
 
+  // Snapshot revalidation: when we hydrate from sessionStorage we're trusting
+  // filter state frozen at write time. If an author got banned/suspended or
+  // a post got deleted in the meantime, those rows survive the rehydration
+  // and reappear on back-navigation. Re-check author status + post deleted_at
+  // for hydrated posts and drop any that no longer qualify.
+  useEffect(() => {
+    if (!didHydrateRef.current) return
+    if (posts.length === 0) return
+    let cancelled = false
+    const supabase = createClient()
+    const postIds = posts.map((p) => p.id)
+    const authorIds = Array.from(new Set(posts.map((p) => p.author_id)))
+    Promise.all([
+      supabase.from('profiles').select('id, status').in('id', authorIds),
+      supabase.from('posts').select('id, deleted_at').in('id', postIds),
+    ])
+      .then(([{ data: authorRows }, { data: postRows }]) => {
+        if (cancelled) return
+        const activeAuthors = new Set(
+          (authorRows ?? []).filter((r) => r.status === 'active').map((r) => r.id)
+        )
+        const livePosts = new Set(
+          (postRows ?? []).filter((r) => r.deleted_at === null).map((r) => r.id)
+        )
+        setPosts((prev) =>
+          prev.filter((p) => activeAuthors.has(p.author_id) && livePosts.has(p.id))
+        )
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Scroll restoration — deliberately simple. We scroll to the anchor once
   // in useLayoutEffect (pre-paint) and that's it. The earlier settle-loop
   // / ResizeObserver / multi-phase approach was racing layout shifts from

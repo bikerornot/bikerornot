@@ -8,6 +8,7 @@ import { scanCommentForScam } from '@/app/actions/scam-scan'
 import { notifyIfActive } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
 import { sendCommentEmail } from '@/lib/email'
+import { sendPushToUser } from '@/lib/push'
 
 function getServiceClient() {
   return createServiceClient(
@@ -125,6 +126,17 @@ export async function createComment(postId: string, content: string, parentComme
           })
         }
       } catch { /* best-effort */ }
+
+      // Push to the parent comment's author
+      const replyAuthor = (comment as { author?: { username?: string | null; full_name?: string | null } }).author
+      const replyAuthorName = replyAuthor?.full_name?.trim() || replyAuthor?.username || 'Someone'
+      after(() =>
+        sendPushToUser(parent.author_id, {
+          title: `${replyAuthorName} replied to your comment`,
+          body: content.trim().slice(0, 140),
+          data: { type: 'comment_reply', postId, commentId: String(comment.id) },
+        }).catch((err) => console.warn('[push] comment reply trigger failed', err))
+      )
     }
   } else {
     const { data: postData } = await admin
@@ -160,6 +172,17 @@ export async function createComment(postId: string, content: string, parentComme
           })
         }
       } catch { /* best-effort */ }
+
+      // Push to the post's author
+      const commentAuthor = (comment as { author?: { username?: string | null; full_name?: string | null } }).author
+      const commentAuthorName = commentAuthor?.full_name?.trim() || commentAuthor?.username || 'Someone'
+      after(() =>
+        sendPushToUser(postData.author_id, {
+          title: `${commentAuthorName} commented on your post`,
+          body: content.trim().slice(0, 140),
+          data: { type: 'post_comment', postId, commentId: String(comment.id) },
+        }).catch((err) => console.warn('[push] post comment trigger failed', err))
+      )
     }
   }
 

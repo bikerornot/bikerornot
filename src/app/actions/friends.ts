@@ -1,11 +1,13 @@
 'use server'
 
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { sendFriendRequestEmail, sendFriendAcceptedEmail } from '@/lib/email'
 import { checkRateLimit, assertUuid } from '@/lib/rate-limit'
 import { notifyIfActive } from '@/lib/notify'
 import { getBlockedIds } from '@/app/actions/blocks'
+import { sendPushToUser } from '@/lib/push'
 
 function getServiceClient() {
   return createServiceClient(
@@ -98,6 +100,21 @@ export async function sendFriendRequest(addresseeId: string): Promise<{ error?: 
     }
   } catch { /* best-effort */ }
 
+  // Push notification to the addressee
+  const { data: requesterPush } = await admin
+    .from('profiles')
+    .select('username, full_name')
+    .eq('id', user.id)
+    .single()
+  const requesterName = requesterPush?.full_name?.trim() || requesterPush?.username || 'Someone'
+  after(() =>
+    sendPushToUser(addresseeId, {
+      title: 'New friend request',
+      body: `${requesterName} wants to be friends`,
+      data: { type: 'friend_request', actorId: user.id },
+    }).catch((err) => console.warn('[push] friend request trigger failed', err))
+  )
+
   return {}
 }
 
@@ -178,6 +195,21 @@ export async function acceptFriendRequest(requesterId: string): Promise<void> {
       })
     }
   } catch { /* best-effort */ }
+
+  // Push to the original requester — they were waiting on a response
+  const { data: accepterPush } = await admin
+    .from('profiles')
+    .select('username, full_name')
+    .eq('id', user.id)
+    .single()
+  const accepterName = accepterPush?.full_name?.trim() || accepterPush?.username || 'Someone'
+  after(() =>
+    sendPushToUser(requesterId, {
+      title: 'Friend request accepted',
+      body: `${accepterName} accepted your friend request`,
+      data: { type: 'friend_accepted', actorId: user.id },
+    }).catch((err) => console.warn('[push] friend accepted trigger failed', err))
+  )
 }
 
 export async function declineFriendRequest(requesterId: string): Promise<void> {

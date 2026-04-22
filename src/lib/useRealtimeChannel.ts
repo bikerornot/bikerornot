@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, startTransition } from 'react'
 import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 
@@ -32,6 +32,14 @@ export function useRealtimeChannel(
   options?: { presence?: { key: string } }
 ) {
   const [rtGen, setRtGen] = useState(0)
+  // Exponential backoff across reconnect cycles. Without this, a broken
+  // realtime channel (Supabase free tier, flaky wifi) triggers a setRtGen
+  // every ~2s indefinitely. Those state updates are `urgent` priority in
+  // React and STARVE the concurrent transitions the Next.js router uses
+  // for navigation — producing a bug where a Link click is queued but
+  // never commits until something else in the tree unmounts and gives the
+  // scheduler a gap. Resets to 2s whenever a channel actually subscribes.
+  const backoffRef = useRef(2000)
 
   useEffect(() => {
     const supabase = createClient()
@@ -53,9 +61,19 @@ export function useRealtimeChannel(
 
       channel = configured.subscribe((status) => {
         if (cancelled) return
+        if (status === 'SUBSCRIBED') {
+          backoffRef.current = 2000
+          return
+        }
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.warn(`[realtime:${channelName}] status ${status} — reconnecting`)
-          reconnectTimer = setTimeout(() => setRtGen((g) => g + 1), 2000)
+          const delay = backoffRef.current
+          backoffRef.current = Math.min(delay * 2, 60_000)
+          console.warn(`[realtime:${channelName}] status ${status} — reconnecting in ${delay}ms`)
+          reconnectTimer = setTimeout(() => {
+            // Mark the reconnect bump as a transition so it never preempts
+            // urgent transitions (router navigation) that may be pending.
+            startTransition(() => setRtGen((g) => g + 1))
+          }, delay)
         }
       })
     })()
@@ -84,7 +102,7 @@ export function useRealtimeChannel(
       } else if (document.visibilityState === 'visible' && hiddenAt != null) {
         const hiddenForMs = Date.now() - hiddenAt
         hiddenAt = null
-        if (hiddenForMs > 30000) setRtGen((g) => g + 1)
+        if (hiddenForMs > 30000) startTransition(() => setRtGen((g) => g + 1))
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)

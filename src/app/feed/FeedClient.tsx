@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useRealtimeChannel } from '@/lib/useRealtimeChannel'
 import { Post, Profile, UserBike } from '@/lib/supabase/types'
 import PostCard from '@/app/components/PostCard'
 import PostComposer from '@/app/components/PostComposer'
@@ -268,11 +269,10 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Realtime: notify when others post
-  useEffect(() => {
-    const supabase = createClient()
-    const channel = supabase
-      .channel('feed-new-posts')
-      .on(
+  useRealtimeChannel(
+    'feed-new-posts',
+    (channel) =>
+      channel.on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'posts' },
         (payload) => {
@@ -282,13 +282,9 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
             setNewPostCount((c) => c + 1)
           }
         }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [currentUserId])
+      ),
+    [currentUserId, blockedUserIds]
+  )
 
   async function refresh() {
     setNewPostCount(0)

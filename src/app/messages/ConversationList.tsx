@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase/client'
+import { useRealtimeChannel } from '@/lib/useRealtimeChannel'
 import { getImageUrl } from '@/lib/supabase/image'
 import VerifiedBadge from '@/app/components/VerifiedBadge'
 import type { ConversationSummary } from '@/lib/supabase/types'
@@ -26,11 +26,10 @@ interface Props {
 export default function ConversationList({ initialConversations, currentUserId, mode = 'inbox' }: Props) {
   const [conversations, setConversations] = useState<ConversationSummary[]>(initialConversations)
 
-  useEffect(() => {
-    const supabase = createClient()
-    const channel = supabase
-      .channel('inbox_messages')
-      .on(
+  useRealtimeChannel(
+    'inbox_messages',
+    (channel) =>
+      channel.on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload) => {
@@ -50,13 +49,9 @@ export default function ConversationList({ initialConversations, currentUserId, 
             )
           })
         }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [currentUserId])
+      ),
+    [currentUserId]
+  )
 
   if (conversations.length === 0) {
     if (mode === 'requests') {

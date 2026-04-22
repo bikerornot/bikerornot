@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase/client'
 import { getImageUrl } from '@/lib/supabase/image'
+import { useRealtimeChannel } from '@/lib/useRealtimeChannel'
 import Link from 'next/link'
 import { getNotifications, markRead, markAllRead } from '@/app/actions/notifications'
 import { acceptFriendRequest, declineFriendRequest } from '@/app/actions/friends'
@@ -117,11 +117,12 @@ export default function NotificationBell({ userId, username }: Props) {
 
   useEffect(() => {
     getNotifications().then(setNotifications)
+  }, [userId])
 
-    const supabase = createClient()
-    const channel = supabase
-      .channel(`notifications:${userId}`)
-      .on(
+  useRealtimeChannel(
+    `notifications:${userId}`,
+    (channel, supabase) =>
+      channel.on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
         async (payload) => {
@@ -136,11 +137,9 @@ export default function NotificationBell({ userId, username }: Props) {
             )
           }
         }
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [userId])
+      ),
+    [userId]
+  )
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {

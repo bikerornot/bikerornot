@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useRealtimeChannel } from '@/lib/useRealtimeChannel'
 import { Comment, Profile } from '@/lib/supabase/types'
 import { getImageUrl } from '@/lib/supabase/image'
 import CommentItem from './CommentItem'
@@ -100,10 +101,12 @@ export default function CommentSection({ postId, postAuthorId, currentUserId, cu
         }
         setLoading(false)
       })
+  }, [postId, currentUserId, blockedUserIds])
 
-    const channel = supabase
-      .channel(`comments:${postId}`)
-      .on(
+  useRealtimeChannel(
+    `comments:${postId}`,
+    (channel, supabase) =>
+      channel.on(
         'postgres_changes',
         {
           event: 'INSERT',
@@ -126,13 +129,9 @@ export default function CommentSection({ postId, postAuthorId, currentUserId, cu
             )
           }
         }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [postId])
+      ),
+    [postId, blockedUserIds]
+  )
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { useRealtimeChannel } from '@/lib/useRealtimeChannel'
 import { getUnreadMessageCount } from '@/app/actions/messages'
 
 export default function MessagesLink({ userId }: { userId: string }) {
@@ -12,33 +12,31 @@ export default function MessagesLink({ userId }: { userId: string }) {
     getUnreadMessageCount().then(setCount)
   }, [])
 
-  useEffect(() => {
-    const supabase = createClient()
-    const channel = supabase
-      .channel('messages_badge')
-      // New message arrives — re-fetch count if it's not from us
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload) => {
-          const msg = payload.new as { sender_id: string }
-          if (msg.sender_id !== userId) {
+  useRealtimeChannel(
+    'messages_badge',
+    (channel) =>
+      channel
+        // New message arrives — re-fetch count if it's not from us
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages' },
+          (payload) => {
+            const msg = payload.new as { sender_id: string }
+            if (msg.sender_id !== userId) {
+              getUnreadMessageCount().then(setCount)
+            }
+          }
+        )
+        // Message marked as read — re-fetch so badge decrements
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'messages' },
+          () => {
             getUnreadMessageCount().then(setCount)
           }
-        }
-      )
-      // Message marked as read — re-fetch so badge decrements
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'messages' },
-        () => {
-          getUnreadMessageCount().then(setCount)
-        }
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [userId])
+        ),
+    [userId]
+  )
 
   return (
     <Link

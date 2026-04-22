@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Post, Profile } from '@/lib/supabase/types'
@@ -268,10 +268,16 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
     }
   }
 
-  function updateCommentCount(next: number) {
+  // Stable identity: CommentSection consumes this as a useEffect dep. A fresh
+  // closure on every PostCard render would re-fire the effect unnecessarily;
+  // combined with an ancestor setState that always produces a new array, that
+  // loop starved router transitions and froze navigation while comments were
+  // open. Parent now short-circuits no-op updates, but keeping this stable is
+  // belt-and-braces against the same failure mode creeping back.
+  const updateCommentCount = useCallback((next: number) => {
     setCommentCount(next)
     onCommentCountChange?.(post.id, next)
-  }
+  }, [post.id, onCommentCountChange])
 
   async function handleDelete() {
     setDeleted(true)

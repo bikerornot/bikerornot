@@ -338,12 +338,30 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
   // When a user likes/unlikes or adds a comment on a PostCard, reflect that in
   // the posts array so the sessionStorage snapshot stays current. Without this
   // the snapshot keeps pre-click state and the indicator "resets" on refresh.
+  //
+  // Each handler MUST return `prev` when nothing actually changed. `.map()`
+  // always produces a new array even if no element is rewritten, so a
+  // no-op setPosts still triggers a re-render. PostCard re-creates its
+  // `updateCommentCount` closure on every render, which flips CommentSection's
+  // useEffect identity dep, which re-fires the effect, which calls
+  // updateCommentCount again — an infinite render loop that starves the
+  // concurrent transition Next.js Link clicks rely on, producing a bug where
+  // clicks queue and only commit once comments collapse.
   const handleLikeChange = useCallback((postId: string, liked: boolean, likeCount: number) => {
-    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, is_liked_by_me: liked, like_count: likeCount } : p)))
+    setPosts((prev) => {
+      const target = prev.find((p) => p.id === postId)
+      if (!target) return prev
+      if (target.is_liked_by_me === liked && target.like_count === likeCount) return prev
+      return prev.map((p) => (p.id === postId ? { ...p, is_liked_by_me: liked, like_count: likeCount } : p))
+    })
   }, [])
 
   const handleCommentCountChange = useCallback((postId: string, count: number) => {
-    setPosts((prev) => prev.map((p) => (p.id === postId && p.comment_count !== count ? { ...p, comment_count: count } : p)))
+    setPosts((prev) => {
+      const target = prev.find((p) => p.id === postId)
+      if (!target || target.comment_count === count) return prev
+      return prev.map((p) => (p.id === postId ? { ...p, comment_count: count } : p))
+    })
   }, [])
 
   // Drop the post from the array so the persisted snapshot doesn't resurrect

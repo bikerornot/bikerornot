@@ -10,6 +10,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Message;
 import android.util.Log;
+import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
@@ -22,6 +23,9 @@ import androidx.browser.customtabs.CustomTabsClient;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebChromeClient;
@@ -60,9 +64,28 @@ public class MainActivity extends BridgeActivity {
             }
         });
 
+        applySystemBarInsets();
         setupExternalLinkHandling();
         requestNotificationPermissionIfNeeded();
         registerFcmToken();
+    }
+
+    // Android 15+ with target SDK 35+ enforces edge-to-edge: the OS ignores
+    // windowFitsSystemWindows / fitsSystemWindows theme attributes and draws
+    // the WebView under the status bar, obscuring the wifi / battery / clock
+    // icons at the top. The only portable fix is to pad the root content view
+    // by the system bar insets ourselves. Capacitor exposes android.R.id.content
+    // as the host for the WebView, so padding it pushes the whole page down.
+    private void applySystemBarInsets() {
+        View root = findViewById(android.R.id.content);
+        if (root == null) return;
+        ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
+            Insets bars = insets.getInsets(
+                    WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()
+            );
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            return WindowInsetsCompat.CONSUMED;
+        });
     }
 
     // Android 13+ (API 33) requires runtime permission to post notifications.

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Android 12+ (API 31+) launch theme. The modern SplashScreen API reads
+         windowSplashScreen* attributes directly rather than the legacy
+         windowBackground. The OS shows the icon centered on the background
+         color, sized up to 288dp — BON wordmark fits in that area, though
+         aggressive OEM skins may clip the outer edges to a circle. The
+         Capacitor splash plugin keeps this on screen for launchShowDuration
+         ms via setKeepOnScreenCondition. -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#09090b</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+    </style>
+</resources>

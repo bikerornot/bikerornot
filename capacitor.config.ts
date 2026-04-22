@@ -27,6 +27,21 @@ const config: CapacitorConfig = {
       '*.supabase.in',
     ],
   },
+  plugins: {
+    SplashScreen: {
+      // Remote mode means first-paint depends on network. Give the splash
+      // long enough to hide the blank-WebView moment on typical LTE, and
+      // let the plugin auto-hide once the WebView signals it's ready.
+      launchShowDuration: 1500,
+      launchAutoHide: true,
+      backgroundColor: '#09090b',
+      androidSplashResourceName: 'splash',
+      androidScaleType: 'FIT_CENTER',
+      showSpinner: false,
+      splashFullScreen: true,
+      splashImmersive: false,
+    },
+  },
 }
 
 export default config

@@ -16,7 +16,13 @@
     </style>
 
 
+    <!-- Pre-API 31 launch theme. Capacitor's SplashScreen plugin uses the
+         legacy code path here, which reads android:windowBackground (not
+         android:background — the scaffold default was subtly wrong and the
+         splash drawable never actually rendered). API 31+ gets the modern
+         SplashScreen API via values-v31/styles.xml, which ignores this. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="android:windowBackground">@drawable/splash</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

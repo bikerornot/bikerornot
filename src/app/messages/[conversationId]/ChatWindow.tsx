@@ -125,52 +125,73 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
     }
   }, [handleScroll, hasMore, loadingMore, loadOlderMessages])
 
-  // Single channel for: incoming messages, read receipt updates, and presence (typing)
+  // Single channel for: incoming messages, read receipt updates, and presence (typing).
+  // Auth is pushed to Realtime explicitly *before* subscribe — the factory's
+  // async getSession().then(setAuth) can lose the race against the first
+  // subscription, leaving the channel joined anonymously and RLS-filtered
+  // silently. Symptom when that happens: looks like it works once (on some
+  // race win) then stops. Awaiting getSession()+setAuth here guarantees the
+  // subscription always carries the user's JWT.
   useEffect(() => {
     const supabase = createClient()
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let cancelled = false
 
-    const channel = supabase
-      .channel(`chat_${conversationId}`, {
-        config: { presence: { key: currentUserId } },
-      })
-      // New messages from the other user
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
-        (payload) => {
-          const msg = payload.new as Message
-          // Only show messages from the other user if they're still active
-          if (msg.sender_id !== currentUserId && otherUser.status === 'active') {
-            setMessages((prev) => [...prev, { ...msg, sender: otherUser }])
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (cancelled) return
+      await supabase.realtime.setAuth(session?.access_token ?? null)
+      if (cancelled) return
+
+      channel = supabase
+        .channel(`chat_${conversationId}`, {
+          config: { presence: { key: currentUserId } },
+        })
+        // New messages from the other user
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+          (payload) => {
+            const msg = payload.new as Message
+            // Only show messages from the other user if they're still active
+            if (msg.sender_id !== currentUserId && otherUser.status === 'active') {
+              setMessages((prev) => [...prev, { ...msg, sender: otherUser }])
+            }
           }
-        }
-      )
-      // Read receipt: other user opened the conversation, read_at gets set on our messages
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
-        (payload) => {
-          const updated = payload.new as Message
-          setMessages((prev) =>
-            prev.map((m) => (m.id === updated.id ? { ...m, read_at: updated.read_at } : m))
-          )
-        }
-      )
-      // Typing indicator via Presence (no DB writes)
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState<{ typing: boolean }>()
-        const otherPresence = Object.entries(state)
-          .filter(([key]) => key !== currentUserId)
-          .flatMap(([, values]) => values)
-        setOtherUserTyping(otherPresence.some((p) => p.typing === true))
-      })
-      .subscribe()
+        )
+        // Read receipt: other user opened the conversation, read_at gets set on our messages
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+          (payload) => {
+            const updated = payload.new as Message
+            setMessages((prev) =>
+              prev.map((m) => (m.id === updated.id ? { ...m, read_at: updated.read_at } : m))
+            )
+          }
+        )
+        // Typing indicator via Presence (no DB writes)
+        .on('presence', { event: 'sync' }, () => {
+          if (!channel) return
+          const state = channel.presenceState<{ typing: boolean }>()
+          const otherPresence = Object.entries(state)
+            .filter(([key]) => key !== currentUserId)
+            .flatMap(([, values]) => values)
+          setOtherUserTyping(otherPresence.some((p) => p.typing === true))
+        })
+        .subscribe((status) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            console.warn('[chat] realtime channel status', status)
+          }
+        })
 
-    channelRef.current = channel
+      channelRef.current = channel
+    })()
 
     return () => {
+      cancelled = true
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
-      supabase.removeChannel(channel)
+      if (channel) supabase.removeChannel(channel)
     }
   }, [conversationId, currentUserId, otherUser])
 

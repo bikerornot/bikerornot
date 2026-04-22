@@ -71,8 +71,21 @@ export function useRealtimeChannel(
   }, [...deps, rtGen, channelName])
 
   useEffect(() => {
+    // Only reconnect on real backgrounding, not on brief visibility flickers.
+    // Mobile fires visibilitychange for keyboard show/hide, screen dims,
+    // in-app switcher previews, etc. — forcing a reconnect on each of those
+    // tears down presence state momentarily and breaks the typing indicator
+    // for the remote user. Threshold of 30s catches real sleep/background
+    // cases while letting routine mobile interruptions pass through.
+    let hiddenAt: number | null = null
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') setRtGen((g) => g + 1)
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now()
+      } else if (document.visibilityState === 'visible' && hiddenAt != null) {
+        const hiddenForMs = Date.now() - hiddenAt
+        hiddenAt = null
+        if (hiddenForMs > 30000) setRtGen((g) => g + 1)
+      }
     }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => document.removeEventListener('visibilitychange', handleVisibility)

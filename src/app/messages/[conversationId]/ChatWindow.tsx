@@ -210,13 +210,21 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
   }, [conversationId, currentUserId, otherUser, rtGen])
 
   // Supabase free-tier realtime can stop delivering events while a tab is
-  // backgrounded without closing the socket. When the tab becomes visible
-  // again, force a fresh subscription so the user's next conversation view
-  // is live rather than frozen.
+  // backgrounded without closing the socket. Force a fresh subscription
+  // only on a real sleep/background — mobile fires visibilitychange for
+  // keyboard show/hide, screen dims, and app-switcher previews, and a
+  // reconnect on each drops the presence state momentarily, which breaks
+  // the remote user's view of our typing indicator. 30s threshold lets
+  // routine mobile interruptions pass through.
   useEffect(() => {
+    let hiddenAt: number | null = null
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        setRtGen((g) => g + 1)
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now()
+      } else if (document.visibilityState === 'visible' && hiddenAt != null) {
+        const hiddenForMs = Date.now() - hiddenAt
+        hiddenAt = null
+        if (hiddenForMs > 30000) setRtGen((g) => g + 1)
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)

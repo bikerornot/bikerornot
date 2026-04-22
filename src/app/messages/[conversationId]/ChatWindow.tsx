@@ -38,6 +38,13 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [otherUserTyping, setOtherUserTyping] = useState(false)
+  // Bumping this forces a resubscribe. Used when the channel reports a
+  // terminal status (ERROR/TIMED_OUT/CLOSED) or when the tab comes back
+  // from the background — Supabase's free-tier realtime can silently stop
+  // delivering events after idle periods even though the websocket stays
+  // open, which looks to the user like "typing stopped, then messages
+  // stopped" without a refresh.
+  const [rtGen, setRtGen] = useState(0)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -136,6 +143,7 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
     const supabase = createClient()
     let channel: ReturnType<typeof supabase.channel> | null = null
     let cancelled = false
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
     ;(async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -180,8 +188,13 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
           setOtherUserTyping(otherPresence.some((p) => p.typing === true))
         })
         .subscribe((status) => {
+          if (cancelled) return
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            console.warn('[chat] realtime channel status', status)
+            console.warn('[chat] realtime channel status', status, '— reconnecting')
+            // Bump the generation counter so the useEffect tears down this
+            // dead channel and creates a fresh one. 2s delay avoids a tight
+            // loop if the server is genuinely down.
+            reconnectTimer = setTimeout(() => setRtGen((g) => g + 1), 2000)
           }
         })
 
@@ -190,10 +203,25 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
 
     return () => {
       cancelled = true
+      if (reconnectTimer) clearTimeout(reconnectTimer)
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
       if (channel) supabase.removeChannel(channel)
     }
-  }, [conversationId, currentUserId, otherUser])
+  }, [conversationId, currentUserId, otherUser, rtGen])
+
+  // Supabase free-tier realtime can stop delivering events while a tab is
+  // backgrounded without closing the socket. When the tab becomes visible
+  // again, force a fresh subscription so the user's next conversation view
+  // is live rather than frozen.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        setRtGen((g) => g + 1)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [])
 
   function broadcastTyping(isTyping: boolean) {
     channelRef.current?.track({ typing: isTyping })

@@ -540,6 +540,21 @@ export async function sendMessage(conversationId: string, content: string): Prom
   const isRequest = convo.status === 'request' && convo.initiated_by === user.id
   after(() => scanMessageForScam(message.id, user.id, trimmed, isRequest))
 
+  // sendMessage bypasses insertMessageAndBump (has its own insert path for
+  // historical reasons), so the push trigger wired in that helper doesn't
+  // fire for replies in existing conversations — which is most DMs. Mirror
+  // the same payload shape here.
+  const sender = (message as Message & { sender?: { username?: string | null; full_name?: string | null } }).sender
+  const senderName = sender?.full_name?.trim() || sender?.username || 'BikerOrNot'
+  console.log('[push] sendMessage trigger queued', { recipientId, senderName, messageId: message.id })
+  after(() =>
+    sendPushToUser(recipientId, {
+      title: senderName,
+      body: trimmed.slice(0, 140),
+      data: { conversationId, messageId: String(message.id), type: 'dm' },
+    }).catch((err) => console.warn('[push] sendMessage trigger failed', err))
+  )
+
   return message as Message
 }
 

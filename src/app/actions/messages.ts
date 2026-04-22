@@ -7,6 +7,7 @@ import type { ConversationSummary, Message } from '@/lib/supabase/types'
 import { scanMessageForScam } from '@/app/actions/scam-scan'
 import { checkRateLimit, assertUuid } from '@/lib/rate-limit'
 import { getBlockedIds } from '@/app/actions/blocks'
+import { sendPushToUser } from '@/lib/push'
 
 function getServiceClient() {
   return createServiceClient(
@@ -275,7 +276,6 @@ async function insertMessageAndBump(
   recipientId: string,
   _status: 'request' | 'active',
 ): Promise<Message> {
-  void recipientId
   const { data: message, error } = await admin
     .from('messages')
     .insert({ conversation_id: conversationId, sender_id: senderId, content })
@@ -290,6 +290,21 @@ async function insertMessageAndBump(
       last_message_preview: content.slice(0, 100),
     })
     .eq('id', conversationId)
+
+  // Fire-and-forget push to the recipient. Wrapped in after() so a slow /
+  // failed FCM call never delays the sender's UI response. Title is the
+  // sender's display name; body is the first 140 chars of the message so
+  // long paragraphs don't bloat the notification. conversationId goes in
+  // data for future deep-link routing on tap.
+  const sender = (message as Message & { sender?: { username?: string | null; full_name?: string | null } }).sender
+  const senderName = sender?.full_name?.trim() || sender?.username || 'BikerOrNot'
+  after(() =>
+    sendPushToUser(recipientId, {
+      title: senderName,
+      body: content.slice(0, 140),
+      data: { conversationId, messageId: String(message.id), type: 'dm' },
+    })
+  )
 
   return message as Message
 }

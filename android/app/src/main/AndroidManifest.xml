@@ -34,6 +34,20 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <!-- Our FirebaseMessagingService displays notifications when the app
+             is in the foreground (FCM hands the message to the app instead
+             of drawing it natively in that state). Declaring it at the app
+             level means Android routes messaging events here rather than to
+             Capacitor's plugin default, which is a no-op in remote mode
+             since it only emits to the JS bridge. -->
+        <service
+            android:name=".BikerOrNotMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
     </application>
 
     <!-- Permissions -->

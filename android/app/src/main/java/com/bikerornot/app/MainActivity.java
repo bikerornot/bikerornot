@@ -68,6 +68,40 @@ public class MainActivity extends BridgeActivity {
         setupExternalLinkHandling();
         requestNotificationPermissionIfNeeded();
         registerFcmToken();
+        handleNotificationIntent(getIntent());
+    }
+
+    // Fires when the user taps a notification while the activity is already
+    // alive (warm start, most common case). launchMode="singleTask" in the
+    // manifest routes the tap to this existing instance instead of stacking
+    // a new one. Without this override the intent extras would be dropped
+    // and the deep-link URL would never reach the WebView.
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleNotificationIntent(intent);
+    }
+
+    // FCM push payloads include a `data` object; Android copies every entry
+    // into the launch intent's extras when the user taps the notification.
+    // We look for a conversationId and, if present, navigate the WebView
+    // straight to /messages/<id>. The URL load works in every lifecycle
+    // state — cold start (Bridge is wired but the first server.url load is
+    // in flight, our loadUrl replaces it), warm start, and foreground.
+    private void handleNotificationIntent(Intent intent) {
+        if (intent == null || intent.getExtras() == null) return;
+        String conversationId = intent.getStringExtra("conversationId");
+        if (conversationId == null || conversationId.isEmpty()) return;
+        if (bridge == null || bridge.getWebView() == null) return;
+
+        String target = "https://www.bikerornot.com/messages/" + Uri.encode(conversationId);
+        Log.d(TAG, "Deep-link from notification → " + target);
+        bridge.getWebView().loadUrl(target);
+
+        // Clear so a subsequent unrelated onNewIntent (e.g. share) doesn't
+        // re-trigger the navigation with stale data.
+        intent.removeExtra("conversationId");
     }
 
     // Android 15+ with target SDK 35+ enforces edge-to-edge: the OS ignores

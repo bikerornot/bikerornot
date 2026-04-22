@@ -77,11 +77,13 @@ export async function sendFriendRequest(addresseeId: string): Promise<{ error?: 
   if (error && error.code !== '23505') return { error: 'Unable to send friend request. Please try again.' }
   if (error) return {} // already exists, skip notification
 
+  console.log('[push] friend request: before notifyIfActive', { addresseeId })
   await notifyIfActive(user.id, {
     user_id: addresseeId,
     type: 'friend_request',
     actor_id: user.id,
   })
+  console.log('[push] friend request: after notifyIfActive')
 
   // Send email notification
   try {
@@ -98,7 +100,9 @@ export async function sendFriendRequest(addresseeId: string): Promise<{ error?: 
         fromUsername: requesterProfile.username,
       })
     }
-  } catch { /* best-effort */ }
+  } catch (err) { console.warn('[push] friend request email block error', err) }
+
+  console.log('[push] friend request: after email block, before push')
 
   // Push notification to the addressee
   const { data: requesterPush } = await admin

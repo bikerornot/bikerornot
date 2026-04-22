@@ -297,7 +297,7 @@ async function insertMessageAndBump(
   // long paragraphs don't bloat the notification. conversationId goes in
   // data for future deep-link routing on tap.
   const sender = (message as Message & { sender?: { username?: string | null; full_name?: string | null } }).sender
-  const senderName = sender?.full_name?.trim() || sender?.username || 'BikerOrNot'
+  const senderName = sender?.username || sender?.full_name?.trim() || 'BikerOrNot'
   console.log('[push] DM trigger queued', { recipientId, senderName, messageId: message.id })
   after(() =>
     sendPushToUser(recipientId, {
@@ -544,7 +544,7 @@ export async function sendMessage(conversationId: string, content: string): Prom
   // historical reasons), so the push trigger wired in that helper doesn't
   // fire for replies in existing conversations — which is most DMs.
   const sender = (message as Message & { sender?: { username?: string | null; full_name?: string | null } }).sender
-  const senderName = sender?.full_name?.trim() || sender?.username || 'BikerOrNot'
+  const senderName = sender?.username || sender?.full_name?.trim() || 'BikerOrNot'
   after(() =>
     sendPushToUser(recipientId, {
       title: senderName,

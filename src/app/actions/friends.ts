@@ -77,13 +77,11 @@ export async function sendFriendRequest(addresseeId: string): Promise<{ error?: 
   if (error && error.code !== '23505') return { error: 'Unable to send friend request. Please try again.' }
   if (error) return {} // already exists, skip notification
 
-  console.log('[push] friend request: before notifyIfActive', { addresseeId })
   await notifyIfActive(user.id, {
     user_id: addresseeId,
     type: 'friend_request',
     actor_id: user.id,
   })
-  console.log('[push] friend request: after notifyIfActive')
 
   // Send email notification
   try {
@@ -100,31 +98,23 @@ export async function sendFriendRequest(addresseeId: string): Promise<{ error?: 
         fromUsername: requesterProfile.username,
       })
     }
-  } catch (err) { console.warn('[push] friend request email block error', err) }
+  } catch { /* best-effort */ }
 
-  console.log('[push] friend request: after email block, before push')
-
-  // Push notification to the addressee
+  // Push notification to the addressee — title = who, body = what, matching
+  // the DM pattern (and the standard iOS/Android social-app convention).
   const { data: requesterPush } = await admin
     .from('profiles')
     .select('username, full_name')
     .eq('id', user.id)
     .single()
-  const requesterName = requesterPush?.full_name?.trim() || requesterPush?.username || 'Someone'
-  console.log('[push] friend request trigger queued', { addresseeId, requesterName })
-  // DIAGNOSTIC: synchronous await like we did for sendMessage during
-  // Phase 2 bring-up. First end-to-end test didn't reach the phone and
-  // Vercel logs show no sendPushToUser internals — same after() swallow
-  // pattern. Verify the pipeline, then revert to after().
-  try {
-    await sendPushToUser(addresseeId, {
-      title: 'New friend request',
-      body: `${requesterName} wants to be friends`,
+  const requesterName = requesterPush?.username || requesterPush?.full_name?.trim() || 'Someone'
+  after(() =>
+    sendPushToUser(addresseeId, {
+      title: requesterName,
+      body: 'Sent you a friend request',
       data: { type: 'friend_request', actorId: user.id },
-    })
-  } catch (err) {
-    console.warn('[push] friend request trigger failed', err)
-  }
+    }).catch((err) => console.warn('[push] friend request trigger failed', err))
+  )
 
   return {}
 }
@@ -213,11 +203,11 @@ export async function acceptFriendRequest(requesterId: string): Promise<void> {
     .select('username, full_name')
     .eq('id', user.id)
     .single()
-  const accepterName = accepterPush?.full_name?.trim() || accepterPush?.username || 'Someone'
+  const accepterName = accepterPush?.username || accepterPush?.full_name?.trim() || 'Someone'
   after(() =>
     sendPushToUser(requesterId, {
-      title: 'Friend request accepted',
-      body: `${accepterName} accepted your friend request`,
+      title: accepterName,
+      body: 'Accepted your friend request',
       data: { type: 'friend_accepted', actorId: user.id },
     }).catch((err) => console.warn('[push] friend accepted trigger failed', err))
   )

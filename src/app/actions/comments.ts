@@ -129,11 +129,11 @@ export async function createComment(postId: string, content: string, parentComme
 
       // Push to the parent comment's author
       const replyAuthor = (comment as { author?: { username?: string | null; full_name?: string | null } }).author
-      const replyAuthorName = replyAuthor?.full_name?.trim() || replyAuthor?.username || 'Someone'
+      const replyAuthorName = replyAuthor?.username || replyAuthor?.full_name?.trim() || 'Someone'
       after(() =>
         sendPushToUser(parent.author_id, {
-          title: `${replyAuthorName} replied to your comment`,
-          body: content.trim().slice(0, 140),
+          title: replyAuthorName,
+          body: `Replied to your comment: ${content.trim().slice(0, 120)}`,
           data: { type: 'comment_reply', postId, commentId: String(comment.id) },
         }).catch((err) => console.warn('[push] comment reply trigger failed', err))
       )
@@ -175,11 +175,11 @@ export async function createComment(postId: string, content: string, parentComme
 
       // Push to the post's author
       const commentAuthor = (comment as { author?: { username?: string | null; full_name?: string | null } }).author
-      const commentAuthorName = commentAuthor?.full_name?.trim() || commentAuthor?.username || 'Someone'
+      const commentAuthorName = commentAuthor?.username || commentAuthor?.full_name?.trim() || 'Someone'
       after(() =>
         sendPushToUser(postData.author_id, {
-          title: `${commentAuthorName} commented on your post`,
-          body: content.trim().slice(0, 140),
+          title: commentAuthorName,
+          body: `Commented on your post: ${content.trim().slice(0, 120)}`,
           data: { type: 'post_comment', postId, commentId: String(comment.id) },
         }).catch((err) => console.warn('[push] post comment trigger failed', err))
       )

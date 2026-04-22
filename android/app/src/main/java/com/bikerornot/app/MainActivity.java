@@ -130,6 +130,14 @@ public class MainActivity extends BridgeActivity {
     // icons at the top. The only portable fix is to pad the root content view
     // by the system bar insets ourselves. Capacitor exposes android.R.id.content
     // as the host for the WebView, so padding it pushes the whole page down.
+    //
+    // We also include the IME (soft keyboard) inset. windowSoftInputMode=
+    // adjustResize in the manifest handles this on older Android, but under
+    // edge-to-edge enforcement the system no longer shrinks the window for the
+    // IME — we have to do it manually. Without this, tapping an input near
+    // the bottom of the page (e.g. the messages composer) leaves the field
+    // hidden behind the keyboard. The IME inset is max(0) when hidden, so
+    // this is safe to always apply.
     private void applySystemBarInsets() {
         View root = findViewById(android.R.id.content);
         if (root == null) return;
@@ -137,7 +145,9 @@ public class MainActivity extends BridgeActivity {
             Insets bars = insets.getInsets(
                     WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()
             );
-            view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+            int bottom = Math.max(bars.bottom, ime.bottom);
+            view.setPadding(bars.left, bars.top, bars.right, bottom);
             return WindowInsetsCompat.CONSUMED;
         });
     }

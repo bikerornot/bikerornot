@@ -484,7 +484,7 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
               Send
             </button>
           </div>
-          <p className="text-sm text-zinc-600 mt-1.5 text-right">Enter to send · Shift+Enter for newline</p>
+          <p className="hidden sm:block text-sm text-zinc-600 mt-1.5 text-right">Enter to send · Shift+Enter for newline</p>
         </div>
       )}
     </div>

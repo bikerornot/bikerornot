@@ -298,12 +298,13 @@ async function insertMessageAndBump(
   // data for future deep-link routing on tap.
   const sender = (message as Message & { sender?: { username?: string | null; full_name?: string | null } }).sender
   const senderName = sender?.full_name?.trim() || sender?.username || 'BikerOrNot'
+  console.log('[push] DM trigger queued', { recipientId, senderName, messageId: message.id })
   after(() =>
     sendPushToUser(recipientId, {
       title: senderName,
       body: content.slice(0, 140),
       data: { conversationId, messageId: String(message.id), type: 'dm' },
-    })
+    }).catch((err) => console.warn('[push] DM trigger failed', err))
   )
 
   return message as Message

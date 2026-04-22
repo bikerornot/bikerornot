@@ -92,15 +92,24 @@ export async function sendPushToUser(
   userId: string,
   notification: PushNotificationPayload
 ): Promise<void> {
+  console.log('[push] sendPushToUser called', { userId, title: notification.title })
+
   const admin = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  const { data: tokens } = await admin
+  const { data: tokens, error: tokenErr } = await admin
     .from('device_tokens')
     .select('id, token')
     .eq('user_id', userId)
+
+  if (tokenErr) {
+    console.warn('[push] token lookup error', tokenErr)
+    return
+  }
+
+  console.log('[push] tokens found', { userId, count: tokens?.length ?? 0 })
 
   if (!tokens || tokens.length === 0) return
 
@@ -109,6 +118,7 @@ export async function sendPushToUser(
   try {
     accessToken = await getAccessToken()
     projectId = getServiceAccount().project_id
+    console.log('[push] FCM auth obtained for project', projectId)
   } catch (err) {
     console.warn('[push] could not obtain FCM access token', err)
     return
@@ -139,7 +149,10 @@ export async function sendPushToUser(
           },
           body: JSON.stringify(body),
         })
-        if (res.ok) return
+        if (res.ok) {
+          console.log('[push] FCM accepted', { tokenId: id, status: res.status })
+          return
+        }
 
         const errText = await res.text()
         // FCM reports dead tokens with 404 UNREGISTERED or 400

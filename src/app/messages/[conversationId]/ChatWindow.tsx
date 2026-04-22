@@ -97,6 +97,32 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
     }
   }, [messages, otherUserTyping, scrollToBottomSmooth])
 
+  // Keep the latest message visible when the soft keyboard opens. Both the
+  // textarea focus (which precedes the keyboard animation) and the Visual
+  // Viewport resize (which fires when the keyboard has actually appeared)
+  // trigger a scroll-to-bottom. Focus alone fires too early on Android —
+  // the layout hasn't shrunk yet so the scroll lands in the old coordinate
+  // space and ends up short. Listening for both is what WhatsApp / iMessage
+  // effectively do.
+  useEffect(() => {
+    function pinToBottom() {
+      const el = scrollContainerRef.current
+      if (!el) return
+      el.scrollTop = el.scrollHeight
+    }
+
+    const input = inputRef.current
+    input?.addEventListener('focus', pinToBottom)
+
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null
+    vv?.addEventListener('resize', pinToBottom)
+
+    return () => {
+      input?.removeEventListener('focus', pinToBottom)
+      vv?.removeEventListener('resize', pinToBottom)
+    }
+  }, [])
+
   // Load older messages when scrolling to top
   const loadOlderMessages = useCallback(async () => {
     if (loadingMore || !hasMore || messages.length === 0) return

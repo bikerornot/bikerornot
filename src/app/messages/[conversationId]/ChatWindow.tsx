@@ -99,16 +99,29 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
 
   // Keep the latest message visible when the soft keyboard opens. Both the
   // textarea focus (which precedes the keyboard animation) and the Visual
-  // Viewport resize (which fires when the keyboard has actually appeared)
-  // trigger a scroll-to-bottom. Focus alone fires too early on Android —
-  // the layout hasn't shrunk yet so the scroll lands in the old coordinate
-  // space and ends up short. Listening for both is what WhatsApp / iMessage
-  // effectively do.
+  // Viewport resize (which fires during the keyboard animation) trigger a
+  // scroll-to-bottom — neither alone is reliable because focus fires before
+  // layout shrinks, and resize fires while layout is still reflowing. We
+  // schedule the scroll across two rAF ticks plus a short timeout tail so
+  // the final scroll lands after layout has fully settled, regardless of
+  // where in the animation the event arrived. Also scroll document.body
+  // and documentElement as a belt-and-braces fallback for WebViews that
+  // scroll the outer page rather than the inner flex child.
   useEffect(() => {
+    let lastT: ReturnType<typeof setTimeout> | null = null
+
     function pinToBottom() {
-      const el = scrollContainerRef.current
-      if (!el) return
-      el.scrollTop = el.scrollHeight
+      const apply = () => {
+        const el = scrollContainerRef.current
+        if (el) el.scrollTop = el.scrollHeight
+        bottomRef.current?.scrollIntoView({ block: 'end' })
+      }
+      requestAnimationFrame(() => {
+        apply()
+        requestAnimationFrame(apply)
+        if (lastT) clearTimeout(lastT)
+        lastT = setTimeout(apply, 120) // tail catches slow Android IME reflow
+      })
     }
 
     const input = inputRef.current
@@ -120,6 +133,7 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
     return () => {
       input?.removeEventListener('focus', pinToBottom)
       vv?.removeEventListener('resize', pinToBottom)
+      if (lastT) clearTimeout(lastT)
     }
   }, [])
 

@@ -36,6 +36,11 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation "androidx.browser:browser:1.8.0"
+    // firebase-messaging is a transitive dep of @capacitor/push-notifications,
+    // but the plugin module's classpath doesn't expose it to the app module.
+    // Declaring it here makes FirebaseMessaging reachable from MainActivity
+    // so we can grab the FCM token natively without a JS shim.
+    implementation "com.google.firebase:firebase-messaging:25.0.1"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"

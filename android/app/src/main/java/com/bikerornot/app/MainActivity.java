@@ -1,12 +1,16 @@
 package com.bikerornot.app;
 
+import android.Manifest;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Message;
+import android.util.Log;
+import android.webkit.CookieManager;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -16,14 +20,26 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.browser.customtabs.CustomTabColorSchemeParams;
 import androidx.browser.customtabs.CustomTabsClient;
 import androidx.browser.customtabs.CustomTabsIntent;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.BridgeWebChromeClient;
 import com.getcapacitor.BridgeWebViewClient;
+import com.google.firebase.messaging.FirebaseMessaging;
+
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends BridgeActivity {
 
+    private static final String TAG = "BikerOrNot";
     private static final long DOUBLE_PRESS_WINDOW_MS = 2000L;
+    private static final int POST_NOTIFICATIONS_REQUEST_CODE = 1001;
+    private static final String DEVICE_TOKEN_ENDPOINT = "https://www.bikerornot.com/api/device-tokens";
+
     private long lastBackPressMs = 0L;
 
     @Override
@@ -45,6 +61,85 @@ public class MainActivity extends BridgeActivity {
         });
 
         setupExternalLinkHandling();
+        requestNotificationPermissionIfNeeded();
+        registerFcmToken();
+    }
+
+    // Android 13+ (API 33) requires runtime permission to post notifications.
+    // Older versions grant it implicitly. We ask on every launch until granted —
+    // after the first user response the system caches and silently returns.
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return;
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                == PackageManager.PERMISSION_GRANTED) return;
+        ActivityCompat.requestPermissions(
+                this,
+                new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                POST_NOTIFICATIONS_REQUEST_CODE
+        );
+    }
+
+    // Fetch the FCM token and POST it to bikerornot.com/api/device-tokens using
+    // the WebView's session cookies — no JS shim needed, no coupling between
+    // web code and the native shell. First-launch attempts before login will
+    // 401 silently; the next app start after login retries and succeeds.
+    // Tokens are stable per install, so one successful registration is enough.
+    private void registerFcmToken() {
+        FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
+            if (!task.isSuccessful()) {
+                Log.w(TAG, "FCM token fetch failed", task.getException());
+                return;
+            }
+            String token = task.getResult();
+            if (token == null || token.isEmpty()) return;
+            postDeviceToken(token);
+        });
+    }
+
+    // Fire-and-forget POST to the device-tokens endpoint. Runs on a background
+    // thread because HttpURLConnection blocks, and uses CookieManager to read
+    // the WebView's session cookies so the server recognises the logged-in user.
+    private void postDeviceToken(String token) {
+        new Thread(() -> {
+            HttpURLConnection conn = null;
+            try {
+                URL url = new URL(DEVICE_TOKEN_ENDPOINT);
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setRequestProperty("User-Agent", "BikerOrNotAndroid");
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(10000);
+
+                String cookies = CookieManager.getInstance().getCookie("https://www.bikerornot.com");
+                if (cookies != null && !cookies.isEmpty()) {
+                    conn.setRequestProperty("Cookie", cookies);
+                }
+
+                conn.setDoOutput(true);
+                // Token is an FCM registration string (base64ish, no quotes); still
+                // JSON-escape it defensively in case FCM ever changes the format.
+                String body = "{\"token\":\"" + token.replace("\\", "\\\\").replace("\"", "\\\"")
+                        + "\",\"platform\":\"android\"}";
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(body.getBytes(StandardCharsets.UTF_8));
+                }
+
+                int code = conn.getResponseCode();
+                if (code == 200) {
+                    Log.i(TAG, "Device token registered");
+                } else if (code == 401) {
+                    // User isn't logged in yet — nothing to report; next launch
+                    // after sign-in will pick it up.
+                } else {
+                    Log.w(TAG, "Device token registration HTTP " + code);
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Device token registration failed", e);
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        }, "FcmTokenRegister").start();
     }
 
     // Fallback for any code path that still calls through to the legacy

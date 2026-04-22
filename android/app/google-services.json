@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "222411524561",
+    "project_id": "bikerornot-572f2",
+    "storage_bucket": "bikerornot-572f2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:222411524561:android:c6827a8cb67dcd35ab38f0",
+        "android_client_info": {
+          "package_name": "com.bikerornot.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAZwfVscML8gtaDYBoJuiuMa7l2wISqcw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

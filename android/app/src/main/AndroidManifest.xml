@@ -39,6 +39,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Android 13+ (API 33+) requires runtime permission before notifications
+         can be posted. Silently granted on older versions. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Android 11+ package visibility for Custom Tabs. Without this,
          CustomTabsClient.getPackageName() returns null and we cannot pin

@@ -103,7 +103,9 @@ public class MainActivity extends BridgeActivity {
             }
         } else if ("friend_request".equals(type) || "friend_accepted".equals(type)) {
             target = "https://www.bikerornot.com/friends";
-        } else if ("post_comment".equals(type) || "comment_reply".equals(type) || "comment_like".equals(type)) {
+        } else if ("post_comment".equals(type) || "comment_reply".equals(type)
+                || "comment_like".equals(type) || "post_like".equals(type)
+                || "wall_post".equals(type)) {
             String postId = intent.getStringExtra("postId");
             if (postId != null && !postId.isEmpty()) {
                 target = "https://www.bikerornot.com/posts/" + Uri.encode(postId);

@@ -104,10 +104,10 @@ export async function sendFriendRequest(addresseeId: string): Promise<{ error?: 
   // the DM pattern (and the standard iOS/Android social-app convention).
   const { data: requesterPush } = await admin
     .from('profiles')
-    .select('username, full_name')
+    .select('username')
     .eq('id', user.id)
     .single()
-  const requesterName = requesterPush?.username || requesterPush?.full_name?.trim() || 'Someone'
+  const requesterName = requesterPush?.username || 'Someone'
   after(() =>
     sendPushToUser(addresseeId, {
       title: requesterName,
@@ -200,10 +200,10 @@ export async function acceptFriendRequest(requesterId: string): Promise<void> {
   // Push to the original requester — they were waiting on a response
   const { data: accepterPush } = await admin
     .from('profiles')
-    .select('username, full_name')
+    .select('username')
     .eq('id', user.id)
     .single()
-  const accepterName = accepterPush?.username || accepterPush?.full_name?.trim() || 'Someone'
+  const accepterName = accepterPush?.username || 'Someone'
   after(() =>
     sendPushToUser(requesterId, {
       title: accepterName,

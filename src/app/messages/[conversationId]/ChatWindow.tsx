@@ -49,6 +49,13 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Tracks whether we've already broadcast `typing: true` to the other user,
+  // so we don't fire a new presence message on every keystroke. Without this
+  // dedup, typing "hello" sent 5 separate channel.track() calls — enough to
+  // hit Supabase Realtime's ClientPresenceRateLimit. That throttle cascaded
+  // into TIMED_OUT for every channel on the socket, which broke DM delivery,
+  // the notification bell, and the feed-new-posts indicator for this tab.
+  const isTypingRef = useRef(false)
   const channelRef = useRef<RealtimeChannel | null>(null)
   const initialScrollDone = useRef(false)
   const isNearBottom = useRef(true)
@@ -272,6 +279,8 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
   }, [])
 
   function broadcastTyping(isTyping: boolean) {
+    if (isTypingRef.current === isTyping) return
+    isTypingRef.current = isTyping
     channelRef.current?.track({ typing: isTyping })
   }
 

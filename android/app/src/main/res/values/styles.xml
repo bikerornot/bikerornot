@@ -13,6 +13,15 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Android 15+ (target SDK 35+) enables edge-to-edge by default,
+             which makes the WebView draw under the status bar and obscure
+             the wifi / battery / clock icons. fitsSystemWindows tells the
+             root decor view to pad its content below the system bars so
+             those icons stay visible. Also set the status bar color to
+             match the theme so the bar isn't translucent over zinc. -->
+        <item name="android:fitsSystemWindows">true</item>
+        <item name="android:statusBarColor">#09090b</item>
+        <item name="android:navigationBarColor">#09090b</item>
     </style>
 
 

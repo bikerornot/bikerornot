@@ -306,6 +306,25 @@ export async function likeComment(commentId: string): Promise<void> {
       comment_id: commentId,
       post_id: comment.post_id,
     })
+
+    // Push to comment author
+    const { data: likerPush } = await admin
+      .from('profiles')
+      .select('username')
+      .eq('id', user.id)
+      .single()
+    const likerName = likerPush?.username || 'Someone'
+    after(() =>
+      sendPushToUser(comment.author_id, {
+        title: likerName,
+        body: 'Liked your comment',
+        data: {
+          type: 'comment_like',
+          postId: String(comment.post_id),
+          commentId: String(commentId),
+        },
+      }).catch((err) => console.warn('[push] comment like trigger failed', err))
+    )
   }
 }
 

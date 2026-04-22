@@ -1,5 +1,6 @@
 'use server'
 
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { moderateImage, type ModerationResult } from '@/lib/sightengine'
@@ -7,6 +8,7 @@ import { checkRateLimit, validateImageFile, assertUuid } from '@/lib/rate-limit'
 import { notifyIfActive } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
 import { sendWallPostEmail } from '@/lib/email'
+import { sendPushToUser } from '@/lib/push'
 
 function getServiceClient() {
   return createServiceClient(
@@ -126,6 +128,22 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
       actor_id: user.id,
       post_id: post.id,
     })
+
+    // Push to wall owner
+    const { data: authorPush } = await admin
+      .from('profiles')
+      .select('username')
+      .eq('id', user.id)
+      .single()
+    const authorName = authorPush?.username || 'Someone'
+    const preview = (content?.trim() ?? '').slice(0, 120)
+    after(() =>
+      sendPushToUser(wallOwnerId, {
+        title: authorName,
+        body: preview ? `Posted on your wall: ${preview}` : 'Posted on your wall',
+        data: { type: 'wall_post', postId: String(post.id) },
+      }).catch((err) => console.warn('[push] wall post trigger failed', err))
+    )
 
     // Send wall post email
     try {
@@ -381,6 +399,21 @@ export async function likePost(postId: string): Promise<void> {
       actor_id: user.id,
       post_id: postId,
     })
+
+    // Push to post author
+    const { data: likerPush } = await admin
+      .from('profiles')
+      .select('username')
+      .eq('id', user.id)
+      .single()
+    const likerName = likerPush?.username || 'Someone'
+    after(() =>
+      sendPushToUser(post.author_id, {
+        title: likerName,
+        body: 'Liked your post',
+        data: { type: 'post_like', postId: String(postId) },
+      }).catch((err) => console.warn('[push] post like trigger failed', err))
+    )
   }
 }
 

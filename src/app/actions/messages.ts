@@ -547,13 +547,22 @@ export async function sendMessage(conversationId: string, content: string): Prom
   const sender = (message as Message & { sender?: { username?: string | null; full_name?: string | null } }).sender
   const senderName = sender?.full_name?.trim() || sender?.username || 'BikerOrNot'
   console.log('[push] sendMessage trigger queued', { recipientId, senderName, messageId: message.id })
-  after(() =>
-    sendPushToUser(recipientId, {
+  // DIAGNOSTIC: awaiting instead of using after() to verify the push path
+  // is reachable end-to-end. after() is meant to keep this non-blocking on
+  // the UI response, but the first real test showed only the trigger log,
+  // none of sendPushToUser's internal logs — suggests the serverless
+  // instance terminated before after() could run the callback. Sync await
+  // will add ~200-500ms to the sender's UI. Revert to after() once the
+  // pipeline is proven to work.
+  try {
+    await sendPushToUser(recipientId, {
       title: senderName,
       body: trimmed.slice(0, 140),
       data: { conversationId, messageId: String(message.id), type: 'dm' },
-    }).catch((err) => console.warn('[push] sendMessage trigger failed', err))
-  )
+    })
+  } catch (err) {
+    console.warn('[push] sendMessage trigger failed', err)
+  }
 
   return message as Message
 }

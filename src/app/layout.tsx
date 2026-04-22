@@ -11,7 +11,12 @@ export const metadata: Metadata = {
   title: 'BikerOrNot — The Motorcycle Enthusiast Network',
   description: 'Connect with fellow riders, share your rides, and find your community.',
   applicationName: 'BikerOrNot',
-  manifest: '/manifest.webmanifest',
+  // Intentionally unwired until the Play Store app ships. The file still
+  // exists at public/manifest.webmanifest and the icons/theme metadata
+  // below stay harmless; removing only this line suppresses Chrome's
+  // "Install app" prompt on mobile so users don't get a PWA shortcut
+  // during the pre-launch period. Re-enable on launch day.
+  // manifest: '/manifest.webmanifest',
   formatDetection: { telephone: false },
   appleWebApp: {
     capable: true,

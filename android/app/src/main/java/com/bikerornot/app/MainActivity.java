@@ -452,15 +452,21 @@ public class MainActivity extends BridgeActivity {
                 // asking for a PDF upload should not show a Take Photo option.
                 boolean imageCapable = mimeType.startsWith("image/") || mimeType.equals("*/*");
 
-                Intent contentIntent = new Intent(Intent.ACTION_GET_CONTENT);
+                // ACTION_OPEN_DOCUMENT returns content:// URIs with grant
+                // flags that survive across activity boundaries and are
+                // reliably readable by WebView; ACTION_GET_CONTENT used to
+                // work but broke previewing picked images on newer Android
+                // because the returned URI's permission grant didn't carry
+                // through to the WebView's upload pipeline.
+                Intent contentIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 contentIntent.addCategory(Intent.CATEGORY_OPENABLE);
                 contentIntent.setType(mimeType);
+                contentIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 if (fileChooserParams.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE) {
                     contentIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
                 }
 
-                Intent chooser = Intent.createChooser(contentIntent, "Select source");
-
+                Intent chooser;
                 if (imageCapable) {
                     Uri outputUri = createCameraOutputUri();
                     if (outputUri != null) {
@@ -469,9 +475,19 @@ public class MainActivity extends BridgeActivity {
                         cameraIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                         cameraIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                         pendingCameraOutputUri = outputUri;
+                        // Use the explicit ACTION_CHOOSER pattern so camera
+                        // apps show up as a peer to the doc picker rather
+                        // than being relegated to an "alternatives" sheet.
+                        chooser = new Intent(Intent.ACTION_CHOOSER);
+                        chooser.putExtra(Intent.EXTRA_INTENT, contentIntent);
+                        chooser.putExtra(Intent.EXTRA_TITLE, "Select source");
                         chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS,
                                 new Intent[]{cameraIntent});
+                    } else {
+                        chooser = contentIntent;
                     }
+                } else {
+                    chooser = contentIntent;
                 }
 
                 pendingChooserIntent = chooser;

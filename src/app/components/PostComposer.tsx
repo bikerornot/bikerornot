@@ -285,27 +285,6 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
               />
             )}
 
-            {imagePreviews.length > 0 && (
-              <div
-                className={`grid gap-2 mt-2 ${imagePreviews.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}
-              >
-                {imagePreviews.map((url, i) => (
-                  <div
-                    key={i}
-                    className="relative aspect-video rounded-lg overflow-hidden bg-zinc-800"
-                  >
-                    <Image src={url} alt="" fill className="object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(i)}
-                      className="absolute top-1 right-1 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-black"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Icon-only action row at rest */}
@@ -353,6 +332,33 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
             </div>
           )}
         </div>
+
+        {/* Image previews — rendered at form level (not inside the avatar
+            row) so they span the full composer width and match how the
+            final post looks in the feed. Previously they were nested in
+            the textarea column, which pinched them flush to the right of
+            the avatar. */}
+        {imagePreviews.length > 0 && (
+          <div
+            className={`grid gap-2 mt-3 ${imagePreviews.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}
+          >
+            {imagePreviews.map((url, i) => (
+              <div
+                key={i}
+                className="relative aspect-video rounded-lg overflow-hidden bg-zinc-800"
+              >
+                <Image src={url} alt="" fill className="object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeImage(i)}
+                  className="absolute top-1 right-1 bg-black/70 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-black"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* YouTube preview — full width to match how it looks when posted */}
         {ytPreview && (

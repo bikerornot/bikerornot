@@ -149,6 +149,7 @@ public class MainActivity extends BridgeActivity {
             results -> {
                 boolean granted = Boolean.TRUE.equals(results.get(Manifest.permission.ACCESS_FINE_LOCATION))
                         || Boolean.TRUE.equals(results.get(Manifest.permission.ACCESS_COARSE_LOCATION));
+                Log.d(TAG, "geo permission result granted=" + granted + " results=" + results);
                 if (pendingGeoCallback != null && pendingGeoOrigin != null) {
                     // Second arg (`retain`) = true so the decision persists
                     // for this origin inside the WebView — the user only
@@ -416,6 +417,12 @@ public class MainActivity extends BridgeActivity {
 
         webView.getSettings().setSupportMultipleWindows(true);
         webView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
+        // setGeolocationEnabled is a no-op on modern WebView (API 33+ just
+        // defers to onGeolocationPermissionsShowPrompt) but is still honored
+        // on older Android versions where it defaults to false. Cheap to
+        // set defensively so the callback below can grant the permission
+        // without an outer setting blocking it.
+        webView.getSettings().setGeolocationEnabled(true);
 
         webView.setWebViewClient(new BridgeWebViewClient(bridge) {
             @Override
@@ -547,6 +554,7 @@ public class MainActivity extends BridgeActivity {
                         Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
                 boolean coarse = ContextCompat.checkSelfPermission(MainActivity.this,
                         Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+                Log.d(TAG, "geo prompt origin=" + origin + " fine=" + fine + " coarse=" + coarse);
                 if (fine || coarse) {
                     callback.invoke(origin, true, true);
                     return;
@@ -555,6 +563,7 @@ public class MainActivity extends BridgeActivity {
                 // pendingGeoCallback/Origin once the OS dialog closes.
                 pendingGeoOrigin = origin;
                 pendingGeoCallback = callback;
+                Log.d(TAG, "geo requesting runtime permission");
                 locationPermissionLauncher.launch(new String[]{
                         Manifest.permission.ACCESS_FINE_LOCATION,
                         Manifest.permission.ACCESS_COARSE_LOCATION,

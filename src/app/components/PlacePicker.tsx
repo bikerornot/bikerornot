@@ -1,46 +1,52 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { searchPlaces, type PlaceSearchResult } from '@/app/actions/places'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import {
+  searchPlaces,
+  selectPlace,
+  type PlacePrediction,
+  type PlaceSearchResult,
+} from '@/app/actions/places'
 
 interface Props {
   onSelect: (place: PlaceSearchResult) => void
   onClose: () => void
 }
 
-// Full-screen modal place picker. Opens when the user taps the location
-// icon in the composer. Three sources feed the list:
+// Google Places Autocomplete-backed check-in picker. Two-phase flow:
 //
-//   1. "Use current location" — browser geolocation → proximity bias on
-//      subsequent searches. Silent if the user denies permission.
-//   2. Typed query — debounced 300ms so we don't fire a Mapbox request
-//      on every keystroke. Results are biased toward the resolved lat/lng
-//      when available.
+//   1. As the user types, hit the Autocomplete endpoint → cheap
+//      predictions (place_id + display text). Debounced 300ms.
+//   2. When the user taps a prediction, hit Place Details → lat/lng,
+//      address, category. THIS is what closes out Google's billed
+//      "session" — using the same sessionToken across step 1 and 2
+//      means a whole check-in costs one request, not one per keystroke.
 //
-// No "recent places" list yet — would need a new table or user prefs
-// row; skip for the MVP and add later if real usage shows pattern of
-// repeat check-ins.
+// Location is a relevance bias only — biker use case is "check in at
+// this named place I know", not "browse what's nearby".
 export default function PlacePicker({ onSelect, onClose }: Props) {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<PlaceSearchResult[]>([])
+  const [predictions, setPredictions] = useState<PlacePrediction[]>([])
   const [loading, setLoading] = useState(false)
+  const [resolvingPlaceId, setResolvingPlaceId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [proximity, setProximity] = useState<{ latitude: number; longitude: number } | null>(null)
   const [locatingInFlight, setLocatingInFlight] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Autofocus the search box on open so the keyboard comes up right away
-  // on mobile — otherwise users have to make an extra tap.
+  // Session token tied to the lifetime of this picker instance. Generated
+  // once on mount and reused for every autocomplete + the final details
+  // call — that's what makes Google bill the whole interaction as one
+  // request instead of one-per-keystroke. UUID v4 is the required format.
+  const sessionToken = useMemo(() => crypto.randomUUID(), [])
+
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
-  // Debounced search. A trailing 300ms window balances responsiveness
-  // against Mapbox request cost; shorter feels snappier but burns free
-  // tier quota on in-progress typing ("res", "rest", "resta"...).
   useEffect(() => {
     if (query.trim().length < 2) {
-      setResults([])
+      setPredictions([])
       setError(null)
       return
     }
@@ -49,8 +55,8 @@ export default function PlacePicker({ onSelect, onClose }: Props) {
       setLoading(true)
       setError(null)
       try {
-        const out = await searchPlaces(query, proximity ?? undefined)
-        if (!cancelled) setResults(out)
+        const out = await searchPlaces(query, sessionToken, proximity ?? undefined)
+        if (!cancelled) setPredictions(out)
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Search failed')
       } finally {
@@ -61,7 +67,7 @@ export default function PlacePicker({ onSelect, onClose }: Props) {
       cancelled = true
       clearTimeout(t)
     }
-  }, [query, proximity])
+  }, [query, proximity, sessionToken])
 
   function handleUseCurrentLocation() {
     if (!navigator.geolocation) {
@@ -73,10 +79,6 @@ export default function PlacePicker({ onSelect, onClose }: Props) {
       (pos) => {
         setProximity({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
         setLocatingInFlight(false)
-        // Location is used only as a relevance bias on subsequent typed
-        // searches — Mapbox's geocoder doesn't have a reliable "list
-        // everything near me" mode, so we don't auto-display anything.
-        // The user types a name and nearby matches rise to the top.
       },
       (err) => {
         setLocatingInFlight(false)
@@ -84,6 +86,19 @@ export default function PlacePicker({ onSelect, onClose }: Props) {
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
     )
+  }
+
+  async function handlePick(p: PlacePrediction) {
+    setResolvingPlaceId(p.placeId)
+    setError(null)
+    try {
+      const full = await selectPlace(p.placeId, sessionToken)
+      onSelect(full)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not load place details')
+    } finally {
+      setResolvingPlaceId(null)
+    }
   }
 
   return (
@@ -120,7 +135,7 @@ export default function PlacePicker({ onSelect, onClose }: Props) {
           <button
             type="button"
             onClick={handleUseCurrentLocation}
-            disabled={locatingInFlight}
+            disabled={locatingInFlight || !!proximity}
             className="w-full flex items-center gap-3 px-4 py-3 border-b border-zinc-800 text-left hover:bg-zinc-800 transition-colors disabled:opacity-60"
           >
             <div className="w-9 h-9 rounded-full bg-orange-500/15 flex items-center justify-center flex-shrink-0">
@@ -160,31 +175,38 @@ export default function PlacePicker({ onSelect, onClose }: Props) {
             </p>
           )}
 
-          {!loading && query.trim().length >= 2 && results.length === 0 && !error && (
+          {!loading && query.trim().length >= 2 && predictions.length === 0 && !error && (
             <p className="px-4 py-3 text-zinc-500 text-sm">No results for &ldquo;{query}&rdquo;</p>
           )}
 
-          {results.map((r) => (
-            <button
-              key={r.mapboxId}
-              type="button"
-              onClick={() => onSelect(r)}
-              className="w-full flex items-start gap-3 px-4 py-3 border-t border-zinc-800 text-left hover:bg-zinc-800 transition-colors"
-            >
-              <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-7.5 8-13a8 8 0 10-16 0c0 5.5 8 13 8 13z" />
-                  <circle cx="12" cy="9" r="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-white text-sm font-medium truncate">{r.name}</p>
-                {r.fullAddress && (
-                  <p className="text-zinc-500 text-xs truncate">{r.fullAddress}</p>
+          {predictions.map((p) => {
+            const busy = resolvingPlaceId === p.placeId
+            return (
+              <button
+                key={p.placeId}
+                type="button"
+                onClick={() => handlePick(p)}
+                disabled={!!resolvingPlaceId}
+                className="w-full flex items-start gap-3 px-4 py-3 border-t border-zinc-800 text-left hover:bg-zinc-800 transition-colors disabled:opacity-60"
+              >
+                <div className="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-7.5 8-13a8 8 0 10-16 0c0 5.5 8 13 8 13z" />
+                    <circle cx="12" cy="9" r="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-white text-sm font-medium truncate">{p.primary}</p>
+                  {p.secondary && (
+                    <p className="text-zinc-500 text-xs truncate">{p.secondary}</p>
+                  )}
+                </div>
+                {busy && (
+                  <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin mt-1" />
                 )}
-              </div>
-            </button>
-          ))}
+              </button>
+            )
+          })}
         </div>
       </div>
     </div>

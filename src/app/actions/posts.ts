@@ -33,12 +33,14 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
   const wallOwnerId = formData.get('wallOwnerId') as string | null
   const groupId = formData.get('groupId') as string | null
   const bikeId = formData.get('bikeId') as string | null
+  const placeId = formData.get('placeId') as string | null
   const files = formData.getAll('images') as File[]
 
   // Reject malformed IDs before any are interpolated into PostgREST filter strings
   if (wallOwnerId) assertUuid(wallOwnerId, 'wallOwnerId')
   if (groupId) assertUuid(groupId, 'groupId')
   if (bikeId) assertUuid(bikeId, 'bikeId')
+  if (placeId) assertUuid(placeId, 'placeId')
 
   // If posting on someone else's wall, require an accepted friendship
   if (wallOwnerId && wallOwnerId !== user.id) {
@@ -113,6 +115,7 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
       wall_owner_id: wallOwnerId || null,
       group_id: groupId || null,
       bike_id: bikeId || null,
+      place_id: placeId || null,
       content: content?.trim() || null,
     })
     .select()

@@ -194,6 +194,15 @@ function SharedPostEmbed({ post }: { post: Omit<Post, 'shared_post'> }) {
         </Link>
         <span className="text-zinc-500 text-sm">· {formatTimeAgo(post.created_at)}</span>
       </div>
+      {post.place && (
+        <div className="px-4 -mt-2 mb-1 flex items-center gap-1.5 text-zinc-400 text-sm">
+          <svg className="w-4 h-4 text-orange-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-7.5 8-13a8 8 0 10-16 0c0 5.5 8 13 8 13z" />
+            <circle cx="12" cy="9" r="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="truncate">at <span className="text-white font-medium">{post.place.name}</span></span>
+        </div>
+      )}
       {post.content && (() => {
         const ytVideo = extractYouTubeId(post.content)
         return (

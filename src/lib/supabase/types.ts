@@ -88,6 +88,17 @@ export interface PostImage {
   order_index: number
 }
 
+export interface Place {
+  id: string
+  mapbox_id: string
+  name: string
+  full_address: string | null
+  latitude: number
+  longitude: number
+  category: string | null
+  created_at: string
+}
+
 export interface Post {
   id: string
   author_id: string
@@ -96,6 +107,7 @@ export interface Post {
   group_id?: string | null
   shared_post_id?: string | null
   event_id?: string | null
+  place_id?: string | null
   content: string | null
   post_type?: string | null
   created_at: string
@@ -110,6 +122,7 @@ export interface Post {
   shared_post?: Omit<Post, 'shared_post'> | null
   group?: { name: string; slug: string } | null
   event?: { id: string; type: string; title: string; slug: string; starts_at: string; city: string | null; state: string | null; going_count: number; cover_photo_url: string | null; status: string } | null
+  place?: Place | null
 }
 
 export const GROUP_CATEGORIES = [

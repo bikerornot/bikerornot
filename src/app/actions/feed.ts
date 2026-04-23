@@ -87,7 +87,7 @@ export async function getFeedPage(page: number): Promise<{ posts: Post[]; hasMor
   const { data: postsData } = await admin
     .from('posts')
     .select(
-      '*, author:profiles!author_id(*), images:post_images(*), group:groups!group_id(name, slug), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status)'
+      '*, author:profiles!author_id(*), images:post_images(*), group:groups!group_id(name, slug), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status), place:places!place_id(*)'
     )
     .in('id', pagePostIds)
 

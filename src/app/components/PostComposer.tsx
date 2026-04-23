@@ -9,6 +9,8 @@ import { createPost } from '@/app/actions/posts'
 import { compressImage } from '@/lib/compress'
 import { extractYouTubeId, fetchYouTubeMeta } from '@/lib/youtube'
 import MentionDropdown, { useMention } from './MentionDropdown'
+import PlacePicker from './PlacePicker'
+import { getOrCreatePlace, type PlaceSearchResult } from '@/app/actions/places'
 
 interface Props {
   currentUserProfile: Profile
@@ -31,6 +33,8 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
   const [focused, setFocused] = useState(false)
   const [bikePickerOpen, setBikePickerOpen] = useState(false)
   const [taggedBike, setTaggedBike] = useState<UserBike | null>(null)
+  const [placePickerOpen, setPlacePickerOpen] = useState(false)
+  const [checkedInPlace, setCheckedInPlace] = useState<PlaceSearchResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const ytIdRef = useRef<string | null>(null)
@@ -43,7 +47,9 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
     images.length > 0 ||
     ytPreview !== null ||
     taggedBike !== null ||
-    bikePickerOpen
+    bikePickerOpen ||
+    checkedInPlace !== null ||
+    placePickerOpen
 
   const handleMentionSelect = useCallback((newText: string, newCursorPos: number) => {
     setContent(newText)
@@ -170,6 +176,17 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
       if (groupId) formData.set('groupId', groupId)
       const effectiveBikeId = bikeId ?? taggedBike?.id
       if (effectiveBikeId) formData.set('bikeId', effectiveBikeId)
+      // Resolve the check-in right before submit — getOrCreatePlace will
+      // reuse the places row if someone else has already checked in here.
+      // Failure is non-fatal: post still goes out, we just skip the attach.
+      if (checkedInPlace) {
+        try {
+          const placeId = await getOrCreatePlace(checkedInPlace)
+          formData.set('placeId', placeId)
+        } catch (err) {
+          console.warn('Could not resolve place for check-in', err)
+        }
+      }
       images.forEach((file) => formData.append('images', file))
 
       const result = await createPost(formData)
@@ -187,6 +204,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
       ytIdRef.current = null
       setTaggedBike(null)
       setBikePickerOpen(false)
+      setCheckedInPlace(null)
       setFocused(false)
       onPostCreated?.(result.postId)
     } catch (err: unknown) {
@@ -329,6 +347,20 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                 </svg>
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFocused(true)
+                  setPlacePickerOpen(true)
+                }}
+                className="text-orange-400/70 hover:text-orange-400 p-2 rounded-lg hover:bg-zinc-800"
+                title="Check in"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-7.5 8-13a8 8 0 10-16 0c0 5.5 8 13 8 13z" />
+                  <circle cx="12" cy="9" r="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
             </div>
           )}
         </div>
@@ -388,6 +420,36 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
               <p className="text-white text-sm font-medium line-clamp-2">{ytPreview.title}</p>
               <p className="text-zinc-400 text-sm">{ytPreview.channel}</p>
             </div>
+          </div>
+        )}
+
+        {/* Checked-in place chip — mirrors the tagged-bike chip below so
+            both optional post annotations share the same visual language. */}
+        {checkedInPlace && (
+          <div className="mt-3 flex items-center gap-3 bg-zinc-800 rounded-lg p-2 pr-3 border border-zinc-700">
+            <div className="w-12 h-12 rounded-md bg-orange-500/15 flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-7.5 8-13a8 8 0 10-16 0c0 5.5 8 13 8 13z" />
+                <circle cx="12" cy="9" r="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-orange-400/80 font-medium">Checked in at</p>
+              <p className="text-white text-sm font-medium truncate">{checkedInPlace.name}</p>
+              {checkedInPlace.fullAddress && (
+                <p className="text-zinc-500 text-xs truncate">{checkedInPlace.fullAddress}</p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setCheckedInPlace(null)}
+              className="text-zinc-500 hover:text-white p-1.5 rounded-full hover:bg-zinc-700 flex-shrink-0"
+              title="Remove check-in"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         )}
 
@@ -560,6 +622,23 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
                 </svg>
                 <span>Tag</span>
               </button>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setPlacePickerOpen(true)}
+                className={`flex items-center gap-1.5 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-sm font-medium ${
+                  placePickerOpen || checkedInPlace
+                    ? 'text-orange-400 bg-zinc-800'
+                    : 'text-orange-400/80 hover:text-orange-400'
+                }`}
+                title="Check in"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-7.5 8-13a8 8 0 10-16 0c0 5.5 8 13 8 13z" />
+                  <circle cx="12" cy="9" r="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span>Check in</span>
+              </button>
             </div>
 
             <button
@@ -572,6 +651,16 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
           </div>
         )}
       </form>
+
+      {placePickerOpen && (
+        <PlacePicker
+          onClose={() => setPlacePickerOpen(false)}
+          onSelect={(place) => {
+            setCheckedInPlace(place)
+            setPlacePickerOpen(false)
+          }}
+        />
+      )}
     </div>
   )
 }

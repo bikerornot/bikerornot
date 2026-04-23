@@ -103,7 +103,7 @@ export default function PlacePicker({ onSelect, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-6 sm:items-center sm:pt-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}

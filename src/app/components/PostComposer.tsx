@@ -303,132 +303,24 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
               />
             )}
 
-            {/* Mobile-only collapsed action row — rendered below the
-                textarea so the placeholder keeps full width while the
-                affordances stay visible. Desktop keeps the inline
-                variant (sibling to this wrapper). */}
-            {!expanded && (
-              <div className="flex sm:hidden items-center justify-around mt-1.5 -mx-1">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="text-orange-400/70 hover:text-orange-400 p-2 rounded-lg hover:bg-zinc-800"
-                  title="Add photos"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <polyline points="21 15 16 10 5 21" />
-                  </svg>
-                </button>
-                {showBikeTag && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFocused(true)
-                      handleBikeClick()
-                    }}
-                    className="text-orange-400/70 hover:text-orange-400 p-2 rounded-lg hover:bg-zinc-800"
-                    title="Tag a bike"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                      <circle cx="5.5" cy="17.5" r="3.5" />
-                      <circle cx="18.5" cy="17.5" r="3.5" />
-                      <path d="M15 6h3l2 5m-4-5l-4 11H5.5m0 0l2-7h7" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={insertMention}
-                  className="text-orange-400/70 hover:text-orange-400 p-2 rounded-lg hover:bg-zinc-800"
-                  title="Tag a friend"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                  </svg>
-                </button>
-                {!bikeId && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFocused(true)
-                      setPlacePickerOpen(true)
-                    }}
-                    className="text-orange-400/70 hover:text-orange-400 p-2 rounded-lg hover:bg-zinc-800"
-                    title="Check in"
-                  >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-7.5 8-13a8 8 0 10-16 0c0 5.5 8 13 8 13z" />
-                      <circle cx="12" cy="9" r="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            )}
           </div>
 
-          {/* Icon-only action row at rest — hidden on mobile so the
-              placeholder has room; tapping the field expands the composer
-              and reveals the full action bar. */}
+          {/* Single photo affordance at rest — matches Facebook's pattern.
+              Photo is the dominant secondary action; the others appear on
+              focus via the expanded action bar. */}
           {!expanded && (
-            <div className="hidden sm:flex items-center gap-1 pt-1.5 flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="text-orange-400/70 hover:text-orange-400 p-2 rounded-lg hover:bg-zinc-800"
-                title="Add photos"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <polyline points="21 15 16 10 5 21" />
-                </svg>
-              </button>
-              {showBikeTag && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFocused(true)
-                    handleBikeClick()
-                  }}
-                  className="text-orange-400/70 hover:text-orange-400 p-2 rounded-lg hover:bg-zinc-800"
-                  title="Tag a bike"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                    <circle cx="5.5" cy="17.5" r="3.5" />
-                    <circle cx="18.5" cy="17.5" r="3.5" />
-                    <path d="M15 6h3l2 5m-4-5l-4 11H5.5m0 0l2-7h7" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={insertMention}
-                className="text-orange-400/70 hover:text-orange-400 p-2 rounded-lg hover:bg-zinc-800"
-                title="Tag a friend"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                </svg>
-              </button>
-              {!bikeId && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFocused(true)
-                    setPlacePickerOpen(true)
-                  }}
-                  className="text-orange-400/70 hover:text-orange-400 p-2 rounded-lg hover:bg-zinc-800"
-                  title="Check in"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-7.5 8-13a8 8 0 10-16 0c0 5.5 8 13 8 13z" />
-                    <circle cx="12" cy="9" r="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="text-orange-400/70 hover:text-orange-400 p-2 rounded-lg hover:bg-zinc-800 flex-shrink-0"
+              title="Add photos"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+            </button>
           )}
         </div>
 

@@ -69,8 +69,12 @@ export async function googleAutocomplete(
   })
   if (proximity) {
     params.set('location', `${proximity.latitude},${proximity.longitude}`)
-    params.set('radius', '80000') // 50 mi in meters; bias, not a hard cap
-    params.set('strictbounds', 'true') // make the radius an actual filter
+    // 80km radius as a bias hint, NOT a hard cap. strictbounds=true
+    // excluded nearby chain locations Google ranked as "less canonical"
+    // even when they were the closest match — dropping it lets Google
+    // return neighborhood stores that sit just outside its strict radius
+    // calculation.
+    params.set('radius', '80000')
   }
 
   const url = `${AUTOCOMPLETE_URL}?${params.toString()}`

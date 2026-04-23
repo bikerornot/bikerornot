@@ -572,22 +572,22 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
 
         {/* Expanded action bar */}
         {expanded && (
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-zinc-800">
-            <div className="flex items-center gap-1">
+          <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-zinc-800">
+            <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
               {images.length < 4 && (
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-1.5 text-orange-400/80 hover:text-orange-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-sm font-medium"
+                  className="flex items-center gap-1.5 text-orange-400/80 hover:text-orange-400 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-sm font-medium"
                   title="Add photos (max 4)"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                     <circle cx="8.5" cy="8.5" r="1.5" />
                     <polyline points="21 15 16 10 5 21" />
                   </svg>
-                  Photo
+                  <span className="hidden sm:inline">Photo</span>
                 </button>
               )}
               {showBikeTag && (
@@ -595,49 +595,49 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={handleBikeClick}
-                  className={`flex items-center gap-1.5 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-sm font-medium ${
+                  className={`flex items-center gap-1.5 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-sm font-medium ${
                     bikePickerOpen || taggedBike
                       ? 'text-orange-400 bg-zinc-800'
                       : 'text-orange-400/80 hover:text-orange-400'
                   }`}
                   title="Tag a bike"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                     <circle cx="5.5" cy="17.5" r="3.5" />
                     <circle cx="18.5" cy="17.5" r="3.5" />
                     <path d="M15 6h3l2 5m-4-5l-4 11H5.5m0 0l2-7h7" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  Bike
+                  <span className="hidden sm:inline">Bike</span>
                 </button>
               )}
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={insertMention}
-                className="flex items-center gap-1.5 text-orange-400/80 hover:text-orange-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-sm font-medium"
+                className="flex items-center gap-1.5 text-orange-400/80 hover:text-orange-400 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-sm font-medium"
                 title="Tag a friend"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                 </svg>
-                <span>Tag</span>
+                <span className="hidden sm:inline">Tag</span>
               </button>
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => setPlacePickerOpen(true)}
-                className={`flex items-center gap-1.5 transition-colors px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-sm font-medium ${
+                className={`flex items-center gap-1.5 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-sm font-medium ${
                   placePickerOpen || checkedInPlace
                     ? 'text-orange-400 bg-zinc-800'
                     : 'text-orange-400/80 hover:text-orange-400'
                 }`}
                 title="Check in"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-7.5 8-13a8 8 0 10-16 0c0 5.5 8 13 8 13z" />
                   <circle cx="12" cy="9" r="2.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                <span>Check in</span>
+                <span className="hidden sm:inline">Check in</span>
               </button>
             </div>
 

@@ -9,13 +9,10 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Message;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.GeolocationPermissions;
-import android.webkit.ValueCallback;
-import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -29,7 +26,6 @@ import androidx.browser.customtabs.CustomTabsClient;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.content.FileProvider;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -39,14 +35,10 @@ import com.getcapacitor.BridgeWebChromeClient;
 import com.getcapacitor.BridgeWebViewClient;
 import com.google.firebase.messaging.FirebaseMessaging;
 
-import java.io.File;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
 
 public class MainActivity extends BridgeActivity {
 
@@ -56,20 +48,6 @@ public class MainActivity extends BridgeActivity {
     private static final String DEVICE_TOKEN_ENDPOINT = "https://www.bikerornot.com/api/device-tokens";
 
     private long lastBackPressMs = 0L;
-
-    // File-chooser bridging state. When a page fires an <input type="file">
-    // event, the WebView hands us a ValueCallback we must invoke with the
-    // user's selected URIs (or null if cancelled). We launch a chooser
-    // activity and stash the callback + the URI of any in-progress camera
-    // capture here so the ActivityResult handlers below can complete the
-    // flow. Capacitor's default file chooser only offers Photos / Files on
-    // Android 13+ (Photo Picker API) which hides the camera source, so we
-    // override onShowFileChooser ourselves to include ACTION_IMAGE_CAPTURE.
-    private ValueCallback<Uri[]> pendingFileCallback = null;
-    private Uri pendingCameraOutputUri = null;
-    private ActivityResultLauncher<Intent> fileChooserLauncher;
-    private ActivityResultLauncher<String> cameraPermissionLauncher;
-    private Intent pendingChooserIntent = null;
 
     // Geolocation bridging state. The WebView's
     // onGeolocationPermissionsShowPrompt hands us an origin + a callback
@@ -102,48 +80,15 @@ public class MainActivity extends BridgeActivity {
         setupExternalLinkHandling();
         requestNotificationPermissionIfNeeded();
         registerFcmToken();
-        registerFileChooserLaunchers();
+        registerPermissionLaunchers();
         handleNotificationIntent(getIntent());
     }
 
-    // File chooser result + camera-permission plumbing. Registered once in
-    // onCreate because ActivityResultLauncher must be declared before the
-    // activity starts (STARTED state) per AndroidX contract.
-    private void registerFileChooserLaunchers() {
-        fileChooserLauncher = registerForActivityResult(
-            new ActivityResultContracts.StartActivityForResult(),
-            result -> {
-                if (pendingFileCallback == null) return;
-                Uri[] uris = null;
-                if (result.getResultCode() == RESULT_OK) {
-                    Intent data = result.getData();
-                    Uri dataUri = data != null ? data.getData() : null;
-                    if (dataUri != null) {
-                        // User picked from gallery / photos
-                        uris = new Uri[]{dataUri};
-                    } else if (pendingCameraOutputUri != null) {
-                        // User took a photo — camera writes to the URI we
-                        // provided; data Intent is null in that case.
-                        uris = new Uri[]{pendingCameraOutputUri};
-                    }
-                }
-                pendingFileCallback.onReceiveValue(uris);
-                pendingFileCallback = null;
-                pendingCameraOutputUri = null;
-            }
-        );
-
-        cameraPermissionLauncher = registerForActivityResult(
-            new ActivityResultContracts.RequestPermission(),
-            granted -> {
-                // Whether granted or denied, proceed with the chooser. If
-                // camera was denied, the chooser still shows Photos/Files
-                // and users can pick that way; the camera option in the
-                // chooser will still be offered but will fail on tap.
-                launchPendingChooser();
-            }
-        );
-
+    // Activity-result launchers must be registered before onStart per
+    // AndroidX contract, so this runs from onCreate. Currently only the
+    // WebView geolocation prompt needs a launcher; the file-chooser uses
+    // Capacitor's default path (gallery / photo picker — no camera).
+    private void registerPermissionLaunchers() {
         locationPermissionLauncher = registerForActivityResult(
             new ActivityResultContracts.RequestMultiplePermissions(),
             results -> {
@@ -161,42 +106,6 @@ public class MainActivity extends BridgeActivity {
                 pendingGeoOrigin = null;
             }
         );
-    }
-
-    // Build a chooser that combines ACTION_GET_CONTENT (gallery / photos /
-    // files) with ACTION_IMAGE_CAPTURE (camera). Called from
-    // onShowFileChooser after any runtime camera permission has been
-    // resolved. Populates pendingCameraOutputUri so the result handler
-    // knows which file to surface back to the WebView when the user
-    // actually took a photo.
-    private void launchPendingChooser() {
-        if (pendingChooserIntent == null) return;
-        Intent toLaunch = pendingChooserIntent;
-        pendingChooserIntent = null;
-        try {
-            fileChooserLauncher.launch(toLaunch);
-        } catch (ActivityNotFoundException e) {
-            Log.w(TAG, "File chooser launch failed", e);
-            if (pendingFileCallback != null) {
-                pendingFileCallback.onReceiveValue(null);
-                pendingFileCallback = null;
-            }
-            pendingCameraOutputUri = null;
-        }
-    }
-
-    private Uri createCameraOutputUri() {
-        try {
-            File dir = new File(getCacheDir(), "camera_captures");
-            if (!dir.exists()) dir.mkdirs();
-            String stamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
-            File outFile = new File(dir, "IMG_" + stamp + ".jpg");
-            String authority = getPackageName() + ".fileprovider";
-            return FileProvider.getUriForFile(this, authority, outFile);
-        } catch (Exception e) {
-            Log.w(TAG, "Could not create camera output URI", e);
-            return null;
-        }
     }
 
     // Fires when the user taps a notification while the activity is already
@@ -455,87 +364,6 @@ public class MainActivity extends BridgeActivity {
                 WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
                 transport.setWebView(sink);
                 resultMsg.sendToTarget();
-                return true;
-            }
-
-            // Override the file chooser so <input type="file" accept="image/*">
-            // offers BOTH the photo library AND the camera. Capacitor's default
-            // routes to Android 13+'s Photo Picker which is photos-only, and
-            // users can't take a new shot of their bike in-context. We merge
-            // ACTION_GET_CONTENT (or ACTION_OPEN_DOCUMENT) with a camera capture
-            // intent via EXTRA_INITIAL_INTENTS so the system's disambiguation
-            // sheet shows "Camera" alongside the existing sources.
-            @Override
-            public boolean onShowFileChooser(WebView webView,
-                                             ValueCallback<Uri[]> filePathCallback,
-                                             FileChooserParams fileChooserParams) {
-                // Cancel any in-flight request — WebView guarantees only one
-                // at a time but be defensive.
-                if (pendingFileCallback != null) {
-                    pendingFileCallback.onReceiveValue(null);
-                }
-                pendingFileCallback = filePathCallback;
-                pendingCameraOutputUri = null;
-
-                String[] accept = fileChooserParams.getAcceptTypes();
-                String mimeType = "*/*";
-                if (accept != null && accept.length > 0 && accept[0] != null && !accept[0].isEmpty()) {
-                    mimeType = accept[0];
-                }
-                // Only offer the camera when the input accepts images — a form
-                // asking for a PDF upload should not show a Take Photo option.
-                boolean imageCapable = mimeType.startsWith("image/") || mimeType.equals("*/*");
-
-                // ACTION_OPEN_DOCUMENT returns content:// URIs with grant
-                // flags that survive across activity boundaries and are
-                // reliably readable by WebView; ACTION_GET_CONTENT used to
-                // work but broke previewing picked images on newer Android
-                // because the returned URI's permission grant didn't carry
-                // through to the WebView's upload pipeline.
-                Intent contentIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                contentIntent.addCategory(Intent.CATEGORY_OPENABLE);
-                contentIntent.setType(mimeType);
-                contentIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                if (fileChooserParams.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE) {
-                    contentIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-                }
-
-                Intent chooser;
-                if (imageCapable) {
-                    Uri outputUri = createCameraOutputUri();
-                    if (outputUri != null) {
-                        Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                        cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, outputUri);
-                        cameraIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                        cameraIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        pendingCameraOutputUri = outputUri;
-                        // Use the explicit ACTION_CHOOSER pattern so camera
-                        // apps show up as a peer to the doc picker rather
-                        // than being relegated to an "alternatives" sheet.
-                        chooser = new Intent(Intent.ACTION_CHOOSER);
-                        chooser.putExtra(Intent.EXTRA_INTENT, contentIntent);
-                        chooser.putExtra(Intent.EXTRA_TITLE, "Select source");
-                        chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS,
-                                new Intent[]{cameraIntent});
-                    } else {
-                        chooser = contentIntent;
-                    }
-                } else {
-                    chooser = contentIntent;
-                }
-
-                pendingChooserIntent = chooser;
-
-                if (imageCapable
-                        && ContextCompat.checkSelfPermission(MainActivity.this,
-                                Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                    // Request camera permission first so tapping "Camera" in the
-                    // chooser actually works. If the user denies, the chooser
-                    // still launches — they can pick from the gallery instead.
-                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA);
-                } else {
-                    launchPendingChooser();
-                }
                 return true;
             }
 

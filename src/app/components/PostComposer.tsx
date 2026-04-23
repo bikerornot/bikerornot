@@ -532,7 +532,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
         {/* Expanded action bar */}
         {expanded && (
           <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-zinc-800">
-            <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
+            <div className="flex items-center gap-3 sm:gap-1 min-w-0">
               {images.length < 4 && (
                 <button
                   type="button"

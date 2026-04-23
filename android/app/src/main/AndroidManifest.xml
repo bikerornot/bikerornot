@@ -58,6 +58,15 @@
          can be posted. Silently granted on older versions. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Camera capture for <input type="file" accept="image/*"> and
+         <input capture="environment">. Without this, Capacitor's
+         BridgeWebChromeClient doesn't offer "Camera" as a source in the
+         file picker — users only see Photos / Files when uploading a bike
+         photo or avatar. The permission is granted at capture time, not
+         install, so no new prompt until the user actually taps Camera. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <!-- Android 11+ package visibility for Custom Tabs. Without this,
          CustomTabsClient.getPackageName() returns null and we cannot pin
          the browser, letting URL-intercepting apps (Facebook, YouTube,

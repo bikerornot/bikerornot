@@ -349,20 +349,22 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                 </svg>
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFocused(true)
-                  setPlacePickerOpen(true)
-                }}
-                className="text-orange-400/70 hover:text-orange-400 p-2 rounded-lg hover:bg-zinc-800"
-                title="Check in"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-7.5 8-13a8 8 0 10-16 0c0 5.5 8 13 8 13z" />
-                  <circle cx="12" cy="9" r="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
+              {!bikeId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFocused(true)
+                    setPlacePickerOpen(true)
+                  }}
+                  className="text-orange-400/70 hover:text-orange-400 p-2 rounded-lg hover:bg-zinc-800"
+                  title="Check in"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-7.5 8-13a8 8 0 10-16 0c0 5.5 8 13 8 13z" />
+                    <circle cx="12" cy="9" r="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -624,23 +626,25 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
                 </svg>
                 <span className="hidden sm:inline">Tag</span>
               </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => setPlacePickerOpen(true)}
-                className={`flex items-center gap-1.5 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-sm font-medium ${
-                  placePickerOpen || checkedInPlace
-                    ? 'text-orange-400 bg-zinc-800'
-                    : 'text-orange-400/80 hover:text-orange-400'
-                }`}
-                title="Check in"
-              >
-                <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-7.5 8-13a8 8 0 10-16 0c0 5.5 8 13 8 13z" />
-                  <circle cx="12" cy="9" r="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <span className="hidden sm:inline">Check in</span>
-              </button>
+              {!bikeId && (
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => setPlacePickerOpen(true)}
+                  className={`flex items-center gap-1.5 transition-colors px-2 sm:px-3 py-1.5 rounded-lg hover:bg-zinc-800 text-sm font-medium ${
+                    placePickerOpen || checkedInPlace
+                      ? 'text-orange-400 bg-zinc-800'
+                      : 'text-orange-400/80 hover:text-orange-400'
+                  }`}
+                  title="Check in"
+                >
+                  <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-7.5 8-13a8 8 0 10-16 0c0 5.5 8 13 8 13z" />
+                    <circle cx="12" cy="9" r="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="hidden sm:inline">Check in</span>
+                </button>
+              )}
             </div>
 
             <button

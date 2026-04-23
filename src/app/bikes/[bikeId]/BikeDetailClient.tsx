@@ -346,13 +346,18 @@ function OwnerCard({ owner }: { owner: BikeDetailOwnerCard }) {
             <p className="text-white text-sm font-semibold truncate group-hover:text-orange-400 transition-colors">
               @{owner.username ?? 'user'}
             </p>
-            <p className="text-zinc-500 text-xs truncate">
-              {formatLocationLine(location, owner.distanceMiles)}
+            <p className="text-zinc-500 text-xs truncate min-h-[16px]">
+              {location || ' '}
             </p>
-            {/* Third metadata line — always rendered so the card's vertical
-                rhythm is consistent and the Add Friend buttons line up
-                across the grid. Aligned with username/location rather than
-                flush-left so the whole info block reads as one column. */}
+            {/* Distance gets its own line. On a narrow 2-column mobile grid
+                "Tampa, FL · 12 mi" was too tight and got clipped by truncate;
+                separating lets each field breathe. Rendered unconditionally
+                (with &nbsp; placeholder) so all cards stay the same height. */}
+            <p className="text-zinc-500 text-xs truncate min-h-[16px]">
+              {owner.distanceMiles != null ? `${owner.distanceMiles} mi away` : ' '}
+            </p>
+            {/* Relationship line — same "always rendered" treatment so the
+                Add Friend buttons line up across the grid. */}
             <p className="text-xs truncate min-h-[16px]">
               {owner.friendshipStatus === 'accepted' ? (
                 <span className="text-emerald-400 font-medium">Friends</span>
@@ -370,15 +375,6 @@ function OwnerCard({ owner }: { owner: BikeDetailOwnerCard }) {
       </div>
     </div>
   )
-}
-
-// Render "Tampa, FL · 12 mi" when both are available, or either one alone
-// when the other is missing. Keeps the one-line format so the card layout
-// stays consistent regardless of profile completeness.
-function formatLocationLine(location: string, distanceMiles: number | null): string {
-  const dist = distanceMiles != null ? `${distanceMiles} mi` : ''
-  if (location && dist) return `${location} · ${dist}`
-  return location || dist || ''
 }
 
 // Inline friend/message action button. Kept local to the card so each one

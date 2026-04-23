@@ -305,9 +305,11 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
 
           </div>
 
-          {/* Icon-only action row at rest */}
+          {/* Icon-only action row at rest — hidden on mobile so the
+              placeholder has room; tapping the field expands the composer
+              and reveals the full action bar. */}
           {!expanded && (
-            <div className="flex items-center gap-1 pt-1.5 flex-shrink-0">
+            <div className="hidden sm:flex items-center gap-1 pt-1.5 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}

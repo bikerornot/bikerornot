@@ -22,8 +22,15 @@ export interface BikeDetailOwnerCard {
   username: string | null
   firstName: string
   avatarUrl: string | null
+  // The other owner's own photo of THIS bike (year/make/model). Shown on
+  // the card so the whole section reads like "other Heritage Softails,"
+  // not a generic "suggested riders" widget.
+  bikePhotoUrl: string | null
   city: string | null
   state: string | null
+  // Rounded miles between the viewer and this owner. Null when either
+  // side has no location data — in that case we just hide the row.
+  distanceMiles: number | null
   mutualCount: number
   friendshipStatus: FriendshipStatus
 }
@@ -196,7 +203,9 @@ export default function BikeDetailClient({
       {totalOtherOwners > 0 && (
         <div className="px-4 sm:px-0 pt-2">
           <div className="flex items-baseline justify-between mb-1">
-            <h2 className="text-white text-lg font-semibold">Other owners</h2>
+            <h2 className="text-white text-lg font-semibold">
+              Also ride a {bikeModel || bikeName}
+            </h2>
             {totalOtherOwners > OWNERS_INITIAL_VISIBLE && !ownersExpanded && (
               <button
                 onClick={() => setOwnersExpanded(true)}
@@ -206,13 +215,7 @@ export default function BikeDetailClient({
               </button>
             )}
           </div>
-          {bikeMake && (
-            <p className="text-zinc-500 text-sm mb-3">
-              Riders with a{' '}
-              {[bikeYear, bikeMake, bikeModel].filter(Boolean).join(' ')}
-            </p>
-          )}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 mt-3">
             {visibleOwners.map((o) => (
               <OwnerCard key={o.id} owner={o} />
             ))}
@@ -259,36 +262,65 @@ function OwnerAvatar({
 function OwnerCard({ owner }: { owner: BikeDetailOwnerCard }) {
   const location = [owner.city, owner.state].filter(Boolean).join(', ')
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col items-center gap-2">
-      <Link
-        href={`/profile/${owner.username}`}
-        className="flex flex-col items-center gap-1.5 w-full min-w-0"
-      >
-        <OwnerAvatar
-          avatarUrl={owner.avatarUrl}
-          username={owner.username}
-          firstName={owner.firstName}
-          size={56}
-        />
-        <p className="text-white text-sm font-semibold truncate w-full text-center">
-          @{owner.username ?? 'user'}
-        </p>
-        {location && (
-          <p className="text-zinc-500 text-xs truncate w-full text-center">{location}</p>
-        )}
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden flex flex-col">
+      <Link href={`/profile/${owner.username}`} className="block">
+        {/* Bike photo — the whole point of this section. If the owner has
+            no photo for this bike, fall back to a neutral motorcycle glyph
+            on a tinted background instead of an empty grey block. */}
+        <div className="aspect-[4/3] w-full bg-zinc-800 flex items-center justify-center overflow-hidden">
+          {owner.bikePhotoUrl ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={owner.bikePhotoUrl}
+              alt=""
+              className="w-full h-full object-cover"
+              draggable={false}
+            />
+          ) : (
+            <span className="text-3xl text-zinc-600">🏍️</span>
+          )}
+        </div>
+      </Link>
+      <div className="p-3 flex flex-col gap-2">
+        <Link
+          href={`/profile/${owner.username}`}
+          className="flex items-center gap-2 min-w-0 group"
+        >
+          <OwnerAvatar
+            avatarUrl={owner.avatarUrl}
+            username={owner.username}
+            firstName={owner.firstName}
+            size={32}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-white text-sm font-semibold truncate group-hover:text-orange-400 transition-colors">
+              @{owner.username ?? 'user'}
+            </p>
+            <p className="text-zinc-500 text-xs truncate">
+              {formatLocationLine(location, owner.distanceMiles)}
+            </p>
+          </div>
+        </Link>
         {owner.friendshipStatus === 'accepted' ? (
           <p className="text-emerald-400 text-xs font-medium">Friends</p>
         ) : owner.mutualCount > 0 ? (
           <p className="text-orange-400 text-xs font-medium">
             {owner.mutualCount} mutual friend{owner.mutualCount === 1 ? '' : 's'}
           </p>
-        ) : (
-          <p className="text-xs text-zinc-600">&nbsp;</p>
-        )}
-      </Link>
-      <OwnerAction owner={owner} />
+        ) : null}
+        <OwnerAction owner={owner} />
+      </div>
     </div>
   )
+}
+
+// Render "Tampa, FL · 12 mi" when both are available, or either one alone
+// when the other is missing. Keeps the one-line format so the card layout
+// stays consistent regardless of profile completeness.
+function formatLocationLine(location: string, distanceMiles: number | null): string {
+  const dist = distanceMiles != null ? `${distanceMiles} mi` : ''
+  if (location && dist) return `${location} · ${dist}`
+  return location || dist || ''
 }
 
 // Inline friend/message action button. Kept local to the card so each one

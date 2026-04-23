@@ -11,6 +11,7 @@ import FindRidersLink from '@/app/components/FindRidersLink'
 import BottomNav from '@/app/components/BottomNav'
 import BikeDetailClient, { type BikeDetailOwnerCard } from './BikeDetailClient'
 import { getImageUrl } from '@/lib/supabase/image'
+import { haversine as haversineMiles } from '@/lib/geo'
 import type { UserBike, BikePhoto, Profile } from '@/lib/supabase/types'
 import type { FriendshipStatus } from '@/app/profile/[username]/FriendButton'
 
@@ -128,23 +129,34 @@ export default async function BikeDetailPage({
   let otherOwners: BikeDetailOwnerCard[] = []
   let totalOtherOwners = 0
   if (bike.year && bike.make && bike.model) {
-    // Find all users with the same bike
+    // Find all users with the same bike — keep each row's photo_url so we
+    // can show the owner's OWN version of the bike on their card (a much
+    // stronger hook than a generic avatar-only preview).
     const { data: matchingBikeRows } = await admin
       .from('user_bikes')
-      .select('user_id')
+      .select('user_id, photo_url')
       .eq('year', bike.year)
       .ilike('make', bike.make)
       .ilike('model', bike.model)
 
-    const candidateUserIds = Array.from(
-      new Set((matchingBikeRows ?? []).map((r) => r.user_id))
-    ).filter((id) => id !== ownerProfile.id)
+    // A user might own multiple matching bikes — take the first row we see
+    // per user. In practice rare (duplicate garage entries).
+    const bikePhotoByUserId = new Map<string, string | null>()
+    for (const row of matchingBikeRows ?? []) {
+      if (row.user_id === ownerProfile.id) continue
+      if (!bikePhotoByUserId.has(row.user_id)) {
+        bikePhotoByUserId.set(row.user_id, row.photo_url ?? null)
+      }
+    }
+    const candidateUserIds = Array.from(bikePhotoByUserId.keys())
 
     if (candidateUserIds.length > 0) {
-      // Fetch active profiles for the candidates
+      // Fetch active profiles for the candidates. Include lat/long so we
+      // can compute and surface distance on each card — proximity is a
+      // strong signal in a location-heavy social graph.
       const { data: ownerProfiles } = await admin
         .from('profiles')
-        .select('id, username, first_name, last_name, profile_photo_url, city, state, updated_at')
+        .select('id, username, first_name, last_name, profile_photo_url, city, state, updated_at, latitude, longitude')
         .in('id', candidateUserIds)
         .eq('onboarding_complete', true)
         .eq('status', 'active')
@@ -159,6 +171,8 @@ export default async function BikeDetailPage({
         city: string | null
         state: string | null
         updated_at: string
+        latitude: number | null
+        longitude: number | null
       }>
 
       totalOtherOwners = profiles.length
@@ -227,25 +241,50 @@ export default async function BikeDetailPage({
         }
       }
 
+      // Viewer's lat/long for distance display
+      const { data: viewerLoc } = await admin
+        .from('profiles')
+        .select('latitude, longitude')
+        .eq('id', user.id)
+        .single()
+      const viewerLat = viewerLoc?.latitude ?? null
+      const viewerLon = viewerLoc?.longitude ?? null
+
       otherOwners = profiles
-        .map<BikeDetailOwnerCard>((p) => ({
-          id: p.id,
-          username: p.username,
-          firstName: p.first_name,
-          avatarUrl: p.profile_photo_url
-            ? getImageUrl('avatars', p.profile_photo_url, undefined, p.updated_at)
-            : null,
-          city: p.city,
-          state: p.state,
-          mutualCount: mutualCountMap.get(p.id) ?? 0,
-          friendshipStatus: friendshipStatusMap.get(p.id) ?? 'none',
-        }))
+        .map<BikeDetailOwnerCard>((p) => {
+          const bikePhotoPath = bikePhotoByUserId.get(p.id) ?? null
+          let distanceMiles: number | null = null
+          if (viewerLat != null && viewerLon != null && p.latitude != null && p.longitude != null) {
+            distanceMiles = Math.round(haversineMiles(viewerLat, viewerLon, p.latitude, p.longitude))
+          }
+          return {
+            id: p.id,
+            username: p.username,
+            firstName: p.first_name,
+            avatarUrl: p.profile_photo_url
+              ? getImageUrl('avatars', p.profile_photo_url, undefined, p.updated_at)
+              : null,
+            bikePhotoUrl: bikePhotoPath ? getImageUrl('bikes', bikePhotoPath) : null,
+            city: p.city,
+            state: p.state,
+            distanceMiles,
+            mutualCount: mutualCountMap.get(p.id) ?? 0,
+            friendshipStatus: friendshipStatusMap.get(p.id) ?? 'none',
+          }
+        })
         .sort((a, b) => {
-          // Friends first, then mutual-count desc, then username
+          // Friends first, then mutual-count desc, then distance asc (closer
+          // wins), then username. Distance with a null value sorts last so
+          // rows without location data don't crowd the top.
           const aFriend = a.friendshipStatus === 'accepted' ? 1 : 0
           const bFriend = b.friendshipStatus === 'accepted' ? 1 : 0
           if (aFriend !== bFriend) return bFriend - aFriend
           if (a.mutualCount !== b.mutualCount) return b.mutualCount - a.mutualCount
+          if (a.distanceMiles != null && b.distanceMiles != null) {
+            return a.distanceMiles - b.distanceMiles
+          }
+          if (a.distanceMiles != null) return -1
+          if (b.distanceMiles != null) return 1
           return (a.username ?? '').localeCompare(b.username ?? '')
         })
     }

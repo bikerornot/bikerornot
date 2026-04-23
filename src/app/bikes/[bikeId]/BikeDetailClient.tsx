@@ -259,14 +259,53 @@ function OwnerAvatar({
   )
 }
 
+// Fills the 4:3 hero slot on an OwnerCard when there's no bike photo.
+// Real profile photo fills the whole slot; when the owner has no avatar
+// either, we render the hash-color circle large enough that the card
+// still has visual personality rather than a generic glyph.
+function OwnerAvatarHero({
+  avatarUrl,
+  username,
+  firstName,
+}: {
+  avatarUrl: string | null
+  username: string | null
+  firstName: string | null
+}) {
+  if (avatarUrl) {
+    return (
+      /* eslint-disable-next-line @next/next/no-img-element */
+      <img
+        src={avatarUrl}
+        alt=""
+        className="w-full h-full object-cover"
+        draggable={false}
+      />
+    )
+  }
+  const initials = avatarInitials(firstName, username)
+  const bg = avatarColorFor(username ?? firstName ?? initials)
+  return (
+    <div
+      className="w-full h-full flex items-center justify-center text-white font-bold text-5xl"
+      style={{ backgroundColor: bg }}
+    >
+      {initials}
+    </div>
+  )
+}
+
 function OwnerCard({ owner }: { owner: BikeDetailOwnerCard }) {
   const location = [owner.city, owner.state].filter(Boolean).join(', ')
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden flex flex-col">
       <Link href={`/profile/${owner.username}`} className="block">
-        {/* Bike photo — the whole point of this section. If the owner has
-            no photo for this bike, fall back to a neutral motorcycle glyph
-            on a tinted background instead of an empty grey block. */}
+        {/* Hero slot. When the owner has uploaded a photo of THIS bike
+            we show it (the whole point of the section); otherwise we
+            promote their avatar into the hero slot rather than rendering
+            a sea of identical motorcycle glyphs — ~70% of garage rows
+            currently have no bike photo, so the fallback has to carry
+            its own visual weight. */}
         <div className="aspect-[4/3] w-full bg-zinc-800 flex items-center justify-center overflow-hidden">
           {owner.bikePhotoUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
@@ -277,14 +316,18 @@ function OwnerCard({ owner }: { owner: BikeDetailOwnerCard }) {
               draggable={false}
             />
           ) : (
-            <span className="text-3xl text-zinc-600">🏍️</span>
+            <OwnerAvatarHero
+              avatarUrl={owner.avatarUrl}
+              username={owner.username}
+              firstName={owner.firstName}
+            />
           )}
         </div>
       </Link>
       <div className="p-3 flex flex-col gap-2">
         <Link
           href={`/profile/${owner.username}`}
-          className="flex items-center gap-2 min-w-0 group"
+          className="flex items-start gap-2 min-w-0 group"
         >
           <OwnerAvatar
             avatarUrl={owner.avatarUrl}
@@ -299,15 +342,23 @@ function OwnerCard({ owner }: { owner: BikeDetailOwnerCard }) {
             <p className="text-zinc-500 text-xs truncate">
               {formatLocationLine(location, owner.distanceMiles)}
             </p>
+            {/* Third metadata line — always rendered so the card's vertical
+                rhythm is consistent and the Add Friend buttons line up
+                across the grid. Aligned with username/location rather than
+                flush-left so the whole info block reads as one column. */}
+            <p className="text-xs truncate min-h-[16px]">
+              {owner.friendshipStatus === 'accepted' ? (
+                <span className="text-emerald-400 font-medium">Friends</span>
+              ) : owner.mutualCount > 0 ? (
+                <span className="text-orange-400 font-medium">
+                  {owner.mutualCount} mutual friend{owner.mutualCount === 1 ? '' : 's'}
+                </span>
+              ) : (
+                <span>&nbsp;</span>
+              )}
+            </p>
           </div>
         </Link>
-        {owner.friendshipStatus === 'accepted' ? (
-          <p className="text-emerald-400 text-xs font-medium">Friends</p>
-        ) : owner.mutualCount > 0 ? (
-          <p className="text-orange-400 text-xs font-medium">
-            {owner.mutualCount} mutual friend{owner.mutualCount === 1 ? '' : 's'}
-          </p>
-        ) : null}
         <OwnerAction owner={owner} />
       </div>
     </div>

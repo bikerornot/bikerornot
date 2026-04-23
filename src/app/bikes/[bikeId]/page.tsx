@@ -273,12 +273,20 @@ export default async function BikeDetailPage({
           }
         })
         .sort((a, b) => {
-          // Friends first, then mutual-count desc, then distance asc (closer
-          // wins), then username. Distance with a null value sorts last so
-          // rows without location data don't crowd the top.
+          // Tiers in order:
+          //   1. Friends first (relationship trumps everything)
+          //   2. Has bike photo — ~70% of garage rows have no photo, and
+          //      surfacing the photo-ful ones in the default-visible 6
+          //      avoids a grid dominated by fallback avatars.
+          //   3. Mutual friend count desc
+          //   4. Distance asc (closer wins; missing location sorts last)
+          //   5. Username asc
           const aFriend = a.friendshipStatus === 'accepted' ? 1 : 0
           const bFriend = b.friendshipStatus === 'accepted' ? 1 : 0
           if (aFriend !== bFriend) return bFriend - aFriend
+          const aHasPhoto = a.bikePhotoUrl ? 1 : 0
+          const bHasPhoto = b.bikePhotoUrl ? 1 : 0
+          if (aHasPhoto !== bHasPhoto) return bHasPhoto - aHasPhoto
           if (a.mutualCount !== b.mutualCount) return b.mutualCount - a.mutualCount
           if (a.distanceMiles != null && b.distanceMiles != null) {
             return a.distanceMiles - b.distanceMiles

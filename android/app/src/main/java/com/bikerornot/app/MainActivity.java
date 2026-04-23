@@ -13,6 +13,7 @@ import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.webkit.CookieManager;
+import android.webkit.GeolocationPermissions;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -69,6 +70,15 @@ public class MainActivity extends BridgeActivity {
     private ActivityResultLauncher<Intent> fileChooserLauncher;
     private ActivityResultLauncher<String> cameraPermissionLauncher;
     private Intent pendingChooserIntent = null;
+
+    // Geolocation bridging state. The WebView's
+    // onGeolocationPermissionsShowPrompt hands us an origin + a callback
+    // to invoke once the user decides. We stash the callback while the OS
+    // permission dialog is showing (if needed) and invoke it with the
+    // runtime permission result.
+    private String pendingGeoOrigin = null;
+    private GeolocationPermissions.Callback pendingGeoCallback = null;
+    private ActivityResultLauncher<String[]> locationPermissionLauncher;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -131,6 +141,23 @@ public class MainActivity extends BridgeActivity {
                 // and users can pick that way; the camera option in the
                 // chooser will still be offered but will fail on tap.
                 launchPendingChooser();
+            }
+        );
+
+        locationPermissionLauncher = registerForActivityResult(
+            new ActivityResultContracts.RequestMultiplePermissions(),
+            results -> {
+                boolean granted = Boolean.TRUE.equals(results.get(Manifest.permission.ACCESS_FINE_LOCATION))
+                        || Boolean.TRUE.equals(results.get(Manifest.permission.ACCESS_COARSE_LOCATION));
+                if (pendingGeoCallback != null && pendingGeoOrigin != null) {
+                    // Second arg (`retain`) = true so the decision persists
+                    // for this origin inside the WebView — the user only
+                    // gets prompted once per install, matching browser
+                    // behaviour. `allow` flows straight from the OS result.
+                    pendingGeoCallback.invoke(pendingGeoOrigin, granted, true);
+                }
+                pendingGeoCallback = null;
+                pendingGeoOrigin = null;
             }
         );
     }
@@ -503,6 +530,35 @@ public class MainActivity extends BridgeActivity {
                     launchPendingChooser();
                 }
                 return true;
+            }
+
+            // navigator.geolocation.getCurrentPosition() inside the
+            // WebView routes here. WebView auto-denies if this isn't
+            // overridden, even when the OS has granted the permission —
+            // so without this hook the check-in picker's "Use current
+            // location" button fails with PERMISSION_DENIED on Android.
+            // Request the runtime permission if we don't already hold it,
+            // then invoke the page callback with the result. Matches
+            // chrome's one-prompt-per-origin behaviour via retain=true.
+            @Override
+            public void onGeolocationPermissionsShowPrompt(String origin,
+                                                           GeolocationPermissions.Callback callback) {
+                boolean fine = ContextCompat.checkSelfPermission(MainActivity.this,
+                        Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+                boolean coarse = ContextCompat.checkSelfPermission(MainActivity.this,
+                        Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+                if (fine || coarse) {
+                    callback.invoke(origin, true, true);
+                    return;
+                }
+                // Stash and launch — the launcher's handler picks up
+                // pendingGeoCallback/Origin once the OS dialog closes.
+                pendingGeoOrigin = origin;
+                pendingGeoCallback = callback;
+                locationPermissionLauncher.launch(new String[]{
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                });
             }
         });
     }

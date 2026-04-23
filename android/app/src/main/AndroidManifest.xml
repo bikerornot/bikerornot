@@ -67,6 +67,16 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
+    <!-- navigator.geolocation inside the WebView. FINE for GPS (used by
+         the check-in picker's "Use current location" bias); COARSE as a
+         fallback so network-location-only devices still work. WebView
+         additionally needs onGeolocationPermissionsShowPrompt in the
+         chrome client — without that override the page-level request
+         gets auto-denied even when the OS permission is granted. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+
     <!-- Android 11+ package visibility for Custom Tabs. Without this,
          CustomTabsClient.getPackageName() returns null and we cannot pin
          the browser, letting URL-intercepting apps (Facebook, YouTube,

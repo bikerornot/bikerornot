@@ -408,7 +408,7 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
         {bikes.map((bike) => (
           <div key={bike.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
             <div className="flex items-center gap-4">
-              <Link href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}>
+              <Link href={`/bikes/${bike.id}`}>
                 <PhotoThumbnail
                   photoUrl={bike.photo_url ? getImageUrl('bikes', bike.photo_url) : null}
                   isUploading={false}
@@ -417,7 +417,7 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
               </Link>
               <div className="flex-1 min-w-0">
                 <Link
-                  href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}
+                  href={`/bikes/${bike.id}`}
                   className="text-white font-medium hover:text-orange-400 transition-colors"
                 >
                   {[bike.year, bike.make, bike.model].filter(Boolean).join(' ')}
@@ -427,7 +427,7 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
                 )}
                 {(ownerCounts[bike.id] ?? 0) > 0 && (
                   <Link
-                    href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}
+                    href={`/bikes/${bike.id}`}
                     className="text-orange-400 hover:text-orange-300 text-sm mt-1 block transition-colors"
                   >
                     {ownerCounts[bike.id]} other {ownerCounts[bike.id] === 1 ? 'owner' : 'owners'} →

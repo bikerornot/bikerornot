@@ -13,7 +13,7 @@ import { avatarColorFor, avatarInitials } from '@/lib/avatar-color'
 import FriendButton, { type FriendshipStatus } from '@/app/profile/[username]/FriendButton'
 import MessageButton from '@/app/components/MessageButton'
 import ContentMenu from '@/app/components/ContentMenu'
-import BikeWall from '@/app/garage/[username]/BikeWall'
+import BikeWall from './BikeWall'
 import { sendFriendRequest, cancelFriendRequest, acceptFriendRequest, declineFriendRequest } from '@/app/actions/friends'
 import type { Profile } from '@/lib/supabase/types'
 

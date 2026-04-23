@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { searchPlaces, nearbyPlaces, type PlaceSearchResult } from '@/app/actions/places'
+import { searchPlaces, type PlaceSearchResult } from '@/app/actions/places'
 
 interface Props {
   onSelect: (place: PlaceSearchResult) => void
@@ -70,28 +70,13 @@ export default function PlacePicker({ onSelect, onClose }: Props) {
     }
     setLocatingInFlight(true)
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const latitude = pos.coords.latitude
-        const longitude = pos.coords.longitude
-        setProximity({ latitude, longitude })
+      (pos) => {
+        setProximity({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
         setLocatingInFlight(false)
-        // If the user had typed something, the debounced search effect
-        // picks up the new proximity and re-ranks. Otherwise, reverse-
-        // geocode the coordinates to list actual POIs at this location —
-        // Mapbox's `proximity` on a forward search is only a relevance
-        // bias, which is why a broad query like "restaurants" returned
-        // irrelevant far-away results.
-        if (!query.trim()) {
-          setLoading(true)
-          try {
-            const results = await nearbyPlaces(latitude, longitude)
-            setResults(results)
-          } catch (e) {
-            setError(e instanceof Error ? e.message : 'Could not load nearby places')
-          } finally {
-            setLoading(false)
-          }
-        }
+        // Location is used only as a relevance bias on subsequent typed
+        // searches — Mapbox's geocoder doesn't have a reliable "list
+        // everything near me" mode, so we don't auto-display anything.
+        // The user types a name and nearby matches rise to the top.
       },
       (err) => {
         setLocatingInFlight(false)
@@ -146,12 +131,16 @@ export default function PlacePicker({ onSelect, onClose }: Props) {
             </div>
             <div className="min-w-0">
               <p className="text-white text-sm font-medium">
-                {locatingInFlight ? 'Getting your location…' : 'Use current location'}
+                {locatingInFlight
+                  ? 'Getting your location…'
+                  : proximity
+                    ? 'Location shared'
+                    : 'Use current location'}
               </p>
               <p className="text-zinc-500 text-xs truncate">
                 {proximity
-                  ? `Ranked by distance from ${proximity.latitude.toFixed(3)}, ${proximity.longitude.toFixed(3)}`
-                  : 'Biases results to nearby spots'}
+                  ? 'Nearby places will rank higher when you search'
+                  : 'Optional — helps surface nearby places'}
               </p>
             </div>
           </button>
@@ -162,6 +151,13 @@ export default function PlacePicker({ onSelect, onClose }: Props) {
 
           {loading && (
             <p className="px-4 py-3 text-zinc-500 text-sm">Searching…</p>
+          )}
+
+          {!loading && query.trim().length < 2 && !error && (
+            <p className="px-4 py-6 text-zinc-500 text-sm text-center">
+              Type the name of a place to check in —{' '}
+              <span className="text-zinc-400">e.g. a diner, a dealership, a rally</span>
+            </p>
           )}
 
           {!loading && query.trim().length >= 2 && results.length === 0 && !error && (

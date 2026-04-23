@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { searchPlaces, type PlaceSearchResult } from '@/app/actions/places'
+import { searchPlaces, nearbyPlaces, type PlaceSearchResult } from '@/app/actions/places'
 
 interface Props {
   onSelect: (place: PlaceSearchResult) => void
@@ -70,12 +70,28 @@ export default function PlacePicker({ onSelect, onClose }: Props) {
     }
     setLocatingInFlight(true)
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setProximity({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
+      async (pos) => {
+        const latitude = pos.coords.latitude
+        const longitude = pos.coords.longitude
+        setProximity({ latitude, longitude })
         setLocatingInFlight(false)
-        // Prompt a fresh search immediately if there's a query already typed,
-        // otherwise seed the input with a helpful default so results appear.
-        if (!query.trim()) setQuery('restaurants')
+        // If the user had typed something, the debounced search effect
+        // picks up the new proximity and re-ranks. Otherwise, reverse-
+        // geocode the coordinates to list actual POIs at this location —
+        // Mapbox's `proximity` on a forward search is only a relevance
+        // bias, which is why a broad query like "restaurants" returned
+        // irrelevant far-away results.
+        if (!query.trim()) {
+          setLoading(true)
+          try {
+            const results = await nearbyPlaces(latitude, longitude)
+            setResults(results)
+          } catch (e) {
+            setError(e instanceof Error ? e.message : 'Could not load nearby places')
+          } finally {
+            setLoading(false)
+          }
+        }
       },
       (err) => {
         setLocatingInFlight(false)

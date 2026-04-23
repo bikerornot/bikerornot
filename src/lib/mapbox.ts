@@ -66,3 +66,29 @@ export async function searchPlaces(
   const data = (await res.json()) as { features?: MapboxFeature[] }
   return data.features ?? []
 }
+
+// Reverse-geocode a set of coordinates to a list of actual nearby POIs.
+// Used when the user taps "Use current location" without typing — a free-
+// form search with `proximity` is just a relevance bias, not a filter, so
+// it can still return places on the other side of the country. Reverse
+// geocoding is guaranteed to be at the requested lat/lng.
+export async function nearbyPlaces(
+  latitude: number,
+  longitude: number,
+  limit = 10,
+): Promise<MapboxFeature[]> {
+  const token = getAccessToken()
+  const params = new URLSearchParams({
+    access_token: token,
+    limit: String(limit),
+    types: 'poi',
+  })
+  const url = `${GEOCODING_ENDPOINT}/${longitude},${latitude}.json?${params.toString()}`
+  const res = await fetch(url, { cache: 'no-store' })
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '')
+    throw new Error(`Mapbox reverse geocode failed ${res.status}: ${txt.slice(0, 200)}`)
+  }
+  const data = (await res.json()) as { features?: MapboxFeature[] }
+  return data.features ?? []
+}

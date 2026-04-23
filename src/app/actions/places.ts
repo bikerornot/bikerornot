@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { searchPlaces as mapboxSearch } from '@/lib/mapbox'
+import { searchPlaces as mapboxSearch, nearbyPlaces as mapboxNearby } from '@/lib/mapbox'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 function getServiceClient() {
@@ -53,6 +53,32 @@ export async function searchPlaces(
 function stripLeadingName(placeName: string, name: string): string {
   if (placeName.startsWith(`${name}, `)) return placeName.slice(name.length + 2)
   return placeName
+}
+
+// Return POIs actually located at these coordinates, used when the user
+// taps "Use current location" without typing anything. Reverse geocoding
+// is the right primitive for this; a forward search with `proximity` is
+// only a bias, so a query like "restaurants" nearby can still return
+// results on the other side of the country.
+export async function nearbyPlaces(
+  latitude: number,
+  longitude: number,
+): Promise<PlaceSearchResult[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  checkRateLimit(`nearbyPlaces:${user.id}`, 30, 60_000)
+
+  const features = await mapboxNearby(latitude, longitude)
+  return features.map((f) => ({
+    mapboxId: f.id,
+    name: f.text,
+    fullAddress: stripLeadingName(f.place_name, f.text),
+    latitude: f.center[1],
+    longitude: f.center[0],
+    category: f.properties?.category ?? null,
+  }))
 }
 
 // Look up (or create) a place row for a chosen Mapbox feature. Called right

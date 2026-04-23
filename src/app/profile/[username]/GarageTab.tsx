@@ -511,7 +511,7 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
 
               <div className="flex-1 min-w-0">
                 <Link
-                  href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}
+                  href={`/bikes/${bike.id}`}
                   className="text-white font-medium hover:text-orange-400 transition-colors"
                 >
                   {[bike.year, bike.make, bike.model].filter(Boolean).join(' ')}
@@ -521,7 +521,7 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
                 )}
                 {(ownerCounts[bike.id] ?? 0) > 0 ? (
                   <Link
-                    href={`/garage/${username}?bike=${bikeSluggify(bike.year, bike.make, bike.model)}`}
+                    href={`/bikes/${bike.id}`}
                     className="text-orange-400 hover:text-orange-300 text-sm mt-1 block transition-colors"
                   >
                     {ownerCounts[bike.id]} other {ownerCounts[bike.id] === 1 ? 'owner' : 'owners'} →

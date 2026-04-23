@@ -122,22 +122,37 @@ export default function NotificationBell({ userId, username }: Props) {
   useRealtimeChannel(
     `notifications:${userId}`,
     (channel, supabase) =>
-      channel.on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-        async (payload) => {
-          const { data } = await supabase
-            .from('notifications')
-            .select('*, actor:profiles!actor_id(*), group:groups!group_id(id, name, slug)')
-            .eq('id', payload.new.id)
-            .single()
-          if (data) {
-            setNotifications((prev) =>
-              prev.some((n) => n.id === data.id) ? prev : [data as Notification, ...prev]
-            )
+      channel
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+          async (payload) => {
+            const { data } = await supabase
+              .from('notifications')
+              .select('*, actor:profiles!actor_id(*), group:groups!group_id(id, name, slug)')
+              .eq('id', payload.new.id)
+              .single()
+            if (data) {
+              setNotifications((prev) =>
+                prev.some((n) => n.id === data.id) ? prev : [data as Notification, ...prev]
+              )
+            }
           }
-        }
-      ),
+        )
+        // Server-side cleanup (e.g. acceptFriendRequest / declineFriendRequest
+        // delete the corresponding friend_request notification) needs to
+        // flow through to the bell so a stale "pending request" row doesn't
+        // hang around until the next page refresh. DELETE events carry the
+        // removed row as payload.old — match by id and drop from state.
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+          (payload) => {
+            const removedId = (payload.old as { id?: string } | null)?.id
+            if (!removedId) return
+            setNotifications((prev) => prev.filter((n) => n.id !== removedId))
+          }
+        ),
     [userId]
   )
 

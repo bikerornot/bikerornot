@@ -87,9 +87,24 @@ export async function getFeedPage(page: number): Promise<{ posts: Post[]; hasMor
   const { data: postsData } = await admin
     .from('posts')
     .select(
-      '*, author:profiles!author_id(*), images:post_images(*), group:groups!group_id(name, slug), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status), place:places(*)'
+      '*, author:profiles!author_id(*), images:post_images(*), group:groups!group_id(name, slug), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status)'
     )
     .in('id', pagePostIds)
+
+  // Load places separately — PostgREST's auto-discovery for the
+  // posts.place_id → places FK wasn't returning the embed even after
+  // schema reload, so do a manual join. Cheap: one extra query per page.
+  const placeIds = Array.from(
+    new Set((postsData ?? []).map((p) => p.place_id).filter((v): v is string => !!v))
+  )
+  const placesMap: Record<string, unknown> = {}
+  if (placeIds.length > 0) {
+    const { data: placeRows } = await admin
+      .from('places')
+      .select('*')
+      .in('id', placeIds)
+    for (const p of placeRows ?? []) placesMap[p.id] = p
+  }
 
   if (!postsData?.length) return { posts: [], hasMore: false }
 
@@ -130,6 +145,7 @@ export async function getFeedPage(page: number): Promise<{ posts: Post[]; hasMor
       shared_post: post.shared_post_id
         ? sharedPostMap[post.shared_post_id] ?? null
         : null,
+      place: post.place_id ? (placesMap[post.place_id] ?? null) : null,
     })) as Post[]
 
   return { posts: enrichedPosts, hasMore }

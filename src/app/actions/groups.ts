@@ -486,7 +486,7 @@ export async function getGroupPosts(groupId: string, cursor?: string): Promise<P
 
   const base = admin
     .from('posts')
-    .select('*, author:profiles!author_id(*), images:post_images(*), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status), place:places(*)')
+    .select('*, author:profiles!author_id(*), images:post_images(*), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status)')
     .eq('group_id', groupId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
@@ -508,7 +508,7 @@ export async function getGroupPosts(groupId: string, cursor?: string): Promise<P
     admin.from('comments').select('post_id, author:profiles!author_id(status)').in('post_id', postIds).is('deleted_at', null),
     admin.from('post_likes').select('post_id').in('post_id', postIds).eq('user_id', user.id),
     sharedPostIds.length > 0
-      ? admin.from('posts').select('*, author:profiles!author_id(*), images:post_images(*), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status), place:places(*)').in('id', sharedPostIds)
+      ? admin.from('posts').select('*, author:profiles!author_id(*), images:post_images(*), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status)').in('id', sharedPostIds)
       : Promise.resolve({ data: [] }),
   ])
 

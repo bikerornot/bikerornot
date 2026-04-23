@@ -37,7 +37,7 @@ export default function BikeWall({
 
       const base = supabase
         .from('posts')
-        .select('*, author:profiles!author_id(*), images:post_images(*), place:places(*)')
+        .select('*, author:profiles!author_id(*), images:post_images(*)')
         .eq('bike_id', bikeId)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
@@ -73,7 +73,7 @@ export default function BikeWall({
           sharedPostIds.length > 0
             ? supabase
                 .from('posts')
-                .select('*, author:profiles!author_id(*), images:post_images(*), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status), place:places(*)')
+                .select('*, author:profiles!author_id(*), images:post_images(*), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status)')
                 .in('id', sharedPostIds)
             : Promise.resolve({ data: [] }),
         ])

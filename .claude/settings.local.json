@@ -11,7 +11,12 @@
       "Bash(cmd.exe:*)",
       "Bash(python3:*)",
       "Bash(grep:*)",
-      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\" && cd /c/Users/17276/projects/bikerornot && node_modules/.bin/tsc --noEmit 2>&1)"
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\" && cd /c/Users/17276/projects/bikerornot && node_modules/.bin/tsc --noEmit 2>&1)",
+      "mcp__416a8690-e844-4763-9f3f-7d9dc3ec5ea4__list_projects",
+      "mcp__416a8690-e844-4763-9f3f-7d9dc3ec5ea4__execute_sql",
+      "Bash(\"/c/Program Files/nodejs/node.exe\" node_modules/typescript/bin/tsc --noEmit)",
+      "Bash(\"/c/Program Files/nodejs/node.exe\" node_modules/next/dist/bin/next dev)",
+      "WebFetch(domain:vpic.nhtsa.dot.gov)"
     ]
   }
 }

@@ -63,7 +63,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
       let base = supabase
         .from('posts')
-        .select('*, author:profiles!author_id(*), images:post_images(*), group:groups!group_id(name, slug), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status), place:places(*)')
+        .select('*, author:profiles!author_id(*), images:post_images(*), group:groups!group_id(name, slug), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status)')
         .is('deleted_at', null)
         .is('wall_owner_id', null)
         .order('created_at', { ascending: false })
@@ -113,7 +113,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
           sharedPostIds.length > 0
             ? supabase
                 .from('posts')
-                .select('*, author:profiles!author_id(*), images:post_images(*), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status), place:places(*)')
+                .select('*, author:profiles!author_id(*), images:post_images(*), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status)')
                 .in('id', sharedPostIds)
             : Promise.resolve({ data: [] }),
         ])
@@ -139,12 +139,25 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
         if (p?.id) sharedPostMap[p.id] = p as Post
       }
 
+      // Manual place lookup — PostgREST's embed wasn't resolving the
+      // posts.place_id → places FK reliably, so fetch separately and
+      // attach by id. One extra query per page; negligible.
+      const placeIds = Array.from(
+        new Set(filtered.map((p: any) => p.place_id).filter((v: unknown): v is string => !!v))
+      )
+      const placesMap: Record<string, any> = {}
+      if (placeIds.length > 0) {
+        const { data: placeRows } = await supabase.from('places').select('*').in('id', placeIds)
+        for (const p of placeRows ?? []) placesMap[(p as any).id] = p
+      }
+
       const posts = filtered.map((post) => ({
         ...post,
         like_count: likeMap[post.id] ?? 0,
         comment_count: commentMap[post.id] ?? 0,
         is_liked_by_me: myLikeSet.has(post.id),
         shared_post: post.shared_post_id ? (sharedPostMap[post.shared_post_id] ?? null) : null,
+        place: (post as any).place_id ? (placesMap[(post as any).place_id] ?? null) : null,
       })) as Post[]
 
       return { posts, rawCursor, rawFull }

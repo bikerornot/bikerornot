@@ -60,14 +60,22 @@ export async function sendFriendRequest(addresseeId: string): Promise<{ error?: 
     return { error: `You can send up to ${dailyLimit} friend requests per day.` }
   }
 
-  // Max friends limit — 500
-  const { count: friendCount } = await admin
-    .from('friendships')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'accepted')
-    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
-  if ((friendCount ?? 0) >= 500) {
-    return { error: 'You have reached the maximum of 500 friends.' }
+  // Max friends limit — 500. Super-admins are exempt (project owner's
+  // seed account naturally exceeds a normal user's friend graph).
+  const { data: actorProfile } = await admin
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (actorProfile?.role !== 'super_admin') {
+    const { count: friendCount } = await admin
+      .from('friendships')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'accepted')
+      .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+    if ((friendCount ?? 0) >= 500) {
+      return { error: 'You have reached the maximum of 500 friends.' }
+    }
   }
 
   const { error } = await admin
@@ -142,14 +150,22 @@ export async function acceptFriendRequest(requesterId: string): Promise<void> {
 
   const admin = getServiceClient()
 
-  // Max friends limit — 500
-  const { count: friendCount } = await admin
-    .from('friendships')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'accepted')
-    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
-  if ((friendCount ?? 0) >= 500) {
-    throw new Error('You have reached the maximum of 500 friends.')
+  // Max friends limit — 500. Super-admins are exempt (project owner's
+  // seed account naturally exceeds a normal user's friend graph).
+  const { data: accepterProfile } = await admin
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (accepterProfile?.role !== 'super_admin') {
+    const { count: friendCount } = await admin
+      .from('friendships')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'accepted')
+      .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+    if ((friendCount ?? 0) >= 500) {
+      throw new Error('You have reached the maximum of 500 friends.')
+    }
   }
 
   const { data: updated, error } = await admin

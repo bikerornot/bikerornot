@@ -32,8 +32,15 @@ export default function FriendsClient({ initialRequests, initialFriends, onlineF
       startTransition(() => {
         setRequestStatuses((prev) => ({ ...prev, [id]: 'accepted' }))
       })
-    } catch {
+    } catch (err) {
+      // Previously this was a silent reset to idle, which made the button
+      // look dead to the user when hitting the 500-friend cap or a stale
+      // build-id error. Surface the message so the user knows why nothing
+      // happened; for non-Error throws fall back to a generic prompt to
+      // reload the app.
       setRequestStatuses((prev) => ({ ...prev, [id]: 'idle' }))
+      const msg = err instanceof Error ? err.message : 'Something went wrong. Please reload the app and try again.'
+      alert(msg)
     }
   }
 
@@ -44,8 +51,10 @@ export default function FriendsClient({ initialRequests, initialFriends, onlineF
       startTransition(() => {
         setRequestStatuses((prev) => ({ ...prev, [id]: 'declined' }))
       })
-    } catch {
+    } catch (err) {
       setRequestStatuses((prev) => ({ ...prev, [id]: 'idle' }))
+      const msg = err instanceof Error ? err.message : 'Something went wrong. Please reload the app and try again.'
+      alert(msg)
     }
   }
 

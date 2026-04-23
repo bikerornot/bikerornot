@@ -5,6 +5,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { getImageUrl } from '@/lib/supabase/image'
+// Minimum horizontal drag distance in px before we treat a touch gesture as
+// a carousel swipe. Smaller than 40 and accidental taps register as swipes;
+// larger and intentional short swipes feel unresponsive.
+const SWIPE_THRESHOLD_PX = 40
 import { avatarColorFor, avatarInitials } from '@/lib/avatar-color'
 import FriendButton, { type FriendshipStatus } from '@/app/profile/[username]/FriendButton'
 import MessageButton from '@/app/components/MessageButton'
@@ -65,9 +69,6 @@ export default function BikeDetailClient({
   const [ownersExpanded, setOwnersExpanded] = useState(false)
 
   const bikeName = [bikeYear, bikeMake, bikeModel].filter(Boolean).join(' ')
-  const hasPhotos = photoPaths.length > 0
-  const hasMultiplePhotos = photoPaths.length > 1
-  const currentPhoto = hasPhotos ? photoPaths[photoIndex] : null
 
   const ownerHandle = owner.username ?? 'user'
   const visibleOwners = ownersExpanded ? otherOwners : otherOwners.slice(0, OWNERS_INITIAL_VISIBLE)
@@ -98,9 +99,15 @@ export default function BikeDetailClient({
           </button>
           <Link
             href={`/profile/${ownerHandle}?tab=Garage`}
-            className="text-white text-base font-medium truncate hover:text-orange-400 transition-colors"
+            className="flex items-center gap-2 min-w-0 text-white text-base font-medium hover:text-orange-400 transition-colors group"
           >
-            @{ownerHandle}&apos;s garage
+            <OwnerAvatar
+              avatarUrl={owner.avatarUrl}
+              username={owner.username}
+              firstName={owner.firstName}
+              size={28}
+            />
+            <span className="truncate">@{ownerHandle}&apos;s garage</span>
           </Link>
         </div>
 
@@ -114,55 +121,20 @@ export default function BikeDetailClient({
       </div>
 
       {/* Hero — photo carousel */}
-      <div className="relative bg-zinc-900 sm:rounded-xl overflow-hidden">
-        <div className="aspect-[4/3] w-full bg-zinc-800 flex items-center justify-center">
-          {currentPhoto ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={getImageUrl('bikes', currentPhoto)}
-              alt={bikeName || 'Bike photo'}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="flex flex-col items-center text-zinc-600">
-              <span className="text-5xl">🏍️</span>
-              <span className="text-sm mt-2">No photo yet</span>
-            </div>
-          )}
-        </div>
+      <Carousel
+        photoPaths={photoPaths}
+        photoIndex={photoIndex}
+        onIndexChange={setPhotoIndex}
+        bikeName={bikeName}
+      />
 
-        {hasMultiplePhotos && (
-          <>
-            {/* Dots */}
-            <div className="absolute left-0 right-0 bottom-3 flex justify-center gap-1.5">
-              {photoPaths.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setPhotoIndex(i)}
-                  aria-label={`Show photo ${i + 1}`}
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    i === photoIndex ? 'bg-white' : 'bg-white/40 hover:bg-white/70'
-                  }`}
-                />
-              ))}
-            </div>
-            {/* Counter */}
-            <div className="absolute right-3 bottom-3 bg-black/60 text-white text-xs font-medium px-2 py-1 rounded-full">
-              {photoIndex + 1} / {photoPaths.length}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Title */}
+      {/* Title — full year/make/model on one line; wraps gracefully if it
+          has to on narrow screens, since we no longer split it into two
+          lines and very long model names (e.g. "Heritage Softail Classic")
+          can exceed small viewports. */}
       <div className="px-4 sm:px-0">
-        {(bikeYear || bikeMake) && (
-          <div className="text-orange-400 text-sm font-medium">
-            {[bikeYear, bikeMake].filter(Boolean).join(' · ')}
-          </div>
-        )}
-        <h1 className="text-white text-2xl font-bold leading-tight">
-          {bikeModel || bikeName || 'Bike'}
+        <h1 className="text-white text-2xl font-bold leading-tight break-words">
+          {bikeName || 'Bike'}
         </h1>
       </div>
 
@@ -393,5 +365,122 @@ function OwnerAction({ owner }: { owner: BikeDetailOwnerCard }) {
     >
       Add friend
     </button>
+  )
+}
+
+// Bike photo carousel with three navigation paths:
+//   - Touch swipe (mobile default — matches Instagram/Facebook behaviour)
+//   - Dot indicators below the photo (tap-to-jump, always visible)
+//   - Left/right arrow overlays on desktop hover (hidden on touch devices)
+//
+// Kept local to this file because nothing else in the app needs the exact
+// same shape; if we ever want this pattern elsewhere, lift it to components/.
+function Carousel({
+  photoPaths,
+  photoIndex,
+  onIndexChange,
+  bikeName,
+}: {
+  photoPaths: string[]
+  photoIndex: number
+  onIndexChange: (i: number) => void
+  bikeName: string
+}) {
+  const touchStartXRef = useRef<number | null>(null)
+  const hasPhotos = photoPaths.length > 0
+  const hasMultiple = photoPaths.length > 1
+  const currentPhoto = hasPhotos ? photoPaths[photoIndex] : null
+
+  function goTo(i: number) {
+    if (photoPaths.length === 0) return
+    const clamped = ((i % photoPaths.length) + photoPaths.length) % photoPaths.length
+    onIndexChange(clamped)
+  }
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartXRef.current = e.touches[0].clientX
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    const start = touchStartXRef.current
+    touchStartXRef.current = null
+    if (start == null || !hasMultiple) return
+    const delta = e.changedTouches[0].clientX - start
+    if (Math.abs(delta) < SWIPE_THRESHOLD_PX) return
+    goTo(photoIndex + (delta < 0 ? 1 : -1))
+  }
+
+  return (
+    <div className="relative bg-zinc-900 sm:rounded-xl overflow-hidden group">
+      <div
+        className="aspect-[4/3] w-full bg-zinc-800 flex items-center justify-center select-none"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        {currentPhoto ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={getImageUrl('bikes', currentPhoto)}
+            alt={bikeName || 'Bike photo'}
+            className="w-full h-full object-cover"
+            draggable={false}
+          />
+        ) : (
+          <div className="flex flex-col items-center text-zinc-600">
+            <span className="text-5xl">🏍️</span>
+            <span className="text-sm mt-2">No photo yet</span>
+          </div>
+        )}
+      </div>
+
+      {hasMultiple && (
+        <>
+          {/* Desktop hover arrows — hidden on touch devices via hover-only
+              visibility. pointer:coarse media query would be cleaner but
+              Tailwind's `group-hover:` already suppresses them until the
+              pointer is on the element, which is effectively never for
+              touch users. */}
+          <button
+            type="button"
+            onClick={() => goTo(photoIndex - 1)}
+            aria-label="Previous photo"
+            className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded-full bg-black/50 hover:bg-black/75 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => goTo(photoIndex + 1)}
+            aria-label="Next photo"
+            className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 items-center justify-center rounded-full bg-black/50 hover:bg-black/75 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          {/* Dots */}
+          <div className="absolute left-0 right-0 bottom-3 flex justify-center gap-1.5">
+            {photoPaths.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => goTo(i)}
+                aria-label={`Show photo ${i + 1}`}
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  i === photoIndex ? 'bg-white' : 'bg-white/40 hover:bg-white/70'
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Counter */}
+          <div className="absolute right-3 bottom-3 bg-black/60 text-white text-xs font-medium px-2 py-1 rounded-full">
+            {photoIndex + 1} / {photoPaths.length}
+          </div>
+        </>
+      )}
+    </div>
   )
 }

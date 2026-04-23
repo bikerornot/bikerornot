@@ -556,16 +556,6 @@ export default function GarageTab({ isOwnProfile, initialBikes, ownerCounts, use
                 </button>
               </div>
             </div>
-
-            {/* Photo gallery strip */}
-            <BikePhotoGallery
-              bikeId={bike.id}
-              onPrimaryChanged={(newPath) => {
-                setBikes((prev) =>
-                  prev.map((b) => (b.id === bike.id ? { ...b, photo_url: newPath } : b))
-                )
-              }}
-            />
           </div>
         )
       })}

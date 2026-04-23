@@ -4,7 +4,12 @@ const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  // geolocation=(self) so the check-in picker can request the user's
+  // location on bikerornot.com; camera/microphone stay disabled because
+  // the app never uses them via the web APIs (camera capture in the
+  // Android app goes through the native WebView file chooser, not
+  // navigator.mediaDevices, so disabling the web APIs doesn't affect it).
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
 ]
 
 const nextConfig = {

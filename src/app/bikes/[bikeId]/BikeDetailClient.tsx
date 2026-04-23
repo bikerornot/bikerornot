@@ -40,6 +40,7 @@ interface Props {
   bikeYear: number | null
   bikeMake: string | null
   bikeModel: string | null
+  bikeDescription: string | null
   photoPaths: string[]
   owner: {
     id: string
@@ -62,6 +63,7 @@ export default function BikeDetailClient({
   bikeYear,
   bikeMake,
   bikeModel,
+  bikeDescription,
   photoPaths,
   owner,
   isOwnBike,
@@ -139,10 +141,15 @@ export default function BikeDetailClient({
           has to on narrow screens, since we no longer split it into two
           lines and very long model names (e.g. "Heritage Softail Classic")
           can exceed small viewports. */}
-      <div className="px-4 sm:px-0">
+      <div className="px-4 sm:px-0 space-y-1.5">
         <h1 className="text-white text-2xl font-bold leading-tight break-words">
           {bikeName || 'Bike'}
         </h1>
+        {bikeDescription && (
+          <p className="text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">
+            {bikeDescription}
+          </p>
+        )}
       </div>
 
       {/* Owner attribution strip */}

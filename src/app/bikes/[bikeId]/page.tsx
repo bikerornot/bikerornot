@@ -347,6 +347,7 @@ export default async function BikeDetailPage({
           bikeYear={bike.year}
           bikeMake={bike.make}
           bikeModel={bike.model}
+          bikeDescription={bike.description}
           photoPaths={photoPaths}
           owner={{
             id: ownerProfile.id,

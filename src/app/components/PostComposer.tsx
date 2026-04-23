@@ -182,13 +182,10 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
       if (checkedInPlace) {
         try {
           const placeId = await getOrCreatePlace(checkedInPlace)
-          console.log('[check-in] resolved place', { placeId, name: checkedInPlace.name })
           formData.set('placeId', placeId)
         } catch (err) {
           console.warn('[check-in] Could not resolve place', err)
         }
-      } else {
-        console.log('[check-in] no checkedInPlace at submit')
       }
       images.forEach((file) => formData.append('images', file))
 

@@ -193,9 +193,9 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
     const authorIds = Array.from(new Set(posts.map((p) => p.author_id)))
     Promise.all([
       supabase.from('profiles').select('id, status').in('id', authorIds),
-      supabase.from('posts').select('id, deleted_at').in('id', postIds),
+      supabase.from('posts').select('id, deleted_at, place_id').in('id', postIds),
     ])
-      .then(([{ data: authorRows }, { data: postRows }]) => {
+      .then(async ([{ data: authorRows }, { data: postRows }]) => {
         if (cancelled) return
         const activeAuthors = new Set(
           (authorRows ?? []).filter((r) => r.status === 'active').map((r) => r.id)
@@ -203,8 +203,34 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
         const livePosts = new Set(
           (postRows ?? []).filter((r) => r.deleted_at === null).map((r) => r.id)
         )
+        const postPlaceIdMap = new Map<string, string | null>(
+          (postRows ?? []).map((r: any) => [r.id, r.place_id ?? null])
+        )
+        // Hydrate places for posts whose snapshot pre-dates the check-in feature.
+        const neededPlaceIds = Array.from(
+          new Set(
+            posts
+              .filter((p) => !p.place)
+              .map((p) => postPlaceIdMap.get(p.id))
+              .filter((v): v is string => !!v)
+          )
+        )
+        const placesMap: Record<string, any> = {}
+        if (neededPlaceIds.length > 0) {
+          const { data: placeRows } = await supabase.from('places').select('*').in('id', neededPlaceIds)
+          for (const p of placeRows ?? []) placesMap[(p as any).id] = p
+        }
+        if (cancelled) return
         setPosts((prev) =>
-          prev.filter((p) => activeAuthors.has(p.author_id) && livePosts.has(p.id))
+          prev
+            .filter((p) => activeAuthors.has(p.author_id) && livePosts.has(p.id))
+            .map((p) => {
+              const placeId = postPlaceIdMap.get(p.id)
+              if (!placeId) return p
+              if (p.place) return p
+              const place = placesMap[placeId]
+              return place ? ({ ...p, place_id: placeId, place } as Post) : p
+            })
         )
       })
       .catch(() => {})

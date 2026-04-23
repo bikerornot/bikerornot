@@ -110,6 +110,20 @@ public class MainActivity extends BridgeActivity {
             if (postId != null && !postId.isEmpty()) {
                 target = "https://www.bikerornot.com/posts/" + Uri.encode(postId);
             }
+        } else if ("group_invite".equals(type)) {
+            String groupSlug = intent.getStringExtra("groupSlug");
+            if (groupSlug != null && !groupSlug.isEmpty()) {
+                target = "https://www.bikerornot.com/groups/" + Uri.encode(groupSlug);
+            } else {
+                target = "https://www.bikerornot.com/groups";
+            }
+        } else if ("event_invite".equals(type) || "event_cancelled".equals(type)) {
+            String eventSlug = intent.getStringExtra("eventSlug");
+            if (eventSlug != null && !eventSlug.isEmpty()) {
+                target = "https://www.bikerornot.com/events/" + Uri.encode(eventSlug);
+            } else {
+                target = "https://www.bikerornot.com/events";
+            }
         }
 
         if (target == null) return;
@@ -124,6 +138,10 @@ public class MainActivity extends BridgeActivity {
         intent.removeExtra("postId");
         intent.removeExtra("commentId");
         intent.removeExtra("actorId");
+        intent.removeExtra("groupId");
+        intent.removeExtra("groupSlug");
+        intent.removeExtra("eventId");
+        intent.removeExtra("eventSlug");
     }
 
     // Android 15+ with target SDK 35+ enforces edge-to-edge: the OS ignores

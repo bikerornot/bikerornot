@@ -1,10 +1,12 @@
 'use server'
 
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { validateImageFile, checkRateLimit } from '@/lib/rate-limit'
 import { moderateImage } from '@/lib/sightengine'
 import { notifyIfActive } from '@/lib/notify'
+import { sendPushToUser } from '@/lib/push'
 import { geocodeZip, geocodeAddress } from '@/lib/geocode'
 
 async function refreshEventCounts(admin: ReturnType<typeof getServiceClient>, eventId: string) {
@@ -786,6 +788,30 @@ export async function cancelEvent(eventId: string, reason?: string): Promise<voi
       event_id: eventId,
     }))
     await notifyIfActive(user.id, notifications)
+
+    // Push attendees. Time-sensitive — they may be about to head out.
+    const [{ data: cancellerProfile }, { data: eventRow }] = await Promise.all([
+      admin.from('profiles').select('username').eq('id', user.id).single(),
+      admin.from('events').select('title, slug').eq('id', eventId).single(),
+    ])
+    const cancellerName = cancellerProfile?.username || 'Someone'
+    const eventTitle = eventRow?.title || 'An event'
+    const eventSlug = eventRow?.slug ?? null
+    after(() =>
+      Promise.all(
+        attendees.map((a) =>
+          sendPushToUser(a.user_id, {
+            title: cancellerName,
+            body: `Cancelled ${eventTitle}`,
+            data: {
+              type: 'event_cancelled',
+              eventId: String(eventId),
+              ...(eventSlug ? { eventSlug } : {}),
+            },
+          }).catch((err) => console.warn('[push] event cancelled trigger failed', err)),
+        ),
+      ),
+    )
   }
 }
 
@@ -966,6 +992,32 @@ export async function inviteFriendsToEvent(
     event_id: eventId,
   }))
   await notifyIfActive(user.id, notifications)
+
+  // Push each invitee. Bounded by the 50/day outbound cap enforced earlier
+  // in this function, so no single recipient ever sees more than one buzz
+  // per invited event from the same inviter.
+  const [{ data: inviterProfile }, { data: eventRow }] = await Promise.all([
+    admin.from('profiles').select('username').eq('id', user.id).single(),
+    admin.from('events').select('title, slug').eq('id', eventId).single(),
+  ])
+  const inviterName = inviterProfile?.username || 'Someone'
+  const eventTitle = eventRow?.title || 'an event'
+  const eventSlug = eventRow?.slug ?? null
+  after(() =>
+    Promise.all(
+      toInvite.map((id) =>
+        sendPushToUser(id, {
+          title: inviterName,
+          body: `Invited you to ${eventTitle}`,
+          data: {
+            type: 'event_invite',
+            eventId: String(eventId),
+            ...(eventSlug ? { eventSlug } : {}),
+          },
+        }).catch((err) => console.warn('[push] event invite trigger failed', err)),
+      ),
+    ),
+  )
 
   return { sent: toInvite.length, skipped: userIds.length - toInvite.length }
 }

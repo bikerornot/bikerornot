@@ -1,5 +1,6 @@
 'use server'
 
+import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { haversine } from '@/lib/geo'
@@ -7,6 +8,7 @@ import type { Group, GroupMember, GroupCategory, Post, Profile } from '@/lib/sup
 import { validateImageFile } from '@/lib/rate-limit'
 import { moderateImage } from '@/lib/sightengine'
 import { notifyIfActive } from '@/lib/notify'
+import { sendPushToUser } from '@/lib/push'
 import { geocodeZip } from '@/lib/geocode'
 
 function getServiceClient() {
@@ -795,6 +797,33 @@ export async function inviteFriendsToGroup(
   }))
 
   await notifyIfActive(user.id, notifications)
+
+  // Push notifications. Each eligible recipient receives at most one push
+  // per invited-to group, and the receiver-side daily cap above keeps any
+  // single user from being buzzed more than 5 times total across multiple
+  // inviters / groups per day.
+  const [{ data: inviterProfile }, { data: groupRow }] = await Promise.all([
+    admin.from('profiles').select('username').eq('id', user.id).single(),
+    admin.from('groups').select('name, slug').eq('id', groupId).single(),
+  ])
+  const inviterName = inviterProfile?.username || 'Someone'
+  const groupName = groupRow?.name || 'a group'
+  const groupSlug = groupRow?.slug ?? null
+  after(() =>
+    Promise.all(
+      eligible.map((uid) =>
+        sendPushToUser(uid, {
+          title: inviterName,
+          body: `Invited you to ${groupName}`,
+          data: {
+            type: 'group_invite',
+            groupId: String(groupId),
+            ...(groupSlug ? { groupSlug } : {}),
+          },
+        }).catch((err) => console.warn('[push] group invite trigger failed', err)),
+      ),
+    ),
+  )
 
   // Record mass invite usage
   if (isMassInvite) {

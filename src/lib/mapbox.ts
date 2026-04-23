@@ -51,9 +51,25 @@ export async function searchPlaces(
     autocomplete: 'true',
     limit: String(limit),
     types: 'poi,address',
+    // Restrict to US/Canada by default — the biker user base is primarily
+    // North American, and without this filter Mapbox happily returns the
+    // London or Sydney branch of a chain even when proximity is set.
+    country: 'us,ca',
   })
   if (proximity) {
     params.set('proximity', `${proximity.longitude},${proximity.latitude}`)
+    // Also pass a bounding box ~50 miles around the user as a HARD filter
+    // (proximity is only a relevance bias, so without a bbox we still get
+    // cross-country matches slipping in). 0.75 degrees ≈ 50 mi of latitude
+    // and ~50 mi of longitude at mid-US latitudes, tight enough to feel
+    // local but loose enough to catch the next town over.
+    const lngDelta = 0.75
+    const latDelta = 0.75
+    const minLng = proximity.longitude - lngDelta
+    const minLat = proximity.latitude - latDelta
+    const maxLng = proximity.longitude + lngDelta
+    const maxLat = proximity.latitude + latDelta
+    params.set('bbox', `${minLng},${minLat},${maxLng},${maxLat}`)
   }
 
   const url = `${GEOCODING_ENDPOINT}/${encodeURIComponent(trimmed)}.json?${params.toString()}`

@@ -123,6 +123,7 @@ export interface Post {
   group?: { name: string; slug: string } | null
   event?: { id: string; type: string; title: string; slug: string; starts_at: string; city: string | null; state: string | null; going_count: number; cover_photo_url: string | null; status: string } | null
   place?: Place | null
+  bike?: { id: string; year: number | null; make: string | null; model: string | null; photo_url: string | null } | null
 }
 
 export const GROUP_CATEGORIES = [

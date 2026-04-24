@@ -394,6 +394,17 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
                 )}
               </>
             )}
+            {post.bike && !post.group && (
+              <>
+                <span className="text-zinc-400 text-base sm:text-sm">on</span>
+                <Link
+                  href={`/bikes/${post.bike.id}`}
+                  className="font-semibold text-orange-400 hover:text-orange-300 text-base sm:text-sm hover:underline"
+                >
+                  {[post.bike.year, post.bike.make, post.bike.model].filter(Boolean).join(' ')}
+                </Link>
+              </>
+            )}
             <span className="text-zinc-600 text-sm">·</span>
             <span className="text-zinc-500 text-sm">{formatTimeAgo(post.created_at)}</span>
             {wasEdited && <><span className="text-zinc-600 text-sm">·</span><span className="text-zinc-600 text-sm">Edited</span></>}
@@ -439,6 +450,45 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
           </svg>
           <span className="truncate">at <span className="text-white font-medium">{post.place.name}</span></span>
         </div>
+      )}
+
+      {/* Bike preview — for posts composed on a bike's wall, anchor the
+          text to the bike with a photo + name chip so feed readers know
+          which ride the question or comment is about. */}
+      {post.bike && (
+        <Link
+          href={`/bikes/${post.bike.id}`}
+          className="mx-4 mb-2 flex items-center gap-3 bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-800 rounded-xl p-2 transition-colors"
+        >
+          <div className="w-12 h-12 rounded-lg overflow-hidden bg-zinc-900 flex-shrink-0 relative">
+            {post.bike.photo_url ? (
+              <Image
+                src={getImageUrl('bikes', post.bike.photo_url)}
+                alt=""
+                fill
+                className="object-cover"
+                sizes="48px"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <circle cx="5.5" cy="17.5" r="3.5" />
+                  <circle cx="18.5" cy="17.5" r="3.5" />
+                  <path d="M15 6h3l2 5m-4-5l-4 11H5.5m0 0l2-7h7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-zinc-500 text-xs">Posted on this bike</p>
+            <p className="text-white font-medium text-sm truncate">
+              {[post.bike.year, post.bike.make, post.bike.model].filter(Boolean).join(' ') || 'Bike'}
+            </p>
+          </div>
+          <svg className="w-4 h-4 text-zinc-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
       )}
 
       {/* Text content — edit mode or display mode */}

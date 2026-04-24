@@ -92,7 +92,7 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
   const contextPlaceholder = bikeId
     ? 'Share something about this ride…'
     : wallOwnerUsername
-    ? `Share something with @${wallOwnerUsername}…`
+    ? `Share with @${wallOwnerUsername}…`
     : null
 
   const [rotatedPlaceholder, setRotatedPlaceholder] = useState(() => {

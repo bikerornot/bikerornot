@@ -1774,3 +1774,58 @@ export async function getSafetyOverview(): Promise<SafetyOverview> {
     recentBans: (recentBans ?? []) as any,
   }
 }
+
+// Bundle for the admin user detail UI — used both on
+// /admin/users/[id] and inline in the report queue. Combines everything
+// we need to render UserDetailView so callers don't have to sequence
+// three separate actions.
+export interface AdminUserProfileBundle {
+  user: AdminUserDetail
+  createdGroups: AdminGroupRow[]
+  onWatchlist: boolean
+  watchlistNote: string | null
+  isSuperAdmin: boolean
+  friendshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'accepted'
+}
+
+export async function getAdminUserProfileBundle(
+  userId: string,
+): Promise<AdminUserProfileBundle | null> {
+  assertUuid(userId)
+  await requireAdmin()
+  const supabase = await createClient()
+  const admin = getServiceClient()
+
+  const { data: { user: adminUser } } = await supabase.auth.getUser()
+  const adminId = adminUser?.id ?? ''
+
+  const [user, createdGroups, watchlistStatus, { data: adminProfile }, { data: friendship }] = await Promise.all([
+    getUserDetail(userId),
+    getGroupsByCreator(userId),
+    isOnWatchlist(userId),
+    admin.from('profiles').select('role').eq('id', adminId).single(),
+    admin
+      .from('friendships')
+      .select('status, requester_id')
+      .or(`and(requester_id.eq.${adminId},addressee_id.eq.${userId}),and(requester_id.eq.${userId},addressee_id.eq.${adminId})`)
+      .maybeSingle(),
+  ])
+
+  if (!user) return null
+
+  let friendshipStatus: 'none' | 'pending_sent' | 'pending_received' | 'accepted' = 'none'
+  if (friendship) {
+    if (friendship.status === 'accepted') friendshipStatus = 'accepted'
+    else if (friendship.requester_id === adminId) friendshipStatus = 'pending_sent'
+    else friendshipStatus = 'pending_received'
+  }
+
+  return {
+    user,
+    createdGroups,
+    onWatchlist: watchlistStatus.onWatchlist,
+    watchlistNote: watchlistStatus.note,
+    isSuperAdmin: adminProfile?.role === 'super_admin',
+    friendshipStatus,
+  }
+}

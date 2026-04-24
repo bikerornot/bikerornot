@@ -9,6 +9,7 @@ import {
   type ContentReport,
 } from '@/app/actions/reports'
 import { banUser } from '@/app/actions/admin'
+import InlineUserProfile from './InlineUserProfile'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 
@@ -279,6 +280,7 @@ interface CardProps {
 }
 
 function ContentCard({ report: r, isSelected, onToggle, onDismiss, onRemove, onBan, busy }: CardProps) {
+  const [profileOpen, setProfileOpen] = useState(false)
   const profileLink = r.content_author_username ? `/profile/${r.content_author_username}` : null
   const adminUserLink = r.content_author_id ? `/admin/users/${r.content_author_id}` : null
   const isRemovable = r.content_type !== 'profile'
@@ -413,15 +415,32 @@ function ContentCard({ report: r, isSelected, onToggle, onDismiss, onRemove, onB
                 Ban User
               </button>
             )}
-            {adminUserLink && (
-              <Link
-                href={adminUserLink}
-                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors border border-zinc-700"
+            {r.content_author_id && (
+              <button
+                type="button"
+                onClick={() => setProfileOpen((o) => !o)}
+                className="bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors border border-zinc-700 flex items-center gap-1.5"
+                aria-expanded={profileOpen}
               >
-                User profile →
-              </Link>
+                {profileOpen ? 'Hide profile' : 'User profile'}
+                <svg
+                  className={`w-3 h-3 transition-transform ${profileOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
             )}
           </div>
+
+          {profileOpen && r.content_author_id && (
+            <div className="pt-3 mt-3 border-t border-zinc-800">
+              <InlineUserProfile userId={r.content_author_id} />
+            </div>
+          )}
         </div>
       </div>
     </div>

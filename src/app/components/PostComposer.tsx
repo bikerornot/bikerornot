@@ -89,8 +89,11 @@ export default function PostComposer({ currentUserProfile, wallOwnerId, wallOwne
     : null
   const displayName = currentUserProfile.username ?? 'Unknown'
 
+  // Full phrasing only shows once the composer expands — the collapsed
+  // field is narrow enough that long placeholders ("Share something about
+  // this ride…") get truncated mid-word on mobile.
   const contextPlaceholder = bikeId
-    ? 'Share something about this ride…'
+    ? expanded ? 'Share something about this ride…' : 'Share about this ride…'
     : wallOwnerUsername
     ? `Share with @${wallOwnerUsername}…`
     : null

@@ -1,5 +1,16 @@
 apply plugin: 'com.android.application'
 
+// Load signing config from android/keystore.properties — a local file
+// that holds the upload keystore password and path. Gitignored. If the
+// file is missing (e.g. on CI without secrets wired up) the release
+// buildType falls back to the debug signing config so `assembleDebug`
+// still works; `assembleRelease` will fail without it, which is fine.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.bikerornot.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,10 +27,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (keystoreProperties.getProperty('storeFile')) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig keystoreProperties.getProperty('storeFile')
+                    ? signingConfigs.release
+                    : signingConfigs.debug
         }
     }
 }

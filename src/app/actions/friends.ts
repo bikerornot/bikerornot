@@ -441,8 +441,15 @@ export async function getMyFriends(): Promise<FriendCard[]> {
       }
     })
     .sort((a, b) => {
-      // Starred first, then alphabetical
+      // Starred (top friends) always first.
       if (a.starred !== b.starred) return a.starred ? -1 : 1
+      // Then most recently active — surfaces friends you can probably
+      // reach right now over dormant accounts. Friends with no
+      // last_seen_at recorded fall to the bottom and tiebreak by
+      // first name so the order is still deterministic.
+      const aLast = a.last_seen_at ? new Date(a.last_seen_at).getTime() : 0
+      const bLast = b.last_seen_at ? new Date(b.last_seen_at).getTime() : 0
+      if (aLast !== bLast) return bLast - aLast
       return a.first_name.localeCompare(b.first_name)
     })
 }

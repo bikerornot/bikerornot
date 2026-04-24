@@ -30,17 +30,25 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
 
   const content = formData.get('content') as string | null
   if (content && content.trim().length > 5000) throw new Error('Post too long (max 5000 characters)')
-  const wallOwnerId = formData.get('wallOwnerId') as string | null
+  const rawWallOwnerId = formData.get('wallOwnerId') as string | null
   const groupId = formData.get('groupId') as string | null
   const bikeId = formData.get('bikeId') as string | null
   const placeId = formData.get('placeId') as string | null
   const files = formData.getAll('images') as File[]
 
   // Reject malformed IDs before any are interpolated into PostgREST filter strings
-  if (wallOwnerId) assertUuid(wallOwnerId, 'wallOwnerId')
+  if (rawWallOwnerId) assertUuid(rawWallOwnerId, 'wallOwnerId')
   if (groupId) assertUuid(groupId, 'groupId')
   if (bikeId) assertUuid(bikeId, 'bikeId')
   if (placeId) assertUuid(placeId, 'placeId')
+
+  // Normalize self-wall posts to regular feed posts. When someone posts
+  // from their own profile's wall composer the UI sets wallOwnerId to
+  // their own id, but that should not gate the post out of friends'
+  // feeds — a self-wall post is just a normal post composed from a
+  // different surface. wall_owner_id only means "posted on someone
+  // else's wall" for feed/notification purposes.
+  const wallOwnerId = rawWallOwnerId && rawWallOwnerId !== user.id ? rawWallOwnerId : null
 
   // If posting on someone else's wall, require an accepted friendship
   if (wallOwnerId && wallOwnerId !== user.id) {

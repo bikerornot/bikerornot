@@ -120,7 +120,7 @@ export async function sendFriendRequest(addresseeId: string): Promise<{ error?: 
     sendPushToUser(addresseeId, {
       title: requesterName,
       body: 'Sent you a friend request',
-      data: { type: 'friend_request', actorId: user.id },
+      data: { type: 'friend_request', actorId: user.id, actorUsername: requesterName },
     }).catch((err) => console.warn('[push] friend request trigger failed', err))
   )
 
@@ -224,7 +224,7 @@ export async function acceptFriendRequest(requesterId: string): Promise<void> {
     sendPushToUser(requesterId, {
       title: accepterName,
       body: 'Accepted your friend request',
-      data: { type: 'friend_accepted', actorId: user.id },
+      data: { type: 'friend_accepted', actorId: user.id, actorUsername: accepterName },
     }).catch((err) => console.warn('[push] friend accepted trigger failed', err))
   )
 }

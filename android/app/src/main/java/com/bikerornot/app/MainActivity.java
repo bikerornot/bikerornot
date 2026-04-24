@@ -139,7 +139,17 @@ public class MainActivity extends BridgeActivity {
                 target = "https://www.bikerornot.com/messages/" + Uri.encode(conversationId);
             }
         } else if ("friend_request".equals(type) || "friend_accepted".equals(type)) {
-            target = "https://www.bikerornot.com/friends";
+            // Route to the actor's profile so the user gets full context
+            // (photos, bike, mutuals) before deciding — and so accepters
+            // can land on the new friend's profile to say hi. Fall back
+            // to /friends if the push payload is missing the username
+            // (older clients / legacy pushes).
+            String actorUsername = intent.getStringExtra("actorUsername");
+            if (actorUsername != null && !actorUsername.isEmpty()) {
+                target = "https://www.bikerornot.com/profile/" + Uri.encode(actorUsername);
+            } else {
+                target = "https://www.bikerornot.com/friends";
+            }
         } else if ("post_comment".equals(type) || "comment_reply".equals(type)
                 || "comment_like".equals(type) || "post_like".equals(type)
                 || "wall_post".equals(type)) {
@@ -175,6 +185,7 @@ public class MainActivity extends BridgeActivity {
         intent.removeExtra("postId");
         intent.removeExtra("commentId");
         intent.removeExtra("actorId");
+        intent.removeExtra("actorUsername");
         intent.removeExtra("groupId");
         intent.removeExtra("groupSlug");
         intent.removeExtra("eventId");

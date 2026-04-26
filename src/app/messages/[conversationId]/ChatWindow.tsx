@@ -48,6 +48,7 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const composerRef = useRef<HTMLDivElement>(null)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Tracks whether we've already broadcast `typing: true` to the other user,
   // so we don't fire a new presence message on every keystroke. Without this
@@ -141,6 +142,40 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
       input?.removeEventListener('focus', pinToBottom)
       vv?.removeEventListener('resize', pinToBottom)
       if (lastT) clearTimeout(lastT)
+    }
+  }, [])
+
+  // iOS Safari treats the soft keyboard as an OVERLAY rather than a viewport
+  // resize, so `h-dvh` does not shrink and the composer stays at the same
+  // absolute screen position — hidden behind the keyboard. The Visual
+  // Viewport API is the only reliable way to detect keyboard height on iOS,
+  // so on `vv.resize` we translate the composer up by the difference. Android
+  // Chrome already shrinks layout natively, but the math gives 0 there so
+  // this is a no-op outside iOS. Run on every rAF the viewport changes (vv
+  // also fires `scroll` while the user pans) so the composer tracks during
+  // the keyboard animation rather than snapping at the end.
+  useEffect(() => {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null
+    if (!vv) return
+
+    let raf = 0
+    function adjust() {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        const el = composerRef.current
+        if (!el || !vv) return
+        const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+        el.style.transform = offset > 0 ? `translateY(-${offset}px)` : ''
+      })
+    }
+
+    vv.addEventListener('resize', adjust)
+    vv.addEventListener('scroll', adjust)
+    adjust()
+    return () => {
+      vv.removeEventListener('resize', adjust)
+      vv.removeEventListener('scroll', adjust)
+      cancelAnimationFrame(raf)
     }
   }, [])
 
@@ -461,17 +496,21 @@ export default function ChatWindow({ conversationId, initialMessages, initialHas
         <div ref={bottomRef} />
       </div>
 
-      {/* Input area */}
+      {/* Input area — translated up by the iOS visualViewport effect when
+          the soft keyboard opens. transform-origin doesn't matter; the
+          parent flex layout keeps the messages list scrollable above. */}
       {composeDisabledReason ? (
         <div
-          className="border-t border-zinc-800 bg-zinc-900 px-4 py-4 text-center"
+          ref={composerRef}
+          className="border-t border-zinc-800 bg-zinc-900 px-4 py-4 text-center transition-transform"
           style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
           <p className="text-sm text-zinc-500">{composeDisabledReason}</p>
         </div>
       ) : (
         <div
-          className="border-t border-zinc-800 bg-zinc-900 px-4 py-3"
+          ref={composerRef}
+          className="border-t border-zinc-800 bg-zinc-900 px-4 py-3 transition-transform"
           style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
         >
           <div className="flex items-end gap-3">

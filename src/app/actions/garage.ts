@@ -285,11 +285,37 @@ export async function deleteBikePhoto(photoId: string): Promise<void> {
     .single()
   if (!photo) throw new Error('Photo not found')
 
-  // Delete from storage
-  await admin.storage.from('bikes').remove([photo.storage_path])
-
-  // Delete from DB
-  await admin.from('bike_photos').delete().eq('id', photoId)
+  // Delete from DB first. game_answers.bike_photo_id references this row
+  // with no ON DELETE rule, so a photo that's ever appeared in the
+  // guess-the-bike game can't be hard-deleted. We need to fail loud here
+  // and bail BEFORE touching storage — otherwise the file gets removed
+  // but the row stays, and the bike page renders a broken image.
+  // Soft-delete the row instead in that case so the photo stops showing
+  // up in feeds/garage but game history keeps its FK.
+  const { error: dbDeleteError } = await admin.from('bike_photos').delete().eq('id', photoId)
+  if (dbDeleteError) {
+    if (dbDeleteError.code === '23503') {
+      // FK violation — photo is referenced by game_answers. Soft-delete
+      // instead: mark non-primary and game_approved=false so the bike
+      // detail page filter hides it.
+      await admin
+        .from('bike_photos')
+        .update({
+          is_primary: false,
+          game_approved: false,
+          game_reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', photoId)
+      // Storage file can still be removed — nothing in the DB will
+      // resolve to it after the soft-delete above.
+      await admin.storage.from('bikes').remove([photo.storage_path])
+    } else {
+      throw new Error(dbDeleteError.message)
+    }
+  } else {
+    // Hard-delete succeeded; clean up the file.
+    await admin.storage.from('bikes').remove([photo.storage_path])
+  }
 
   // If this was the primary, promote the next photo
   if (photo.is_primary) {

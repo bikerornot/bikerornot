@@ -3,7 +3,8 @@
 import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { moderateImage, type ModerationResult } from '@/lib/sightengine'
+import { type ModerationResult } from '@/lib/sightengine'
+import { moderateAndLog } from '@/lib/moderation-rejections'
 import { checkRateLimit, validateImageFile, assertUuid } from '@/lib/rate-limit'
 import { notifyIfActive } from '@/lib/notify'
 import { notifyMentions } from '@/lib/mentions'
@@ -109,11 +110,11 @@ export async function createPost(formData: FormData): Promise<{ postId: string }
 
   for (const file of validFiles) {
     const bytes = await file.arrayBuffer()
-    const moderation = await moderateImage(bytes, file.type)
-    if (moderation === 'rejected') {
+    const { verdict } = await moderateAndLog(bytes, file.type, 'post', user.id)
+    if (verdict === 'rejected') {
       return { error: 'One or more images were rejected by our content filter. Please review our community guidelines.' }
     }
-    checkedFiles.push({ file, bytes, moderation })
+    checkedFiles.push({ file, bytes, moderation: verdict })
   }
 
   const { data: post, error: postError } = await admin

@@ -6,7 +6,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { haversine } from '@/lib/geo'
 import type { Group, GroupMember, GroupCategory, Post, Profile } from '@/lib/supabase/types'
 import { validateImageFile } from '@/lib/rate-limit'
-import { moderateImage } from '@/lib/sightengine'
+import { moderateAndLog } from '@/lib/moderation-rejections'
 import { notifyIfActive } from '@/lib/notify'
 import { sendPushToUser } from '@/lib/push'
 import { geocodeZip } from '@/lib/geocode'
@@ -69,7 +69,7 @@ export async function createGroup(
     const ext = coverFile.name.split('.').pop() ?? 'jpg'
     const path = `groups/${user.id}/${slug}.${ext}`
     const bytes = await coverFile.arrayBuffer()
-    const coverModeration = await moderateImage(bytes, coverFile.type)
+    const { verdict: coverModeration } = await moderateAndLog(bytes, coverFile.type, 'group_cover', user.id)
     if (coverModeration === 'rejected') throw new Error('This image was rejected by our content filter. Please choose a different photo.')
     const { error: uploadErr } = await admin.storage
       .from('covers')
@@ -661,7 +661,7 @@ export async function updateGroup(
     const ext = updates.coverFile.name.split('.').pop() ?? 'jpg'
     const path = `groups/${user.id}/${group.slug}.${ext}`
     const bytes = await updates.coverFile.arrayBuffer()
-    const coverModeration = await moderateImage(bytes, updates.coverFile.type)
+    const { verdict: coverModeration } = await moderateAndLog(bytes, updates.coverFile.type, 'group_cover', user.id)
     if (coverModeration === 'rejected') throw new Error('This image was rejected by our content filter. Please choose a different photo.')
     const { error: uploadErr } = await admin.storage
       .from('covers')

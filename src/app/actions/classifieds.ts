@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { geocodeZip } from '@/lib/geocode'
 import { validateImageFile, checkRateLimit } from '@/lib/rate-limit'
-import { moderateImage } from '@/lib/sightengine'
+import { moderateAndLog } from '@/lib/moderation-rejections'
 import { detectBikeCategory } from '@/lib/bike-category'
 import type {
   Listing,
@@ -498,7 +498,7 @@ export async function uploadListingImages(
 
     // Read bytes for moderation
     const bytes = await file.arrayBuffer()
-    const verdict = await moderateImage(bytes, file.type)
+    const { verdict } = await moderateAndLog(bytes, file.type, 'classifieds', user.id)
     if (verdict === 'rejected') throw new Error('Image rejected by content moderation')
 
     const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'

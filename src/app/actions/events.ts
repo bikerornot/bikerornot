@@ -4,7 +4,7 @@ import { after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { validateImageFile, checkRateLimit } from '@/lib/rate-limit'
-import { moderateImage } from '@/lib/sightengine'
+import { moderateAndLog } from '@/lib/moderation-rejections'
 import { notifyIfActive } from '@/lib/notify'
 import { sendPushToUser } from '@/lib/push'
 import { geocodeZip, geocodeAddress } from '@/lib/geocode'
@@ -197,8 +197,8 @@ export async function createEvent(
     const ext = flyerFile.name.split('.').pop() ?? 'jpg'
     const path = `events/${user.id}/${slug}-flyer.${ext}`
     const bytes = await flyerFile.arrayBuffer()
-    const moderation = await moderateImage(bytes, flyerFile.type)
-    if (moderation === 'rejected') throw new Error('Flyer image was rejected by our content filter. Please choose a different image.')
+    const { verdict } = await moderateAndLog(bytes, flyerFile.type, 'event_flyer', user.id)
+    if (verdict === 'rejected') throw new Error('Flyer image was rejected by our content filter. Please choose a different image.')
     const { error: uploadErr } = await admin.storage
       .from('covers')
       .upload(path, bytes, { contentType: flyerFile.type, upsert: true })
@@ -714,8 +714,8 @@ export async function updateEvent(
     const ext = flyerFile.name.split('.').pop() ?? 'jpg'
     const path = `events/${user.id}/${eventId}-flyer.${ext}`
     const bytes = await flyerFile.arrayBuffer()
-    const moderation = await moderateImage(bytes, flyerFile.type)
-    if (moderation === 'rejected') throw new Error('Flyer image was rejected by our content filter.')
+    const { verdict } = await moderateAndLog(bytes, flyerFile.type, 'event_flyer', user.id)
+    if (verdict === 'rejected') throw new Error('Flyer image was rejected by our content filter.')
     const { error: uploadErr } = await admin.storage
       .from('covers')
       .upload(path, bytes, { contentType: flyerFile.type, upsert: true })

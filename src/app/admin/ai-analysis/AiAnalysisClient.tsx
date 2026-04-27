@@ -21,7 +21,7 @@ function formatDate(d: string) {
 
 export default function AiAnalysisClient({ initialProfiles }: Props) {
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6 max-w-5xl">
       <div>
         <h1 className="text-xl font-bold text-white">AI Analysis</h1>
         <p className="text-zinc-400 text-sm mt-1">

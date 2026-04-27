@@ -91,11 +91,15 @@ export default async function BikeDetailPage({
     .single()
   const viewerProfile = viewerProfileRow as Profile | null
 
-  // Bike photos
+  // Bike photos. Skip non-primary rows that have been explicitly rejected
+  // for the game — this is the soft-delete signal we use when a photo is
+  // missing from storage or otherwise needs to be hidden but cannot be
+  // hard-deleted because game_answers references it (FK protected).
   const { data: photoRows } = await admin
     .from('bike_photos')
     .select('*')
     .eq('bike_id', bike.id)
+    .or('is_primary.eq.true,game_approved.is.null,game_approved.eq.true')
     .order('is_primary', { ascending: false })
     .order('created_at', { ascending: true })
   const bikePhotos = (photoRows ?? []) as BikePhoto[]

@@ -3,7 +3,21 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { getUnreviewedGamePhotos, submitGamePhotoReviews, getGamePhotoStats, type GamePhoto, type GamePhotoStats } from '@/app/actions/game'
+import { getUnreviewedGamePhotos, submitGamePhotoReviews, getGamePhotoStats, autoVetUnreviewedGamePhotos, type GamePhoto, type GamePhotoStats } from '@/app/actions/game'
+
+const REASON_LABELS: Record<string, string> = {
+  unidentifiable: 'Unidentifiable',
+  person_visible: 'Person visible',
+  multiple_bikes_unclear_subject: 'Multiple bikes',
+  trike: 'Trike',
+}
+
+// Pre-select photos based on the AI verdict so moderators only have to
+// flip the rare disagreements. Unvetted photos default to approved
+// (matches existing behaviour).
+function defaultCheckedIds(photos: GamePhoto[]): Set<string> {
+  return new Set(photos.filter((p) => p.auto_decision !== 'reject').map((p) => p.id))
+}
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 
@@ -19,10 +33,36 @@ interface Props {
 export default function GamePhotosClient({ initialPhotos, initialStats }: Props) {
   const [photos, setPhotos] = useState<GamePhoto[]>(initialPhotos)
   const [stats, setStats] = useState<GamePhotoStats>(initialStats)
-  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set(initialPhotos.map((p) => p.id)))
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(defaultCheckedIds(initialPhotos))
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(0)
+  const [vetting, setVetting] = useState(false)
+  const [vetSummary, setVetSummary] = useState<string | null>(null)
+
+  async function handleRunVetter() {
+    if (vetting) return
+    setVetting(true)
+    setVetSummary(null)
+    try {
+      const summary = await autoVetUnreviewedGamePhotos()
+      setVetSummary(
+        `Vetted ${summary.total}: auto-approved ${summary.autoApproved}, auto-rejected ${summary.autoRejected}, ` +
+          `${summary.needsReview} need review${summary.errors > 0 ? `, ${summary.errors} errors` : ''}.`,
+      )
+      const [nextPhotos, nextStats] = await Promise.all([
+        getUnreviewedGamePhotos(20),
+        getGamePhotoStats(),
+      ])
+      setPhotos(nextPhotos)
+      setStats(nextStats)
+      setCheckedIds(defaultCheckedIds(nextPhotos))
+    } catch (err) {
+      setVetSummary(`Vetter failed: ${err instanceof Error ? err.message : 'unknown error'}`)
+    } finally {
+      setVetting(false)
+    }
+  }
 
   function togglePhoto(id: string) {
     setCheckedIds((prev) => {
@@ -59,7 +99,7 @@ export default function GamePhotosClient({ initialPhotos, initialStats }: Props)
       ])
       setPhotos(nextPhotos)
       setStats(nextStats)
-      setCheckedIds(new Set(nextPhotos.map((p) => p.id)))
+      setCheckedIds(defaultCheckedIds(nextPhotos))
     } catch (err) {
       console.error('Failed to submit reviews:', err)
     } finally {
@@ -115,6 +155,32 @@ export default function GamePhotosClient({ initialPhotos, initialStats }: Props)
           <p className="text-zinc-400 text-sm">No more Harley photos to review.</p>
         </div>
       )}
+
+      {/* AI vetter row — clears the obvious cases (clear approve / obvious
+          reject) automatically and surfaces the rest with a recommendation
+          so the moderator only flips the disagreements. */}
+      <div className="flex flex-wrap items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
+        <button
+          onClick={handleRunVetter}
+          disabled={vetting || stats.remaining === 0}
+          className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors flex items-center gap-2"
+        >
+          {vetting ? (
+            <>
+              <span className="inline-block w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+              Vetting…
+            </>
+          ) : (
+            <>✨ Run AI vetter on unreviewed</>
+          )}
+        </button>
+        <p className="text-zinc-500 text-xs">
+          GPT-4o-mini scans for blurry photos, people, multiple bikes, and trikes. High-confidence verdicts auto-approve or auto-reject; the rest land here with a recommendation.
+        </p>
+        {vetSummary && (
+          <p className="text-zinc-300 text-sm w-full bg-zinc-800/60 rounded-lg px-3 py-2">{vetSummary}</p>
+        )}
+      </div>
 
       {/* Action bar */}
       {photos.length > 0 && (
@@ -185,6 +251,30 @@ export default function GamePhotosClient({ initialPhotos, initialStats }: Props)
                       </svg>
                     )}
                   </div>
+
+                  {/* AI verdict badge — present whenever the vetter ran on
+                      this row but the result wasn't confident enough to
+                      auto-decide. Saves the moderator from re-reasoning
+                      from scratch. */}
+                  {photo.auto_decision && (
+                    <div className={`absolute top-2 left-2 max-w-[calc(100%-3rem)] rounded-md px-2 py-1 text-[10px] font-semibold leading-tight backdrop-blur-sm ${
+                      photo.auto_decision === 'reject'
+                        ? 'bg-red-500/80 text-white'
+                        : photo.auto_decision === 'approve'
+                          ? 'bg-emerald-500/80 text-white'
+                          : 'bg-yellow-500/80 text-zinc-900'
+                    }`}>
+                      <span>AI: {photo.auto_decision}</span>
+                      {typeof photo.auto_decision_confidence === 'number' && (
+                        <span className="opacity-80"> ({Math.round(photo.auto_decision_confidence * 100)}%)</span>
+                      )}
+                      {photo.auto_decision_reasons && photo.auto_decision_reasons.length > 0 && (
+                        <div className="opacity-90 mt-0.5">
+                          {photo.auto_decision_reasons.map((r) => REASON_LABELS[r] ?? r).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Bottom gradient + info */}
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 pb-2 pt-6">

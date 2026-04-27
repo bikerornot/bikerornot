@@ -2,6 +2,9 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { vetGamePhoto, shouldAutoDecide } from '@/lib/game-photo-vetter'
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 
 async function requireAuth() {
   const supabase = await createClient()
@@ -38,6 +41,10 @@ export interface GamePhoto {
   make: string | null
   model: string | null
   username: string | null
+  auto_decision?: 'approve' | 'reject' | 'review' | null
+  auto_decision_reasons?: string[] | null
+  auto_decision_confidence?: number | null
+  auto_decision_notes?: string | null
 }
 
 export interface GamePhotoStats {
@@ -65,6 +72,10 @@ export async function getUnreviewedGamePhotos(limit = 20): Promise<GamePhoto[]> 
     make: p.make ?? null,
     model: p.model ?? null,
     username: p.username ?? null,
+    auto_decision: p.auto_decision ?? null,
+    auto_decision_reasons: p.auto_decision_reasons ?? null,
+    auto_decision_confidence: p.auto_decision_confidence ?? null,
+    auto_decision_notes: p.auto_decision_notes ?? null,
   }))
 }
 
@@ -568,4 +579,74 @@ export async function getLeaderboard(
       accuracyPercent: r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0,
     }
   })
+}
+
+// ─── AI Auto-Vetting ───────────────────────────────────────
+
+export interface AutoVetSummary {
+  total: number
+  autoApproved: number
+  autoRejected: number
+  needsReview: number
+  errors: number
+}
+
+// Run the GPT-4o-mini vetter against every photo that hasn't been reviewed
+// yet. Each result is stored on the row so the admin queue can show the
+// AI's verdict alongside the photo, and high-confidence verdicts also flip
+// game_approved + game_reviewed_at so they leave the manual queue entirely.
+export async function autoVetUnreviewedGamePhotos(): Promise<AutoVetSummary> {
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  const { data: candidates } = await admin.rpc('get_unreviewed_harley_photos' as any, { p_limit: 500 })
+  const list = (candidates ?? []) as Array<{ id: string; storage_path: string }>
+
+  const summary: AutoVetSummary = {
+    total: list.length,
+    autoApproved: 0,
+    autoRejected: 0,
+    needsReview: 0,
+    errors: 0,
+  }
+  if (list.length === 0) return summary
+
+  const now = new Date().toISOString()
+
+  // Run sequentially to keep OpenAI request rate gentle and surface errors
+  // one-by-one. At ~1s per call and ~40 photos this finishes in under a
+  // minute; if the volume ever grows we can parallelize with a small pool.
+  for (const photo of list) {
+    const url = `${SUPABASE_URL}/storage/v1/object/public/bikes/${photo.storage_path}`
+    try {
+      const result = await vetGamePhoto(url)
+      const auto = shouldAutoDecide(result)
+
+      const update: Record<string, unknown> = {
+        auto_decision: result.decision,
+        auto_decision_reasons: result.reasons,
+        auto_decision_confidence: result.confidence,
+        auto_decision_notes: result.notes,
+        auto_decided_at: now,
+      }
+      if (auto === 'approve') {
+        update.game_approved = true
+        update.game_reviewed_at = now
+        summary.autoApproved++
+      } else if (auto === 'reject') {
+        update.game_approved = false
+        update.game_reviewed_at = now
+        summary.autoRejected++
+      } else {
+        summary.needsReview++
+      }
+
+      await admin.from('bike_photos').update(update).eq('id', photo.id)
+    } catch (err) {
+      summary.errors++
+      console.warn('[game vetter] failed for', photo.id, err)
+    }
+  }
+
+  return summary
 }

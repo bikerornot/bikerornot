@@ -30,7 +30,7 @@ export default function UserActions({ userId, currentStatus, currentRole, isSupe
   const [modal, setModal] = useState<'suspend' | 'ban' | 'reinstate' | 'role' | 'watchlist' | null>(null)
   const [suspendDays, setSuspendDays] = useState<number | null>(7)
   const [suspendReason, setSuspendReason] = useState('')
-  const [banReason, setBanReason] = useState('')
+  const [banReason, setBanReason] = useState('Scammer')
   const [watchlistNote, setWatchlistNote] = useState('')
   const [selectedRole, setSelectedRole] = useState(currentRole)
   const [busy, setBusy] = useState(false)

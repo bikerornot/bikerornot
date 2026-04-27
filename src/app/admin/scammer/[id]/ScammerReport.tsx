@@ -331,7 +331,7 @@ export default function ScammerReport({ userId, profile, result }: Props) {
               Suspend User
             </button>
             <button
-              onClick={() => setShowBan(true)}
+              onClick={() => { setReason('Scammer'); setShowBan(true) }}
               className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg text-sm font-medium hover:bg-red-500/30 transition-colors"
             >
               Ban User

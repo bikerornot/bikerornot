@@ -98,3 +98,92 @@ export function shouldAutoDecide(result: GameVetResult): 'approve' | 'reject' | 
   if (result.decision === 'reject') return 'reject'
   return null
 }
+
+// Used when a user has reported a photo as wrong-model / bad-angle /
+// unidentifiable / multiple-bikes. The model is shown the photo plus
+// what the OWNER claims the bike is, plus the reasons the reporters
+// cited. It comes back with a recommendation: restore the photo to
+// the game (the report is wrong) or keep it out (the report is valid).
+
+export interface GameReportAssessment {
+  recommendation: 'restore' | 'keep_out' | 'review'
+  identified_model: string
+  confidence: number
+  notes: string
+}
+
+const REPORT_SYSTEM_PROMPT = `You evaluate user reports about photos in a "guess the bike" game. The bike's owner has labeled the photo with a year/make/model. Reporters claim the photo is wrong, bad-angle, has multiple bikes, or is unidentifiable.
+
+Look at the image and answer:
+1. What model do YOU see in the photo? (Be specific: "Harley-Davidson Electra Glide Ultra Classic" rather than "touring bike".)
+2. Does it match the claimed year/make/model? Year tolerance is generous — Harley keeps a model on the same generation across many years, so a 5-year miss on year alone is not a problem.
+3. Is the bike clearly identifiable? (Sharp enough, framed enough, no obstructions.)
+4. Is there one clear primary bike? (Background bikes are fine; a lineup of equally-prominent bikes is not.)
+
+Give a recommendation:
+- "restore" — the photo is fine for the game; the report is invalid
+- "keep_out" — the report is valid; photo should stay out of the game
+- "review" — genuinely unclear
+
+Respond with JSON only:
+{
+  "recommendation": "restore" | "keep_out" | "review",
+  "identified_model": "what you see in the photo, in plain text",
+  "confidence": 0.0..1.0,
+  "notes": "one short sentence explaining the call"
+}`
+
+export async function assessGameReport(args: {
+  imageUrl: string
+  claimedYear: number | null
+  claimedMake: string | null
+  claimedModel: string | null
+  reportedReasons: string[]
+}): Promise<GameReportAssessment> {
+  const { imageUrl, claimedYear, claimedMake, claimedModel, reportedReasons } = args
+  const openai = getOpenAI()
+
+  const claimed = [claimedYear, claimedMake, claimedModel].filter(Boolean).join(' ') || 'Unknown'
+  const reasons = reportedReasons.length > 0 ? reportedReasons.join(', ') : 'none specified'
+
+  const userText = `Owner claims: ${claimed}\nReporters cited: ${reasons}\n\nAssess per the criteria.`
+
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: REPORT_SYSTEM_PROMPT },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: userText },
+          { type: 'image_url', image_url: { url: imageUrl, detail: 'low' } },
+        ],
+      },
+    ],
+    max_tokens: 250,
+    temperature: 0.1,
+  })
+
+  const raw = completion.choices[0]?.message?.content ?? '{}'
+  let parsed: any
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return {
+      recommendation: 'review',
+      identified_model: '',
+      confidence: 0,
+      notes: `Assessor returned malformed JSON: ${raw.slice(0, 120)}`,
+    }
+  }
+
+  const recommendation = ['restore', 'keep_out', 'review'].includes(parsed.recommendation)
+    ? parsed.recommendation
+    : 'review'
+  const identified_model = typeof parsed.identified_model === 'string' ? parsed.identified_model.slice(0, 200) : ''
+  const confidence = typeof parsed.confidence === 'number' ? Math.max(0, Math.min(1, parsed.confidence)) : 0
+  const notes = typeof parsed.notes === 'string' ? parsed.notes.slice(0, 280) : ''
+
+  return { recommendation, identified_model, confidence, notes }
+}

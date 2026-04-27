@@ -7,6 +7,7 @@ import {
   listGameReports,
   restoreGamePhoto,
   keepOutGamePhoto,
+  runReportAssessmentBatch,
   type ReportedPhoto,
   type ReportReason,
 } from '@/app/actions/game-reports'
@@ -35,10 +36,29 @@ interface Props {
 export default function GameReportsClient({ initialReports }: Props) {
   const [reports, setReports] = useState<ReportedPhoto[]>(initialReports)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [assessing, setAssessing] = useState(false)
+  const [assessSummary, setAssessSummary] = useState<string | null>(null)
 
   async function refresh() {
     const fresh = await listGameReports()
     setReports(fresh)
+  }
+
+  async function handleAssessAll() {
+    if (assessing) return
+    setAssessing(true)
+    setAssessSummary(null)
+    try {
+      const summary = await runReportAssessmentBatch()
+      setAssessSummary(
+        `Assessed ${summary.total}: ${summary.recommendRestore} restore, ${summary.recommendKeepOut} keep out, ${summary.recommendReview} review${summary.errors > 0 ? `, ${summary.errors} errors` : ''}.`,
+      )
+      await refresh()
+    } catch (err) {
+      setAssessSummary(`Assessor failed: ${err instanceof Error ? err.message : 'unknown error'}`)
+    } finally {
+      setAssessing(false)
+    }
   }
 
   async function handleRestore(photoId: string) {
@@ -72,6 +92,34 @@ export default function GameReportsClient({ initialReports }: Props) {
         </div>
         <span className="text-zinc-500 text-sm">{reports.length} open</span>
       </div>
+
+      {/* AI assessment row — runs the assessor against every open report and
+          stores a recommendation on each row. The admin still clicks the
+          actual decision; the AI just frontloads the analysis. */}
+      {reports.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3">
+          <button
+            onClick={handleAssessAll}
+            disabled={assessing}
+            className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors flex items-center gap-2"
+          >
+            {assessing ? (
+              <>
+                <span className="inline-block w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                Assessing…
+              </>
+            ) : (
+              <>✨ Run AI on all reports</>
+            )}
+          </button>
+          <p className="text-zinc-500 text-xs">
+            GPT-4o-mini compares the photo against the claimed bike and the reporters' reasons, then recommends Restore or Keep Out.
+          </p>
+          {assessSummary && (
+            <p className="text-zinc-300 text-sm w-full bg-zinc-800/60 rounded-lg px-3 py-2">{assessSummary}</p>
+          )}
+        </div>
+      )}
 
       {reports.length === 0 ? (
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center">
@@ -130,6 +178,29 @@ export default function GameReportsClient({ initialReports }: Props) {
                       .map((rep) => rep.username ?? '?')
                       .join(', ')}
                   </div>
+
+                  {r.ai_assessment && (
+                    <div className={`rounded-lg px-3 py-2 border text-sm ${
+                      r.ai_assessment.recommendation === 'restore'
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+                        : r.ai_assessment.recommendation === 'keep_out'
+                          ? 'bg-red-500/10 border-red-500/30 text-red-200'
+                          : 'bg-yellow-500/10 border-yellow-500/30 text-yellow-200'
+                    }`}>
+                      <p className="font-semibold flex items-center gap-1.5">
+                        ✨ AI: {r.ai_assessment.recommendation === 'restore' ? 'Restore to Game' : r.ai_assessment.recommendation === 'keep_out' ? 'Keep Out' : 'Needs Review'}
+                        <span className="text-xs opacity-75">({Math.round(r.ai_assessment.confidence * 100)}%)</span>
+                      </p>
+                      {r.ai_assessment.identified_model && (
+                        <p className="text-xs mt-1 opacity-90">
+                          <span className="opacity-70">Sees:</span> {r.ai_assessment.identified_model}
+                        </p>
+                      )}
+                      {r.ai_assessment.notes && (
+                        <p className="text-xs mt-1 opacity-90">{r.ai_assessment.notes}</p>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex gap-2 mt-auto pt-2">
                     <button

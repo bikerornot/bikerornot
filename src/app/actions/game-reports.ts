@@ -3,6 +3,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { assessGameReport } from '@/lib/game-photo-vetter'
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 
 export type ReportReason = 'wrong_year' | 'wrong_make' | 'wrong_model' | 'bad_angle' | 'multiple_bikes'
 
@@ -80,6 +83,13 @@ export interface ReportedPhoto {
   first_reported_at: string
   latest_reported_at: string
   reporters: { username: string | null; reason: ReportReason; created_at: string }[]
+  ai_assessment: {
+    recommendation: 'restore' | 'keep_out' | 'review'
+    confidence: number
+    identified_model: string
+    notes: string
+    assessed_at: string
+  } | null
 }
 
 export async function listGameReports(): Promise<ReportedPhoto[]> {
@@ -98,7 +108,7 @@ export async function listGameReports(): Promise<ReportedPhoto[]> {
 
   const { data: photos } = await admin
     .from('bike_photos')
-    .select('id, storage_path, bike:user_bikes!bike_id(year, make, model, user_id)')
+    .select('id, storage_path, report_ai_recommendation, report_ai_confidence, report_ai_notes, report_ai_identified_model, report_ai_assessed_at, bike:user_bikes!bike_id(year, make, model, user_id)')
     .in('id', photoIds)
 
   const ownerIds = Array.from(new Set((photos ?? []).map((p: any) => p.bike?.user_id).filter(Boolean)))
@@ -131,6 +141,15 @@ export async function listGameReports(): Promise<ReportedPhoto[]> {
         first_reported_at: r.created_at,
         latest_reported_at: r.created_at,
         reporters: [],
+        ai_assessment: photo.report_ai_assessed_at
+          ? {
+              recommendation: photo.report_ai_recommendation,
+              confidence: photo.report_ai_confidence ?? 0,
+              identified_model: photo.report_ai_identified_model ?? '',
+              notes: photo.report_ai_notes ?? '',
+              assessed_at: photo.report_ai_assessed_at,
+            }
+          : null,
       }
       groups.set(photoId, group)
     }
@@ -181,5 +200,90 @@ export async function keepOutGamePhoto(bikePhotoId: string): Promise<void> {
     .update({ voided_at: new Date().toISOString(), voided_reason: 'misclassified' })
     .eq('bike_photo_id', bikePhotoId)
     .is('voided_at', null)
+}
+
+// ─── AI Assessment of reports ──────────────────────────────────────
+
+export interface ReportAssessmentSummary {
+  total: number
+  recommendRestore: number
+  recommendKeepOut: number
+  recommendReview: number
+  errors: number
+}
+
+// Run the GPT-4o-mini assessor on every open-report photo. The assessor
+// looks at the image, compares to the owner's claimed year/make/model,
+// considers the reporters' reasons, and recommends restore vs keep_out.
+// The recommendation is stored on the row and surfaced in the admin queue
+// — admins still click the actual decision button, but they see the AI's
+// take alongside.
+export async function runReportAssessmentBatch(): Promise<ReportAssessmentSummary> {
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  const { data: openReports } = await admin
+    .from('bike_photo_reports')
+    .select('bike_photo_id, reason')
+    .is('resolved_at', null)
+
+  if (!openReports || openReports.length === 0) {
+    return { total: 0, recommendRestore: 0, recommendKeepOut: 0, recommendReview: 0, errors: 0 }
+  }
+
+  // Group reasons per photo so the prompt sees the full picture.
+  const reasonsByPhoto = new Map<string, Set<string>>()
+  for (const r of openReports as any[]) {
+    if (!reasonsByPhoto.has(r.bike_photo_id)) reasonsByPhoto.set(r.bike_photo_id, new Set())
+    reasonsByPhoto.get(r.bike_photo_id)!.add(r.reason)
+  }
+
+  const photoIds = Array.from(reasonsByPhoto.keys())
+
+  const { data: photos } = await admin
+    .from('bike_photos')
+    .select('id, storage_path, bike:user_bikes!bike_id(year, make, model)')
+    .in('id', photoIds)
+
+  const summary: ReportAssessmentSummary = {
+    total: photos?.length ?? 0,
+    recommendRestore: 0,
+    recommendKeepOut: 0,
+    recommendReview: 0,
+    errors: 0,
+  }
+
+  for (const photo of (photos ?? []) as any[]) {
+    const url = `${SUPABASE_URL}/storage/v1/object/public/bikes/${photo.storage_path}`
+    try {
+      const result = await assessGameReport({
+        imageUrl: url,
+        claimedYear: photo.bike?.year ?? null,
+        claimedMake: photo.bike?.make ?? null,
+        claimedModel: photo.bike?.model ?? null,
+        reportedReasons: Array.from(reasonsByPhoto.get(photo.id) ?? []),
+      })
+
+      await admin
+        .from('bike_photos')
+        .update({
+          report_ai_recommendation: result.recommendation,
+          report_ai_confidence: result.confidence,
+          report_ai_notes: result.notes,
+          report_ai_identified_model: result.identified_model,
+          report_ai_assessed_at: new Date().toISOString(),
+        })
+        .eq('id', photo.id)
+
+      if (result.recommendation === 'restore') summary.recommendRestore++
+      else if (result.recommendation === 'keep_out') summary.recommendKeepOut++
+      else summary.recommendReview++
+    } catch (err) {
+      summary.errors++
+      console.warn('[game report assessor] failed for', photo.id, err)
+    }
+  }
+
+  return summary
 }
 

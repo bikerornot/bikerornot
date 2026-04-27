@@ -240,6 +240,47 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Background refresh on mount + when the tab/app becomes visible. Snapshot
+  // hydration shows users a stale feed instantly (good for perceived speed)
+  // but they need newer posts to appear without a manual reload — especially
+  // in the Android WebView where realtime sometimes silently stops delivering
+  // INSERT events. Fetch the freshest page and prepend any posts whose
+  // created_at is newer than the top of the current list.
+  useEffect(() => {
+    let cancelled = false
+    async function refreshNewerPosts() {
+      try {
+        const { posts: latestPage, rawCursor, rawFull } = await fetchPosts()
+        if (cancelled || latestPage.length === 0) return
+        setPosts((prev) => {
+          if (prev.length === 0) {
+            cursorRef.current = rawCursor
+            setHasMore(rawFull)
+            return latestPage
+          }
+          const topCreated = prev[0].created_at
+          const newer = latestPage.filter((p) => p.created_at > topCreated)
+          if (newer.length === 0) return prev
+          return [...newer, ...prev]
+        })
+      } catch {
+        // Network blip on resume — try again on the next visibility change.
+      }
+    }
+    function onVisible() {
+      if (document.visibilityState === 'visible') refreshNewerPosts()
+    }
+    // First run after mount picks up anything posted while the tab was
+    // backgrounded; subsequent runs fire whenever the user comes back to
+    // the page (tab switch, app foreground on Android).
+    refreshNewerPosts()
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [fetchPosts])
+
   // Scroll restoration — deliberately simple. We scroll to the anchor once
   // in useLayoutEffect (pre-paint) and that's it. The earlier settle-loop
   // / ResizeObserver / multi-phase approach was racing layout shifts from

@@ -221,13 +221,13 @@ export async function getContentReports(
 
   const [postsResult, commentsResult, profilesResult] = await Promise.all([
     postIds.length > 0
-      ? admin.from('posts').select('id, content, author_id, author:profiles!author_id(username)').in('id', postIds)
+      ? admin.from('posts').select('id, content, author_id, author:profiles!author_id(username, status)').in('id', postIds)
       : Promise.resolve({ data: [] as any[] }),
     commentIds.length > 0
-      ? admin.from('comments').select('id, content, author_id, author:profiles!author_id(username)').in('id', commentIds)
+      ? admin.from('comments').select('id, content, author_id, author:profiles!author_id(username, status)').in('id', commentIds)
       : Promise.resolve({ data: [] as any[] }),
     profileIds.length > 0
-      ? admin.from('profiles').select('id, username').in('id', profileIds)
+      ? admin.from('profiles').select('id, username, status').in('id', profileIds)
       : Promise.resolve({ data: [] as any[] }),
   ])
 
@@ -248,6 +248,13 @@ export async function getContentReports(
   const commentMap = new Map((commentsResult.data ?? []).map((c: any) => [c.id, c]))
   const profileMap = new Map((profilesResult.data ?? []).map((p: any) => [p.id, p]))
 
+  // Track which authors are banned so we can drop their reports from the
+  // queue. A banned user's content is shadow-hidden everywhere else, so
+  // there's nothing for a moderator to act on — the content is already
+  // invisible to the rest of the site. Reviewing the report after that
+  // is just busywork.
+  const bannedAuthorIds = new Set<string>()
+
   for (const group of groups) {
     if (group.content_type === 'post') {
       const post = postMap.get(group.content_id)
@@ -256,6 +263,7 @@ export async function getContentReports(
         group.content_author_id = post.author_id
         group.content_author_username = (post.author as any)?.username ?? null
         group.content_images = imageMap.get(group.content_id) ?? []
+        if ((post.author as any)?.status === 'banned') bannedAuthorIds.add(post.author_id)
       }
     } else if (group.content_type === 'comment') {
       const comment = commentMap.get(group.content_id)
@@ -263,6 +271,7 @@ export async function getContentReports(
         group.content_preview = comment.content?.slice(0, 300) ?? null
         group.content_author_id = comment.author_id
         group.content_author_username = (comment.author as any)?.username ?? null
+        if ((comment.author as any)?.status === 'banned') bannedAuthorIds.add(comment.author_id)
       }
     } else if (group.content_type === 'profile') {
       const p = profileMap.get(group.content_id)
@@ -270,11 +279,12 @@ export async function getContentReports(
         group.content_preview = `@${p.username}`
         group.content_author_id = p.id
         group.content_author_username = p.username ?? null
+        if ((p as any).status === 'banned') bannedAuthorIds.add(p.id)
       }
     }
   }
 
-  return groups
+  return groups.filter((g) => !g.content_author_id || !bannedAuthorIds.has(g.content_author_id))
 }
 
 export async function bulkDismissReports(reportIds: string[]): Promise<void> {

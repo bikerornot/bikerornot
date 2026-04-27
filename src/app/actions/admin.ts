@@ -376,12 +376,15 @@ export interface AdminUserDetail {
     created_at: string
     reporter_username: string | null
   }>
+  // One entry per conversation the user is in (deduped by conversation_id),
+  // not one per individual message. Lets the admin UI render a chat-list
+  // style summary instead of repeating the same recipient over and over.
   recent_messages: Array<{
-    id: string
     conversation_id: string
-    content: string
-    created_at: string
     recipient_username: string | null
+    message_count: number
+    last_at: string
+    last_preview: string
   }>
   recent_comments: Array<{
     id: string
@@ -518,13 +521,16 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
     }
   }
 
-  // Last 50 sent messages with recipient info
+  // Pull every message this user has sent so we can group by conversation.
+  // Bounded to 1000 rows so the page doesn't choke on a chat-bot account
+  // with thousands of outbound messages — anything past that is rarely
+  // useful for moderation review anyway.
   const { data: rawMessages } = await admin
     .from('messages')
     .select('id, content, created_at, conversation_id')
     .eq('sender_id', userId)
     .order('created_at', { ascending: false })
-    .limit(50)
+    .limit(1000)
 
   const convIds = [...new Set((rawMessages ?? []).map((m) => m.conversation_id))]
   let recipientMap: Record<string, string | null> = {}
@@ -635,13 +641,33 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
       created_at: r.created_at,
       reporter_username: r.reporter?.username ?? null,
     })),
-    recent_messages: (rawMessages ?? []).map((m) => ({
-      id: m.id,
-      conversation_id: m.conversation_id,
-      content: m.content,
-      created_at: m.created_at,
-      recipient_username: recipientMap[m.conversation_id] ?? null,
-    })),
+    // Aggregate sent messages by conversation: count how many the user sent
+    // to that recipient, plus the latest message for the chat-list preview.
+    // Sorted by recency so the freshest conversation is on top.
+    recent_messages: (() => {
+      const map = new Map<string, { conversation_id: string; recipient_username: string | null; message_count: number; last_at: string; last_preview: string }>()
+      for (const m of rawMessages ?? []) {
+        const existing = map.get(m.conversation_id)
+        if (!existing) {
+          map.set(m.conversation_id, {
+            conversation_id: m.conversation_id,
+            recipient_username: recipientMap[m.conversation_id] ?? null,
+            message_count: 1,
+            last_at: m.created_at,
+            last_preview: (m.content ?? '').slice(0, 200),
+          })
+        } else {
+          existing.message_count++
+          if (m.created_at > existing.last_at) {
+            existing.last_at = m.created_at
+            existing.last_preview = (m.content ?? '').slice(0, 200)
+          }
+        }
+      }
+      return Array.from(map.values())
+        .sort((a, b) => b.last_at.localeCompare(a.last_at))
+        .slice(0, 50)
+    })(),
     recent_comments: (recentComments ?? []).map((c) => ({
       id: c.id,
       content: c.content,
@@ -994,7 +1020,7 @@ export interface AdminThreadMessage {
 
 export async function getConversationThread(
   conversationId: string,
-  limit = 10,
+  limit = 50,
 ): Promise<AdminThreadMessage[]> {
   await requireAdmin()
   const admin = getServiceClient()

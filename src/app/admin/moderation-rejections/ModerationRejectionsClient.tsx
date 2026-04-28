@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {
   deleteModerationRejection,
+  approveModerationRejection,
   type ModerationRejectionRow,
 } from '@/app/actions/moderation-rejections'
 
@@ -55,6 +56,21 @@ export default function ModerationRejectionsClient({ initialRows }: Props) {
     try {
       await deleteModerationRejection(id)
       setRows((prev) => prev.filter((r) => r.id !== id))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  async function handleApprove(id: string) {
+    if (busyId) return
+    setBusyId(id)
+    try {
+      const res = await approveModerationRejection(id)
+      if ('error' in res) {
+        alert(`Approve failed: ${res.error}`)
+      } else {
+        setRows((prev) => prev.filter((r) => r.id !== id))
+      }
     } finally {
       setBusyId(null)
     }
@@ -134,13 +150,23 @@ export default function ModerationRejectionsClient({ initialRows }: Props) {
                   </div>
                 )}
 
-                <button
-                  onClick={() => handleDelete(r.id)}
-                  disabled={!!busyId}
-                  className="mt-auto bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-300 text-xs font-semibold py-1.5 rounded-lg transition-colors border border-zinc-700"
-                >
-                  {busyId === r.id ? '…' : 'Delete now'}
-                </button>
+                <div className="mt-auto flex gap-2">
+                  <button
+                    onClick={() => handleApprove(r.id)}
+                    disabled={!!busyId}
+                    title="False positive — allowlist this image so it goes through next time the user uploads it"
+                    className="flex-1 bg-emerald-500/15 hover:bg-emerald-500/25 disabled:opacity-50 text-emerald-300 text-xs font-semibold py-1.5 rounded-lg transition-colors border border-emerald-500/30"
+                  >
+                    {busyId === r.id ? '…' : 'Approve'}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(r.id)}
+                    disabled={!!busyId}
+                    className="flex-1 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-300 text-xs font-semibold py-1.5 rounded-lg transition-colors border border-zinc-700"
+                  >
+                    {busyId === r.id ? '…' : 'Delete'}
+                  </button>
+                </div>
               </div>
             </div>
           ))}

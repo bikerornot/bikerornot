@@ -52,6 +52,7 @@ export async function listModerationRejections(): Promise<ModerationRejectionRow
   const { data: rows } = await admin
     .from('moderation_rejections')
     .select('id, user_id, surface, storage_path, content_type, byte_size, reason, scores, created_at, expires_at, user:profiles!user_id(username)')
+    .is('restored_at', null)
     .order('created_at', { ascending: false })
     .limit(200)
 
@@ -97,4 +98,49 @@ export async function deleteModerationRejection(id: string): Promise<void> {
     await admin.storage.from(REJECTION_BUCKET).remove([row.storage_path])
   }
   await admin.from('moderation_rejections').delete().eq('id', id)
+}
+
+// Approve a rejected image — admin override for false positives. Hashes
+// the file bytes and adds them to moderation_image_allowlist so a future
+// upload of the exact same bytes bypasses sightengine. Marks the rejection
+// as restored so it drops off the queue. The user still has to re-upload —
+// we can't fabricate the original post / profile photo / event flyer they
+// were trying to create.
+export async function approveModerationRejection(id: string): Promise<{ ok: true } | { error: string }> {
+  const adminUser = await requireAdmin()
+  const admin = getServiceClient()
+
+  const { data: row } = await admin
+    .from('moderation_rejections')
+    .select('storage_path')
+    .eq('id', id)
+    .single()
+  if (!row?.storage_path) return { error: 'Rejection row not found' }
+
+  // Pull the bytes back from the private bucket and hash them.
+  const { data: blob, error: downloadErr } = await admin.storage
+    .from(REJECTION_BUCKET)
+    .download(row.storage_path)
+  if (downloadErr || !blob) return { error: `Could not read image: ${downloadErr?.message ?? 'missing'}` }
+  const bytes = await blob.arrayBuffer()
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  const hash = Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('')
+
+  // Upsert allowlist entry. Multiple rejections of the same image (rare
+  // but possible) just overwrite the metadata.
+  await admin.from('moderation_image_allowlist').upsert(
+    {
+      hash,
+      approved_by: adminUser.id,
+      source_rejection_id: id,
+    },
+    { onConflict: 'hash' },
+  )
+
+  await admin
+    .from('moderation_rejections')
+    .update({ restored_at: new Date().toISOString(), restored_by: adminUser.id })
+    .eq('id', id)
+
+  return { ok: true }
 }

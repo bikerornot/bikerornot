@@ -29,12 +29,36 @@ function admin() {
 //
 // Failures here MUST NOT block the upload pipeline: if logging fails for any
 // reason we fall back to the verdict alone, matching the prior behavior.
+async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 export async function moderateAndLog(
   bytes: ArrayBuffer,
   contentType: string,
   surface: ModerationSurface,
   userId: string | null,
 ): Promise<ModerationDetails> {
+  // Admin-approved images get an allowlist entry by hash. If the user
+  // re-uploads the exact same bytes, skip sightengine entirely so the
+  // false positive doesn't loop.
+  let hash: string | null = null
+  try {
+    hash = await sha256Hex(bytes)
+    const a = admin()
+    const { data: allowed } = await a
+      .from('moderation_image_allowlist')
+      .select('hash')
+      .eq('hash', hash)
+      .maybeSingle()
+    if (allowed) {
+      return { verdict: 'approved', reason: 'admin_allowlist', scores: null }
+    }
+  } catch {
+    // Hashing failure is non-fatal — fall through to normal moderation
+  }
+
   const result = await moderateImageDetailed(bytes, contentType)
   if (result.verdict !== 'rejected') return result
 

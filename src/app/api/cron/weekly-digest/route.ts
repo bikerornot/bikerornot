@@ -163,9 +163,13 @@ export async function GET(request: Request) {
   if (pendingSenderIds.size > 0) {
     const { data: senders } = await admin
       .from('profiles')
-      .select('id, username, first_name, profile_photo_url')
+      .select('id, username, first_name, profile_photo_url, status, deactivated_at')
       .in('id', Array.from(pendingSenderIds))
+    // Skip banned, suspended, and deactivated senders. A pending FR from a
+    // user who's since been kicked off the platform isn't actionable —
+    // surfacing it makes us look like we still have those scammers around.
     for (const s of senders ?? []) {
+      if (s.status !== 'active' || s.deactivated_at) continue
       senderProfileMap.set(s.id, {
         username: s.username ?? 'unknown',
         firstName: s.first_name ?? '',
@@ -399,16 +403,17 @@ export async function GET(request: Request) {
       continue
     }
 
-    // Pending FRs
-    const pendingSenderIdsForUser = pendingByAddressee.get(user.id) ?? []
+    // Pending FRs — drop banned/suspended/deactivated senders. We pre-filtered
+    // them out of senderProfileMap, so the active list is whichever IDs still
+    // resolve to a profile. Both count and samples reflect active senders only.
+    const activePendingSenders = (pendingByAddressee.get(user.id) ?? [])
+      .map((sid) => senderProfileMap.get(sid))
+      .filter((s): s is FriendRequestDigest => !!s)
     const pendingFRBlock =
-      pendingSenderIdsForUser.length > 0
+      activePendingSenders.length > 0
         ? {
-            count: pendingSenderIdsForUser.length,
-            samples: pendingSenderIdsForUser
-              .slice(0, FR_SAMPLE_LIMIT)
-              .map((sid) => senderProfileMap.get(sid))
-              .filter((s): s is FriendRequestDigest => !!s),
+            count: activePendingSenders.length,
+            samples: activePendingSenders.slice(0, FR_SAMPLE_LIMIT),
           }
         : undefined
 

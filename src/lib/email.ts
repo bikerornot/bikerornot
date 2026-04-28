@@ -393,16 +393,330 @@ export async function sendMentionEmail({
 
 // ─── Weekly Digest ──────────────────────────────────────────
 
-interface NearbyRiderDigest {
+export interface NearbyRiderDigest {
   username: string
   firstName: string
   city: string | null
   state: string | null
   bike: string | null
   profilePhotoUrl: string | null
+  distanceMi?: number | null
 }
 
-export async function sendWeeklyDigestEmail({
+export interface FriendRequestDigest {
+  username: string
+  firstName: string
+  profilePhotoUrl: string | null
+}
+
+export interface UnreadMessageDigest {
+  conversationId: string
+  senderUsername: string
+  senderFirstName: string
+  senderPhotoUrl: string | null
+  preview: string
+  count: number
+}
+
+export interface BirthdayDigest {
+  username: string
+  firstName: string
+  profilePhotoUrl: string | null
+  daysAway: number // 0 = today, 1 = tomorrow…
+}
+
+export interface MissedPostDigest {
+  postId: string
+  authorUsername: string
+  authorFirstName: string
+  authorPhotoUrl: string | null
+  content: string | null
+  likeCount: number
+  commentCount: number
+}
+
+export interface UpcomingEventDigest {
+  slug: string
+  title: string
+  startsAt: string
+  city: string | null
+  state: string | null
+  coverPhotoUrl: string | null
+  flyerUrl: string | null
+  distanceMi: number | null
+}
+
+export interface WeeklyDigestPayload {
+  toEmail: string
+  toName: string
+  blocks: {
+    pendingFriendRequests?: { count: number; samples: FriendRequestDigest[] }
+    unreadMessages?: { count: number; samples: UnreadMessageDigest[] }
+    birthdays?: { friends: BirthdayDigest[] }
+    missedFriendPosts?: { posts: MissedPostDigest[] }
+    upcomingEvents?: { events: UpcomingEventDigest[] }
+    nearbyRiders?: { riders: NearbyRiderDigest[]; total: number }
+  }
+}
+
+function avatarHtml(photoUrl: string | null, firstName: string, size = 44) {
+  const url = photoUrl
+    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${encodeURIComponent(photoUrl)}`
+    : null
+  if (url) {
+    return `<img src="${esc(url)}" width="${size}" height="${size}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;" alt="" />`
+  }
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#3f3f46;line-height:${size}px;text-align:center;color:#a1a1aa;font-weight:700;font-size:${Math.round(size / 2.5)}px;">${esc((firstName?.[0] ?? '?').toUpperCase())}</div>`
+}
+
+function eventCoverHtml(coverUrl: string | null, flyerUrl: string | null) {
+  const path = coverUrl ?? flyerUrl
+  if (!path) return ''
+  const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/covers/${encodeURIComponent(path)}`
+  return `<img src="${esc(url)}" width="56" height="56" style="width:56px;height:56px;border-radius:8px;object-fit:cover;" alt="" />`
+}
+
+// Build a digest email from one or more content blocks. The cron handler
+// builds whatever data it could find for the user; this function renders
+// only the blocks that have data and picks a subject line from the
+// highest-priority block. The ordering here mirrors the priority list:
+// pending FR > unread DMs > upcoming events > nearby riders > missed
+// posts > birthdays.
+export async function sendWeeklyDigestEmail(payload: WeeklyDigestPayload) {
+  const { toEmail, toName, blocks } = payload
+
+  const fr = blocks.pendingFriendRequests
+  const dm = blocks.unreadMessages
+  const events = blocks.upcomingEvents
+  const riders = blocks.nearbyRiders
+  const posts = blocks.missedFriendPosts
+  const bdays = blocks.birthdays
+
+  // Subject line: walk priority and pick the strongest signal block.
+  let subject = `This week on BikerOrNot, ${toName}`
+  if (fr && fr.count > 0) {
+    const sample = fr.samples[0]?.username
+    subject = sample
+      ? `@${sample}${fr.count > 1 ? ` and ${fr.count - 1} other${fr.count - 1 !== 1 ? 's' : ''}` : ''} sent you a friend request`
+      : `You have ${fr.count} pending friend request${fr.count !== 1 ? 's' : ''}`
+  } else if (dm && dm.count > 0) {
+    subject = `You have ${dm.count} unread message${dm.count !== 1 ? 's' : ''}`
+  } else if (events && events.events.length > 0) {
+    const e = events.events[0]
+    subject = `${e.title} — coming up near you`
+  } else if (riders && riders.total > 0) {
+    subject = `${riders.total} rider${riders.total !== 1 ? 's' : ''} just joined near you`
+  } else if (posts && posts.posts.length > 0) {
+    subject = `Your friends are posting on BikerOrNot — catch up`
+  } else if (bdays && bdays.friends.length > 0) {
+    const b = bdays.friends[0]
+    subject = `${b.firstName}'s birthday is ${b.daysAway === 0 ? 'today' : b.daysAway === 1 ? 'tomorrow' : 'this week'}`
+  }
+
+  // Render each block. Each returns an HTML chunk OR an empty string.
+  const blockHtml: string[] = []
+
+  if (fr && fr.count > 0) {
+    const list = fr.samples
+      .map(
+        (s) => `
+      <tr>
+        <td style="padding:6px 0;">
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              <td width="52" valign="top">${avatarHtml(s.profilePhotoUrl, s.firstName, 44)}</td>
+              <td style="padding-left:12px;" valign="middle">
+                <a href="${BASE_URL}/profile/${encodeURIComponent(s.username)}" style="color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;">@${esc(s.username)}</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`,
+      )
+      .join('')
+    const more = fr.count > fr.samples.length ? `<p style="margin:12px 0 0;font-size:13px;color:#71717a;">+ ${fr.count - fr.samples.length} more pending</p>` : ''
+    blockHtml.push(`
+      <h2 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#ffffff;">Friend requests waiting</h2>
+      <p style="margin:0 0 12px;font-size:14px;color:#a1a1aa;">${fr.count} ${fr.count === 1 ? 'rider wants' : 'riders want'} to connect with you.</p>
+      <table cellpadding="0" cellspacing="0" width="100%">${list}</table>
+      ${more}
+      <a href="${BASE_URL}/friends" style="display:inline-block;margin-top:14px;background:#f97316;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:10px 22px;border-radius:8px;">See Requests →</a>
+    `)
+  }
+
+  if (dm && dm.count > 0) {
+    const list = dm.samples
+      .map(
+        (m) => `
+      <tr>
+        <td style="padding:6px 0;">
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              <td width="52" valign="top">${avatarHtml(m.senderPhotoUrl, m.senderFirstName, 44)}</td>
+              <td style="padding-left:12px;" valign="middle">
+                <a href="${BASE_URL}/messages/${encodeURIComponent(m.conversationId)}" style="color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;">@${esc(m.senderUsername)}</a>
+                <p style="margin:2px 0 0;color:#a1a1aa;font-size:13px;line-height:1.5;">${esc(m.preview.slice(0, 120))}</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`,
+      )
+      .join('')
+    blockHtml.push(`
+      <h2 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#ffffff;">${dm.count} unread message${dm.count !== 1 ? 's' : ''}</h2>
+      <table cellpadding="0" cellspacing="0" width="100%">${list}</table>
+      <a href="${BASE_URL}/messages" style="display:inline-block;margin-top:14px;background:#27272a;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:10px 22px;border-radius:8px;">Open Messages →</a>
+    `)
+  }
+
+  if (events && events.events.length > 0) {
+    const list = events.events
+      .map((e) => {
+        const cover = eventCoverHtml(e.coverPhotoUrl, e.flyerUrl)
+        const where = [e.city, e.state].filter(Boolean).join(', ')
+        const date = new Date(e.startsAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        const dist = e.distanceMi != null ? ` · ${Math.round(e.distanceMi)} mi away` : ''
+        return `
+      <tr>
+        <td style="padding:6px 0;">
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              <td width="64" valign="top">${cover || `<div style="width:56px;height:56px;border-radius:8px;background:#3f3f46;"></div>`}</td>
+              <td style="padding-left:12px;" valign="middle">
+                <a href="${BASE_URL}/events/${encodeURIComponent(e.slug)}" style="color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;">${esc(e.title)}</a>
+                <p style="margin:2px 0 0;color:#a1a1aa;font-size:13px;">${esc(date)}${where ? ` · ${esc(where)}` : ''}${dist}</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`
+      })
+      .join('')
+    blockHtml.push(`
+      <h2 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#ffffff;">Upcoming rides &amp; events near you</h2>
+      <table cellpadding="0" cellspacing="0" width="100%">${list}</table>
+      <a href="${BASE_URL}/events" style="display:inline-block;margin-top:14px;background:#27272a;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:10px 22px;border-radius:8px;">See All Events →</a>
+    `)
+  }
+
+  if (riders && riders.total > 0 && riders.riders.length > 0) {
+    const list = riders.riders
+      .map((r) => {
+        const where = [r.city, r.state].filter(Boolean).join(', ')
+        const dist = r.distanceMi != null ? ` · ${Math.round(r.distanceMi)} mi` : ''
+        return `
+      <tr>
+        <td style="padding:6px 0;">
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              <td width="52" valign="top">${avatarHtml(r.profilePhotoUrl, r.firstName, 44)}</td>
+              <td style="padding-left:12px;" valign="middle">
+                <a href="${BASE_URL}/profile/${encodeURIComponent(r.username)}" style="color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;">@${esc(r.username)}</a>
+                ${where ? `<br/><span style="color:#a1a1aa;font-size:13px;">${esc(where)}${dist}</span>` : ''}
+                ${r.bike ? `<br/><span style="color:#f97316;font-size:13px;">${esc(r.bike)}</span>` : ''}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`
+      })
+      .join('')
+    const more = riders.total > riders.riders.length ? `<p style="margin:12px 0 0;font-size:13px;color:#71717a;">+ ${riders.total - riders.riders.length} more this week</p>` : ''
+    blockHtml.push(`
+      <h2 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#ffffff;">New riders near you</h2>
+      <table cellpadding="0" cellspacing="0" width="100%">${list}</table>
+      ${more}
+      <a href="${BASE_URL}/people" style="display:inline-block;margin-top:14px;background:#27272a;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:10px 22px;border-radius:8px;">See Who Joined →</a>
+    `)
+  }
+
+  if (posts && posts.posts.length > 0) {
+    const list = posts.posts
+      .map((p) => {
+        const snippet = (p.content ?? '').slice(0, 140)
+        return `
+      <tr>
+        <td style="padding:6px 0;">
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              <td width="52" valign="top">${avatarHtml(p.authorPhotoUrl, p.authorFirstName, 44)}</td>
+              <td style="padding-left:12px;" valign="middle">
+                <a href="${BASE_URL}/posts/${encodeURIComponent(p.postId)}" style="color:#ffffff;font-weight:600;font-size:15px;text-decoration:none;">@${esc(p.authorUsername)}</a>
+                ${snippet ? `<p style="margin:2px 0 0;color:#a1a1aa;font-size:13px;line-height:1.5;">${esc(snippet)}</p>` : ''}
+                <p style="margin:4px 0 0;color:#71717a;font-size:12px;">${p.likeCount} like${p.likeCount !== 1 ? 's' : ''} · ${p.commentCount} comment${p.commentCount !== 1 ? 's' : ''}</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`
+      })
+      .join('')
+    blockHtml.push(`
+      <h2 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#ffffff;">From your friends this week</h2>
+      <table cellpadding="0" cellspacing="0" width="100%">${list}</table>
+      <a href="${BASE_URL}/feed" style="display:inline-block;margin-top:14px;background:#27272a;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;padding:10px 22px;border-radius:8px;">Open Feed →</a>
+    `)
+  }
+
+  if (bdays && bdays.friends.length > 0) {
+    const list = bdays.friends
+      .map((b) => {
+        const when = b.daysAway === 0 ? 'today' : b.daysAway === 1 ? 'tomorrow' : `in ${b.daysAway} days`
+        return `
+      <tr>
+        <td style="padding:6px 0;">
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              <td width="44" valign="top">${avatarHtml(b.profilePhotoUrl, b.firstName, 36)}</td>
+              <td style="padding-left:12px;" valign="middle">
+                <a href="${BASE_URL}/profile/${encodeURIComponent(b.username)}" style="color:#ffffff;font-weight:600;font-size:14px;text-decoration:none;">@${esc(b.username)}</a>
+                <span style="color:#a1a1aa;font-size:13px;"> · birthday ${esc(when)} 🎂</span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>`
+      })
+      .join('')
+    blockHtml.push(`
+      <h2 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#ffffff;">Birthdays this week</h2>
+      <table cellpadding="0" cellspacing="0" width="100%">${list}</table>
+    `)
+  }
+
+  if (blockHtml.length === 0) {
+    // Caller is responsible for skipping when there's no data; if we got
+    // here anyway, refuse to send so we don't ship an empty email.
+    return { skipped: true as const }
+  }
+
+  // Stitch the blocks together with separators between them. Wrap in the
+  // shared layout (with footer + unsubscribe) — this matches every other
+  // email we send.
+  const body = blockHtml.map((html, i) => {
+    const sep = i > 0 ? `<div style="height:1px;background:#27272a;margin:24px 0;"></div>` : ''
+    return sep + html
+  }).join('')
+
+  await resend.emails.send({
+    from: FROM,
+    to: toEmail,
+    subject,
+    html: layout(`
+      <p style="margin:0 0 24px;font-size:15px;color:#a1a1aa;line-height:1.6;">
+        Hey ${esc(toName)}, here's what you missed on BikerOrNot.
+      </p>
+      ${body}
+    `),
+  })
+  return { skipped: false as const }
+}
+
+// Legacy callable signature kept for backwards compatibility — the new
+// cron handler calls sendWeeklyDigestEmail directly with the payload
+// shape. Nothing else should call this.
+export async function sendWeeklyDigestEmailLegacy({
   toEmail,
   toName,
   nearbyRiders,

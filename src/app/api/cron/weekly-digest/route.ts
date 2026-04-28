@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import {
   sendWeeklyDigestEmail,
@@ -541,15 +541,24 @@ export async function GET(request: Request) {
     }
   }
 
-  // Self-chain to next batch.
+  // Self-chain to next batch. Use after() so Vercel keeps the runtime
+  // alive long enough to actually transmit the request — the prior
+  // fire-and-forget fetch() pattern racing the function termination
+  // caused the chain to silently stall mid-sweep on production.
   const hasMore = !testUsername && recipients.length === batchSize
   if (hasMore) {
     const nextUrl = new URL(request.url)
     nextUrl.searchParams.set('start', String(batchStart + batchSize))
     nextUrl.searchParams.set('size', String(batchSize))
-    fetch(nextUrl.toString(), {
-      headers: { authorization: authHeader ?? '' },
-    }).catch((err) => console.error('Weekly digest self-chain failed:', err))
+    after(async () => {
+      try {
+        await fetch(nextUrl.toString(), {
+          headers: { authorization: authHeader ?? '' },
+        })
+      } catch (err) {
+        console.error('Weekly digest self-chain failed:', err)
+      }
+    })
   }
 
   return NextResponse.json({

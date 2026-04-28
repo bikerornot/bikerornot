@@ -178,12 +178,17 @@ async function requireAdminOrMod() {
 export async function getFlaggedContent(): Promise<ContentFlag[]> {
   await requireAdminOrMod()
   const admin = getAdmin()
-  const selectStr = '*, sender:profiles!sender_id(id, username, first_name, last_name, profile_photo_url, status), message:messages!message_id(conversation_id, conversation:conversations!conversation_id(participant1_id, participant2_id, participant1:profiles!participant1_id(id, username, first_name, last_name), participant2:profiles!participant2_id(id, username, first_name, last_name)))'
+  // !inner forces the join to be a strict inner join so the filter on
+  // sender.status applies at the DB level. Without this, banned-sender
+  // flags consume slots in the limit(50) and get dropped post-fetch,
+  // leaving the page nearly empty while the badge — which filters at
+  // the DB level — correctly counts the actionable ones.
+  const selectStr = '*, sender:profiles!sender_id!inner(id, username, first_name, last_name, profile_photo_url, status), message:messages!message_id(conversation_id, conversation:conversations!conversation_id(participant1_id, participant2_id, participant1:profiles!participant1_id(id, username, first_name, last_name), participant2:profiles!participant2_id(id, username, first_name, last_name)))'
 
   // Fetch pending flags separately to ensure they're never cut off by the limit
   const [{ data: pending }, { data: recent }] = await Promise.all([
-    admin.from('content_flags').select(selectStr).eq('status', 'pending').order('score', { ascending: false }).limit(50),
-    admin.from('content_flags').select(selectStr).neq('status', 'pending').order('score', { ascending: false }).order('created_at', { ascending: false }).limit(50),
+    admin.from('content_flags').select(selectStr).eq('status', 'pending').neq('sender.status', 'banned').order('score', { ascending: false }).limit(50),
+    admin.from('content_flags').select(selectStr).neq('status', 'pending').neq('sender.status', 'banned').order('score', { ascending: false }).order('created_at', { ascending: false }).limit(50),
   ])
 
   // Merge and deduplicate

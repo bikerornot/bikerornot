@@ -3,6 +3,30 @@
 import { useEffect } from 'react'
 import { logError } from '@/app/actions/errors'
 
+// Ring buffers of recent context, packed into metadata when an error fires.
+// Live at module scope so they survive React re-renders within the same tab.
+// Bounded so a long-running tab doesn't bloat memory.
+const NAV_BUFFER: string[] = []
+const CLICK_BUFFER: string[] = []
+const NAV_LIMIT = 8
+const CLICK_LIMIT = 8
+
+function pushBounded(buf: string[], val: string, limit: number) {
+  buf.push(val)
+  if (buf.length > limit) buf.shift()
+}
+
+function describeElement(el: Element | null): string {
+  if (!el) return ''
+  const tag = el.tagName.toLowerCase()
+  const id = el.id ? `#${el.id}` : ''
+  // Take only the first className token (Tailwind chains are noisy)
+  const classes = typeof el.className === 'string' ? el.className.split(/\s+/).filter(Boolean).slice(0, 2).map((c) => `.${c}`).join('') : ''
+  // Trim and grab visible text snippet — useful for "which button"
+  const text = (el.textContent ?? '').trim().slice(0, 40).replace(/\s+/g, ' ')
+  return `${tag}${id}${classes}${text ? `[${text}]` : ''}`
+}
+
 /**
  * Global error logger — catches unhandled JS errors and promise rejections
  * that aren't caught by React error boundaries.
@@ -10,6 +34,36 @@ import { logError } from '@/app/actions/errors'
  */
 export default function ErrorLogger() {
   useEffect(() => {
+    // Seed with the current URL so the first error has at least one breadcrumb.
+    pushBounded(NAV_BUFFER, window.location.pathname + window.location.search, NAV_LIMIT)
+
+    // Track navigation breadcrumbs. Next.js uses History API for client-side
+    // routing; popstate fires on back/forward, and pushState/replaceState are
+    // monkey-patched here so soft pushes get tracked too.
+    const onPopstate = () => pushBounded(NAV_BUFFER, window.location.pathname + window.location.search, NAV_LIMIT)
+    const origPush = history.pushState
+    const origReplace = history.replaceState
+    history.pushState = function (...args) {
+      const r = origPush.apply(this, args as Parameters<History['pushState']>)
+      pushBounded(NAV_BUFFER, window.location.pathname + window.location.search, NAV_LIMIT)
+      return r
+    }
+    history.replaceState = function (...args) {
+      const r = origReplace.apply(this, args as Parameters<History['replaceState']>)
+      pushBounded(NAV_BUFFER, window.location.pathname + window.location.search, NAV_LIMIT)
+      return r
+    }
+    window.addEventListener('popstate', onPopstate)
+
+    // Click breadcrumbs — capture the element the user just interacted with.
+    // Selectors only, no input values, so we don't accidentally log secrets.
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as Element | null
+      const desc = describeElement(target)
+      if (desc) pushBounded(CLICK_BUFFER, desc, CLICK_LIMIT)
+    }
+    document.addEventListener('click', onClick, true)
+
     // Browser extension / autofill noise — not our code
     const IGNORE = [
       'setContactAutofillValuesFromBridge',
@@ -69,6 +123,10 @@ export default function ErrorLogger() {
           filename: event.filename,
           lineno: event.lineno,
           colno: event.colno,
+          pathname: window.location.pathname,
+          viewport: `${window.innerWidth}x${window.innerHeight}`,
+          navHistory: NAV_BUFFER.slice(),
+          clickHistory: CLICK_BUFFER.slice(),
         },
       }).catch(() => {})
     }
@@ -79,7 +137,13 @@ export default function ErrorLogger() {
 
       let message = 'Unhandled promise rejection'
       let stack: string | null = null
-      const metadata: Record<string, unknown> = { type: 'unhandledrejection' }
+      const metadata: Record<string, unknown> = {
+        type: 'unhandledrejection',
+        pathname: window.location.pathname,
+        viewport: `${window.innerWidth}x${window.innerHeight}`,
+        navHistory: NAV_BUFFER.slice(),
+        clickHistory: CLICK_BUFFER.slice(),
+      }
 
       if (err instanceof Error) {
         message = err.message || message
@@ -120,6 +184,10 @@ export default function ErrorLogger() {
     return () => {
       window.removeEventListener('error', handleError)
       window.removeEventListener('unhandledrejection', handleRejection)
+      window.removeEventListener('popstate', onPopstate)
+      document.removeEventListener('click', onClick, true)
+      history.pushState = origPush
+      history.replaceState = origReplace
     }
   }, [])
 

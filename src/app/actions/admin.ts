@@ -393,6 +393,16 @@ export interface AdminUserDetail {
     post_id: string
     post_author_username: string | null
   }>
+  bikes: Array<{
+    id: string
+    year: number | null
+    make: string | null
+    model: string | null
+    description: string | null
+    photo_url: string | null
+    photo_count: number
+    created_at: string
+  }>
 }
 
 export async function getUsers({
@@ -675,6 +685,32 @@ export async function getUserDetail(userId: string): Promise<AdminUserDetail | n
       post_id: c.post_id,
       post_author_username: commentPostAuthorMap[c.post_id] ?? null,
     })),
+    bikes: await (async () => {
+      const { data: rawBikes } = await admin
+        .from('user_bikes')
+        .select('id, year, make, model, description, photo_url, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+      const list = (rawBikes ?? []) as any[]
+      if (list.length === 0) return []
+      const ids = list.map((b) => b.id)
+      const { data: photoCounts } = await admin
+        .from('bike_photos')
+        .select('bike_id')
+        .in('bike_id', ids)
+      const countMap: Record<string, number> = {}
+      for (const r of photoCounts ?? []) countMap[r.bike_id] = (countMap[r.bike_id] ?? 0) + 1
+      return list.map((b) => ({
+        id: b.id,
+        year: b.year ?? null,
+        make: b.make ?? null,
+        model: b.model ?? null,
+        description: b.description ?? null,
+        photo_url: b.photo_url ?? null,
+        photo_count: countMap[b.id] ?? 0,
+        created_at: b.created_at,
+      }))
+    })(),
   }
 }
 

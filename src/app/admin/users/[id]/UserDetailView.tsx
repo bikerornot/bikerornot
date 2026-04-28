@@ -407,6 +407,55 @@ export default function UserDetailView({ bundle, embedded = false }: Props) {
             )}
           </div>
 
+          {/* Garage — bikes the user has added */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
+              <h2 className="text-white font-semibold text-sm">Garage</h2>
+              <span className="text-zinc-600 text-xs">{user.bikes?.length ?? 0} bike{(user.bikes?.length ?? 0) !== 1 ? 's' : ''}</span>
+            </div>
+            {(user.bikes?.length ?? 0) === 0 ? (
+              <p className="text-center text-zinc-600 text-sm py-8">No bikes</p>
+            ) : (
+              <ul>
+                {user.bikes!.map((b, i) => {
+                  const photoUrl = b.photo_url ? getImageUrl('bikes', b.photo_url) : null
+                  const label = [b.year, b.make, b.model].filter(Boolean).join(' ') || 'Unknown bike'
+                  return (
+                    <li
+                      key={b.id}
+                      className={`px-5 py-3 flex items-start gap-3 ${i < user.bikes!.length - 1 ? 'border-b border-zinc-800/50' : ''}`}
+                    >
+                      <div className="w-16 h-16 rounded-lg bg-zinc-800 flex-shrink-0 overflow-hidden relative">
+                        {photoUrl ? (
+                          <Image src={photoUrl} alt="" fill className="object-cover" sizes="64px" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <svg className="w-6 h-6 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                              <circle cx="5.5" cy="17.5" r="3.5" />
+                              <circle cx="18.5" cy="17.5" r="3.5" />
+                              <path d="M15 6h3l2 5m-4-5l-4 11H5.5m0 0l2-7h7" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/bikes/${b.id}`} className="text-white font-semibold text-sm hover:text-orange-400 transition-colors">
+                          {label}
+                        </Link>
+                        <p className="text-zinc-500 text-xs mt-0.5">
+                          {b.photo_count} photo{b.photo_count !== 1 ? 's' : ''} · added {formatTimeAgo(b.created_at)}
+                        </p>
+                        {b.description && (
+                          <p className="text-zinc-400 text-xs mt-1 line-clamp-2 leading-relaxed">{b.description}</p>
+                        )}
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+
           {/* Reports against this user */}
           {user.recent_reports.length > 0 && (
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">

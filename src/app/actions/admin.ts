@@ -1225,6 +1225,8 @@ export async function getScammerAnalysis(userId: string): Promise<ScammerAnalysi
     reportsAgainstCount: reportsAgainst ?? 0,
     blocksAgainstCount: blocksAgainst ?? 0,
     contentFlagsCount: contentFlags ?? 0,
+    gender: (profile as any).gender ?? null,
+    bikeCount: (profile.bikes ?? []).length,
   }
 
   const result = computeScammerScore(input)
@@ -1837,10 +1839,40 @@ export async function getSafetyOverview(): Promise<SafetyOverview> {
   }
 }
 
-// Bundle for the admin user detail UI — used both on
-// /admin/users/[id] and inline in the report queue. Combines everything
-// we need to render UserDetailView so callers don't have to sequence
-// three separate actions.
+// ─── No-Bike Scammer Suspects ────────────────────────────────────────────────
+// Lists active male users with no bike in their garage who have sent any
+// messages — historically a 19-67% ban rate depending on volume. Surface
+// them sorted by message count (most-active first) so admins can prioritize.
+
+export interface NoBikeSuspect {
+  id: string
+  username: string | null
+  first_name: string
+  last_name: string
+  profile_photo_url: string | null
+  city: string | null
+  state: string | null
+  signup_country: string | null
+  created_at: string
+  message_count: number
+  friend_request_count: number
+  unique_recipients: number
+}
+
+export async function getNoBikeSuspects(): Promise<NoBikeSuspect[]> {
+  await requireAdmin()
+  const admin = getServiceClient()
+
+  // SECURITY DEFINER RPC would be cleaner, but the data this needs touches
+  // four tables. Run it as raw SQL via the service-role client.
+  const { data, error } = await admin.rpc('get_no_bike_male_suspects' as any)
+  if (error || !data) return []
+  return (data as any[]) as NoBikeSuspect[]
+}
+
+// Bundle for the admin user detail UI — used both on /admin/users/[id]
+// and inline in the report queue. Combines everything we need to render
+// UserDetailView so callers don't have to sequence three separate actions.
 export interface AdminUserProfileBundle {
   user: AdminUserDetail
   createdGroups: AdminGroupRow[]

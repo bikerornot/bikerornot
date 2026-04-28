@@ -11,6 +11,8 @@ export interface ScammerInput {
   profileState: string | null
   signupCountry: string | null
   signupCity: string | null
+  gender: string | null
+  bikeCount: number
 
   // Messages
   messagesSent: Array<{ content: string; created_at: string; recipient_id: string | null }>
@@ -325,7 +327,7 @@ function scoreKeywords(input: ScammerInput): CategoryScore {
 }
 
 function scoreProfileEngagement(input: ScammerInput): CategoryScore {
-  const MAX = 10
+  const MAX = 15
   const findings: string[] = []
   let points = 0
 
@@ -342,6 +344,24 @@ function scoreProfileEngagement(input: ScammerInput): CategoryScore {
   if (!input.bio && (!input.ridingStyle || input.ridingStyle.length === 0)) {
     points += 3
     findings.push('No bio and no riding style set — minimal profile effort')
+  }
+
+  // No bike + male + messaging activity. Strongest signal we have:
+  // historical ban rates among male users — 67% for "no bike + 20+ msgs",
+  // 28% for "no bike + 6-20 msgs", 19% for "no bike + 1-5 msgs", vs ~1%
+  // for males WITH a bike at the same volumes. Weight accordingly.
+  if (input.gender === 'male' && input.bikeCount === 0) {
+    const msgs = input.messagesSent.length
+    if (msgs >= 20) {
+      points += 5
+      findings.push(`Male, no bike in garage, ${msgs} messages sent — strongest scammer signal (67% historical ban rate)`)
+    } else if (msgs >= 6) {
+      points += 3
+      findings.push(`Male, no bike in garage, ${msgs} messages sent — high-risk pattern (28% historical ban rate)`)
+    } else if (msgs >= 1) {
+      points += 1
+      findings.push(`Male, no bike in garage, ${msgs} message(s) sent — elevated risk (19% historical ban rate)`)
+    }
   }
 
   // Geographic inconsistency: signup country vs profile location

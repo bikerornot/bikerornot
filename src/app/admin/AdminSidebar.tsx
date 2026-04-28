@@ -122,6 +122,7 @@ const groups: NavGroup[] = [
       { href: '/admin/flags', label: 'AI Flags', getBadge: (b) => b.flags },
       { href: '/admin/watchlist', label: 'Watchlist', getBadge: (b) => b.watchlist },
       { href: '/admin/ai-analysis', label: 'AI Analysis' },
+      { href: '/admin/no-bike-suspects', label: 'No-Bike Suspects' },
       { href: '/admin/dmca', label: 'DMCA', getBadge: (b) => b.dmca },
       { href: '/admin/moderation-rejections', label: 'Image Rejections' },
     ],

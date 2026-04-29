@@ -6,8 +6,11 @@ import Link from 'next/link'
 import {
   deleteModerationRejection,
   approveModerationRejection,
+  testImageModeration,
   type ModerationRejectionRow,
+  type ModerationTestResult,
 } from '@/app/actions/moderation-rejections'
+import { useRouter } from 'next/navigation'
 
 const SURFACE_LABELS: Record<string, string> = {
   post: 'Feed Post',
@@ -47,8 +50,29 @@ interface Props {
 }
 
 export default function ModerationRejectionsClient({ initialRows }: Props) {
+  const router = useRouter()
   const [rows, setRows] = useState<ModerationRejectionRow[]>(initialRows)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<ModerationTestResult | { error: string } | null>(null)
+
+  async function handleTest(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (testing) return
+    const form = e.currentTarget
+    const fd = new FormData(form)
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const result = await testImageModeration(fd)
+      setTestResult(result)
+      // Refresh the rejection list so a freshly-blocked test image appears below
+      if ('verdict' in result && result.verdict === 'rejected') router.refresh()
+    } finally {
+      setTesting(false)
+      form.reset()
+    }
+  }
 
   async function handleDelete(id: string) {
     if (busyId) return
@@ -83,6 +107,58 @@ export default function ModerationRejectionsClient({ initialRows }: Props) {
         <p className="text-zinc-400 text-sm mt-0.5">
           Images blocked by the AI content filter. Stored privately for 24 hours so you can review false positives, then auto-purged.
         </p>
+      </div>
+
+      {/* Tester — upload an image and see what sightengine returns. Rejections
+          land in the queue below automatically (surface = admin_test). Approved
+          and pending results show inline only. */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-3">
+        <div>
+          <h2 className="text-white font-semibold text-sm">Test an image</h2>
+          <p className="text-zinc-500 text-xs mt-0.5">Upload to see what the AI moderation returns. If rejected, it appears in the queue below for review.</p>
+        </div>
+        <form onSubmit={handleTest} className="flex flex-wrap items-center gap-3">
+          <input
+            type="file"
+            name="file"
+            accept="image/*"
+            required
+            disabled={testing}
+            className="text-sm text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-zinc-800 file:text-zinc-300 hover:file:bg-zinc-700 disabled:opacity-50"
+          />
+          <button
+            type="submit"
+            disabled={testing}
+            className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors"
+          >
+            {testing ? 'Testing…' : '✨ Run moderation'}
+          </button>
+        </form>
+        {testResult && 'error' in testResult && (
+          <p className="text-red-400 text-sm">{testResult.error}</p>
+        )}
+        {testResult && 'verdict' in testResult && (
+          <div className={`rounded-lg px-3 py-2 border text-sm ${
+            testResult.verdict === 'rejected' ? 'bg-red-500/10 border-red-500/30 text-red-200' :
+            testResult.verdict === 'pending' ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-200' :
+            'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+          }`}>
+            <p className="font-semibold uppercase">{testResult.verdict}{testResult.reason ? ` — ${testResult.reason}` : ''}</p>
+            {testResult.scores && (
+              <div className="text-xs mt-2 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5 opacity-90">
+                {Object.entries(testResult.scores)
+                  .filter(([, v]) => typeof v === 'number')
+                  .sort((a, b) => (b[1] as number) - (a[1] as number))
+                  .map(([k, v]) => (
+                    <div key={k} className="flex items-baseline justify-between gap-2">
+                      <span className="opacity-70">{k.replace(/_/g, ' ')}</span>
+                      <span className="font-mono">{((v as number) * 100).toFixed(0)}%</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {rows.length === 0 ? (

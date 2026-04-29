@@ -144,3 +144,36 @@ export async function approveModerationRejection(id: string): Promise<{ ok: true
 
   return { ok: true }
 }
+
+// Admin tester: upload an image and see what sightengine returns. If it's
+// rejected, moderateAndLog stashes it in the rejections queue automatically
+// so the admin can review side-by-side with real user-uploaded rejections.
+// Approved / pending results just return inline without logging.
+export interface ModerationTestResult {
+  verdict: 'approved' | 'pending' | 'rejected'
+  reason: string | null
+  scores: Record<string, number> | null
+}
+
+export async function testImageModeration(formData: FormData): Promise<ModerationTestResult | { error: string }> {
+  const adminUser = await requireAdmin()
+  const file = formData.get('file') as File | null
+  if (!file || !(file instanceof File) || file.size === 0) {
+    return { error: 'No file provided' }
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    return { error: 'File too large (10 MB max)' }
+  }
+  if (!file.type.startsWith('image/')) {
+    return { error: 'Not an image' }
+  }
+
+  const { moderateAndLog } = await import('@/lib/moderation-rejections')
+  const bytes = await file.arrayBuffer()
+  const result = await moderateAndLog(bytes, file.type, 'admin_test', adminUser.id)
+  return {
+    verdict: result.verdict,
+    reason: result.reason,
+    scores: result.scores ? (result.scores as unknown as Record<string, number>) : null,
+  }
+}

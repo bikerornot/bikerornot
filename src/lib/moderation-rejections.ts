@@ -12,6 +12,7 @@ export type ModerationSurface =
   | 'event_flyer'
   | 'group_cover'
   | 'classifieds'
+  | 'admin_test'
 
 const REJECTION_BUCKET = 'moderation-rejections'
 

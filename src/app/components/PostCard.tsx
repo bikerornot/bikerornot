@@ -260,6 +260,62 @@ export default function PostCard({ post, currentUserId, currentUserProfile, init
     : null
   const displayName = author?.username ?? 'Unknown'
 
+  // Group-join feed story: render as a slim "@user joined GroupName · Xm ago"
+  // row with a chevron. No like/comment/share — liking the act of joining
+  // doesn't make sense, and the row itself is the affordance to the group.
+  const groupJoinMatch = displayContent && post.group ? displayContent.match(GROUP_JOIN_REGEX) : null
+  if (groupJoinMatch && post.group) {
+    const groupHref = `/groups/${post.group.slug}`
+    const groupCoverUrl = post.group.cover_photo_url
+      ? getImageUrl('covers', post.group.cover_photo_url)
+      : null
+    return (
+      <div className="relative bg-zinc-900 sm:rounded-xl sm:border sm:border-zinc-800 overflow-hidden flex items-center gap-3 p-3 hover:bg-zinc-800/60 transition-colors">
+        {/* Tap-anywhere fallback to group page; sits behind the inline links */}
+        <Link href={groupHref} className="absolute inset-0 z-0" aria-label={`Open ${post.group.name}`} />
+        <Link href={groupHref} className="relative z-10 w-12 h-12 flex-shrink-0 block">
+          <div className="w-12 h-12 rounded-full bg-zinc-800 overflow-hidden">
+            {groupCoverUrl ? (
+              <Image src={groupCoverUrl} alt={post.group.name} width={48} height={48} className="object-cover w-full h-full" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-zinc-500">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-5a4 4 0 11-8 0 4 4 0 018 0zm6 0a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+            )}
+          </div>
+          <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-orange-500 ring-2 ring-zinc-900 flex items-center justify-center">
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+          </div>
+        </Link>
+        <div className="relative z-10 flex-1 min-w-0">
+          <p className="leading-snug">
+            <Link
+              href={`/profile/${author?.username ?? ''}`}
+              className="font-bold text-white text-lg sm:text-base hover:underline"
+            >
+              @{displayName}
+            </Link>
+            <span className="text-zinc-400 text-base sm:text-sm"> joined </span>
+            <Link
+              href={groupHref}
+              className="font-semibold text-orange-400 text-base sm:text-sm hover:text-orange-300 hover:underline"
+            >
+              {post.group.name}
+            </Link>
+          </p>
+          <p className="text-xs text-zinc-500 mt-0.5">{formatTimeAgo(post.created_at)}</p>
+        </div>
+        <svg className="relative z-10 pointer-events-none w-5 h-5 text-zinc-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+    )
+  }
+
   async function handleLike() {
     if (!currentUserId) return
     if (liked) {

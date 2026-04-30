@@ -43,7 +43,7 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
 
   const { data: post } = await supabase
     .from('posts')
-    .select('*, author:profiles!author_id(*), images:post_images(*), group:groups!group_id(name, slug)')
+    .select('*, author:profiles!author_id(*), images:post_images(*), group:groups!group_id(name, slug, cover_photo_url)')
     .eq('id', id)
     .is('deleted_at', null)
     .single()

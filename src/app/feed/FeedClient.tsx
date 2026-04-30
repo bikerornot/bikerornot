@@ -63,7 +63,7 @@ export default function FeedClient({ currentUserId, currentUserProfile, userGrou
 
       let base = supabase
         .from('posts')
-        .select('*, author:profiles!author_id(*), images:post_images(*), group:groups!group_id(name, slug), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status), bike:user_bikes!bike_id(id, year, make, model, photo_url)')
+        .select('*, author:profiles!author_id(*), images:post_images(*), group:groups!group_id(name, slug, cover_photo_url), event:events!event_id(id, type, title, slug, starts_at, city, state, going_count, cover_photo_url, flyer_url, status), bike:user_bikes!bike_id(id, year, make, model, photo_url)')
         .is('deleted_at', null)
         .is('wall_owner_id', null)
         .order('created_at', { ascending: false })

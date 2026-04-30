@@ -120,7 +120,7 @@ export interface Post {
   comment_count?: number
   is_liked_by_me?: boolean
   shared_post?: Omit<Post, 'shared_post'> | null
-  group?: { name: string; slug: string } | null
+  group?: { name: string; slug: string; cover_photo_url?: string | null } | null
   event?: { id: string; type: string; title: string; slug: string; starts_at: string; city: string | null; state: string | null; going_count: number; cover_photo_url: string | null; status: string } | null
   place?: Place | null
   bike?: { id: string; year: number | null; make: string | null; model: string | null; photo_url: string | null } | null

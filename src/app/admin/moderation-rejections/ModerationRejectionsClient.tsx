@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
@@ -22,6 +22,12 @@ const SURFACE_LABELS: Record<string, string> = {
 }
 
 const REASON_LABELS: Record<string, string> = {
+  // nudity-2.1 reasons
+  sexual_activity: 'Sexual activity',
+  sexual_display: 'Exposed nudity',
+  visibly_undressed: 'Undressed',
+  erotica: 'Explicit',
+  // legacy 1.0 reasons (still appear on rows from before the 2.1 switch)
   nudity_raw: 'Raw nudity',
   nudity_partial: 'Partial nudity',
   nudity_sexual: 'Sexual activity',
@@ -55,6 +61,8 @@ export default function ModerationRejectionsClient({ initialRows }: Props) {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<ModerationTestResult | { error: string } | null>(null)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
   async function handleTest(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -206,9 +214,9 @@ export default function ModerationRejectionsClient({ initialRows }: Props) {
                     <span>unknown user</span>
                   )}
                   <span>·</span>
-                  <span>{formatTimeAgo(r.created_at)}</span>
+                  <span suppressHydrationWarning>{mounted ? formatTimeAgo(r.created_at) : ''}</span>
                   <span>·</span>
-                  <span className="text-zinc-600">{formatExpiresIn(r.expires_at)}</span>
+                  <span className="text-zinc-600" suppressHydrationWarning>{mounted ? formatExpiresIn(r.expires_at) : ''}</span>
                 </div>
 
                 {r.scores && (

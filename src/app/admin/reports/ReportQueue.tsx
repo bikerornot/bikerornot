@@ -7,14 +7,42 @@ import {
   bulkDismissReports,
   bulkRemoveContent,
   type ContentReport,
+  type ReportSignal,
 } from '@/app/actions/reports'
 import { banUser } from '@/app/actions/admin'
+import { getReportAIVerdict, type AIVerdict } from '@/app/actions/report-ai-verdict'
 import InlineUserProfile from './InlineUserProfile'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 
 function postImageUrl(path: string) {
   return `${SUPABASE_URL}/storage/v1/object/public/posts/${path}`
+}
+
+function avatarUrl(path: string) {
+  return `${SUPABASE_URL}/storage/v1/object/public/avatars/${path}`
+}
+
+const SIGNAL_LABELS: Record<ReportSignal, { label: string; emoji: string; tone: string; tooltip: string }> = {
+  new_account:    { label: 'New',           emoji: '🆕', tone: 'bg-blue-500/20 text-blue-300 border-blue-500/30',     tooltip: 'Account created less than 7 days ago' },
+  no_bike:        { label: 'No bike',       emoji: '🏍️', tone: 'bg-amber-500/20 text-amber-300 border-amber-500/30',  tooltip: 'No bikes in garage — strong signal for fake / scammer accounts on a biker site' },
+  datacenter_ip:  { label: 'VPN/DC IP',     emoji: '🚫', tone: 'bg-red-500/20 text-red-300 border-red-500/30',         tooltip: 'Signed up from a known cloud / VPS / VPN IP range — real users sign up from residential ISPs' },
+  burst_dms:      { label: 'Burst DMs',     emoji: '💬', tone: 'bg-red-500/20 text-red-300 border-red-500/30',         tooltip: 'Sent more than 10 DMs within 24 hours of signup — spray-and-pray pattern' },
+  robotic_opener: { label: 'Copy-paste',    emoji: '🔁', tone: 'bg-red-500/20 text-red-300 border-red-500/30',         tooltip: '3+ different conversations got the exact same first message' },
+}
+
+function SignalBadge({ signal }: { signal: ReportSignal }) {
+  const meta = SIGNAL_LABELS[signal]
+  if (!meta) return null
+  return (
+    <span
+      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border inline-flex items-center gap-1 ${meta.tone}`}
+      title={meta.tooltip}
+    >
+      <span>{meta.emoji}</span>
+      <span>{meta.label}</span>
+    </span>
+  )
 }
 
 const REASON_LABELS: Record<string, string> = {
@@ -281,9 +309,29 @@ interface CardProps {
 
 function ContentCard({ report: r, isSelected, onToggle, onDismiss, onRemove, onBan, busy }: CardProps) {
   const [profileOpen, setProfileOpen] = useState(false)
+  const [verdict, setVerdict] = useState<AIVerdict | null>(null)
+  const [verdictLoading, setVerdictLoading] = useState(false)
+  const [verdictError, setVerdictError] = useState<string | null>(null)
   const profileLink = r.content_author_username ? `/profile/${r.content_author_username}` : null
   const adminUserLink = r.content_author_id ? `/admin/users/${r.content_author_id}` : null
   const isRemovable = r.content_type !== 'profile'
+  const authorAvatar = r.content_author_profile_photo_url ? avatarUrl(r.content_author_profile_photo_url) : null
+  const authorInitial = (r.content_author_first_name?.[0] ?? r.content_author_username?.[0] ?? '?').toUpperCase()
+
+  async function handleAIVerdict() {
+    if (!r.content_author_id || verdictLoading) return
+    setVerdictLoading(true)
+    setVerdictError(null)
+    try {
+      const result = await getReportAIVerdict(r.content_author_id)
+      if ('error' in result) setVerdictError(result.error)
+      else setVerdict(result)
+    } catch (err: any) {
+      setVerdictError(err?.message ?? 'Verdict failed')
+    } finally {
+      setVerdictLoading(false)
+    }
+  }
 
   return (
     <div className={`bg-zinc-900 border rounded-xl p-4 transition-colors ${
@@ -321,39 +369,61 @@ function ContentCard({ report: r, isSelected, onToggle, onDismiss, onRemove, onB
             </p>
           </div>
 
-          {/* Author + reporters */}
-          <div className="flex items-center gap-3 text-xs text-zinc-500 flex-wrap">
-            {r.content_author_username && (
-              <span>
-                Author:{' '}
+          {/* Author row — avatar, handle, risk signals */}
+          {r.content_author_username && (
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative group flex-shrink-0">
+                <div className="w-14 h-14 rounded-full bg-zinc-800 overflow-hidden ring-1 ring-zinc-700">
+                  {authorAvatar ? (
+                    <Image src={authorAvatar} alt={r.content_author_username} width={56} height={56} className="object-cover w-full h-full" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-zinc-400 text-lg font-bold">{authorInitial}</div>
+                  )}
+                </div>
+                {/* Hover preview — floats to the right of the row, large enough
+                    to spot fake / stock / underage faces at a glance. Disabled
+                    on touch devices via :hover (touch never matches). */}
+                {authorAvatar && (
+                  <div className="hidden group-hover:block absolute z-40 left-full top-0 ml-3 pointer-events-none">
+                    <div className="w-64 h-64 rounded-xl overflow-hidden ring-2 ring-orange-500/60 shadow-2xl bg-zinc-900">
+                      <Image src={authorAvatar} alt={r.content_author_username} width={256} height={256} className="object-cover w-full h-full" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs text-zinc-500">Author:</span>
                 {profileLink ? (
-                  <Link href={profileLink} className="text-zinc-300 hover:text-orange-400 transition-colors">
+                  <Link href={profileLink} className="text-sm font-semibold text-zinc-200 hover:text-orange-400 transition-colors">
                     @{r.content_author_username}
                   </Link>
                 ) : (
-                  <span className="text-zinc-300">@{r.content_author_username}</span>
+                  <span className="text-sm font-semibold text-zinc-200">@{r.content_author_username}</span>
                 )}
                 {adminUserLink && (
-                  <Link href={adminUserLink} className="ml-1.5 text-zinc-600 hover:text-orange-400 transition-colors">
+                  <Link href={adminUserLink} className="text-zinc-600 hover:text-orange-400 transition-colors text-xs" title="Open admin profile">
                     ↗
                   </Link>
                 )}
+                {r.content_author_signals.map((s) => <SignalBadge key={s} signal={s} />)}
+              </div>
+            </div>
+          )}
+
+          {/* Reporters */}
+          {r.reporters.length > 0 && (
+            <div className="text-xs text-zinc-500">
+              Reported by:{' '}
+              <span className="text-zinc-400">
+                {r.reporters.slice(0, 3).map((rp, i) => (
+                  <span key={i}>
+                    {i > 0 && ', '}@{rp.username ?? 'unknown'}
+                  </span>
+                ))}
+                {r.reporters.length > 3 && ` +${r.reporters.length - 3} more`}
               </span>
-            )}
-            {r.reporters.length > 0 && (
-              <span>
-                Reported by:{' '}
-                <span className="text-zinc-400">
-                  {r.reporters.slice(0, 3).map((rp, i) => (
-                    <span key={i}>
-                      {i > 0 && ', '}@{rp.username ?? 'unknown'}
-                    </span>
-                  ))}
-                  {r.reporters.length > 3 && ` +${r.reporters.length - 3} more`}
-                </span>
-              </span>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Content preview */}
           {(r.content_preview || r.content_images.length > 0) && (
@@ -434,7 +504,47 @@ function ContentCard({ report: r, isSelected, onToggle, onDismiss, onRemove, onB
                 </svg>
               </button>
             )}
+            {r.content_author_id && (
+              <button
+                type="button"
+                onClick={handleAIVerdict}
+                disabled={verdictLoading || !!verdict}
+                className="bg-purple-500/15 hover:bg-purple-500/25 disabled:opacity-50 text-purple-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors border border-purple-500/30 flex items-center gap-1.5"
+                title="Run AI scammer analysis on this user"
+              >
+                {verdictLoading ? '🤖 Analyzing…' : verdict ? '🤖 Done' : '🤖 AI Verdict'}
+              </button>
+            )}
           </div>
+
+          {(verdict || verdictError) && (
+            <div className="pt-3 mt-1 border-t border-zinc-800">
+              {verdictError && (
+                <p className="text-red-400 text-xs">AI verdict failed: {verdictError}</p>
+              )}
+              {verdict && (
+                <div
+                  className={`rounded-lg border px-3 py-2.5 text-xs space-y-1.5 ${
+                    verdict.label === 'likely_scammer'
+                      ? 'bg-red-500/10 border-red-500/40 text-red-200'
+                      : verdict.label === 'likely_real'
+                        ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-200'
+                        : 'bg-yellow-500/10 border-yellow-500/40 text-yellow-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="font-bold uppercase tracking-wide">
+                      🤖 {verdict.label.replace(/_/g, ' ')} · {verdict.confidence}%
+                    </span>
+                    <span className="text-[10px] uppercase font-semibold opacity-80">
+                      Suggests: {verdict.recommended_action.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  <p className="leading-relaxed text-[13px]">{verdict.rationale}</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {profileOpen && r.content_author_id && (
             <div className="pt-3 mt-3 border-t border-zinc-800">

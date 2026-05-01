@@ -2,6 +2,7 @@
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getOpenAI } from '@/lib/openai'
+import { computeRiskSignals, type RiskSignal } from '@/lib/risk-signals'
 
 function getAdmin() {
   return createServiceClient(
@@ -157,6 +158,7 @@ export interface ContentFlag {
     last_name: string
     profile_photo_url: string | null
     status: string
+    signals?: RiskSignal[]
   }
   recipient?: {
     id: string
@@ -201,6 +203,12 @@ export async function getFlaggedContent(): Promise<ContentFlag[]> {
   // Filter out flags from already-banned senders — no point reviewing them
   const filtered = data.filter((flag: any) => flag.sender?.status !== 'banned')
 
+  // Compute at-a-glance risk signals for each unique sender so the queue cards
+  // can show the same triage badges (new, no-bike, datacenter IP, burst DMs,
+  // copy-paste opener) the Reports page uses. One batched query.
+  const uniqueSenderIds = Array.from(new Set(filtered.map((f: any) => f.sender_id).filter(Boolean) as string[]))
+  const signalsByUser = await computeRiskSignals(admin, uniqueSenderIds)
+
   // Resolve recipient from conversation participants (for DM flags)
   return filtered.map((flag: any) => {
     let recipient = null
@@ -214,6 +222,9 @@ export async function getFlaggedContent(): Promise<ContentFlag[]> {
         }
       }
     }
+    const senderWithSignals = flag.sender
+      ? { ...flag.sender, signals: signalsByUser.get(flag.sender_id) ?? [] }
+      : flag.sender
     return {
       id: flag.id,
       message_id: flag.message_id,
@@ -227,7 +238,7 @@ export async function getFlaggedContent(): Promise<ContentFlag[]> {
       reason: flag.reason,
       status: flag.status,
       created_at: flag.created_at,
-      sender: flag.sender,
+      sender: senderWithSignals,
       recipient,
     } as ContentFlag
   })
@@ -359,6 +370,22 @@ export async function reviewFlag(flagId: string): Promise<void> {
     .from('content_flags')
     .update({ status: 'reviewed' })
     .eq('id', flagId)
+}
+
+// Bulk-dismiss every pending flag for a user. Called from the AI Flags
+// queue once an admin has reviewed one of the user's flags and concluded
+// they're legitimate (e.g. AI verdict came back likely_real / likely_victim).
+// Returns how many rows were resolved so the UI can confirm.
+export async function dismissAllFlagsForUser(userId: string): Promise<{ dismissed: number }> {
+  await requireAdminOrMod()
+  const admin = getAdmin()
+  const { data } = await admin
+    .from('content_flags')
+    .update({ status: 'dismissed' })
+    .eq('sender_id', userId)
+    .eq('status', 'pending')
+    .select('id')
+  return { dismissed: (data ?? []).length }
 }
 
 export async function getPendingFlagsCount(): Promise<number> {

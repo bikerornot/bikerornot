@@ -741,6 +741,48 @@ export async function banUser(userId: string, reason: string): Promise<void> {
     .update({ status: 'suspended', suspended_reason: `Creator account banned: ${reason}` })
     .eq('creator_id', userId)
     .eq('status', 'active')
+
+  // Auto-resolve every pending AI scam flag for this user. Their content is
+  // shadow-hidden site-wide once banned, so leaving the flags in the queue
+  // is busywork — and previously the FlagsClient marked them resolved in
+  // local state but the DB didn't agree, so they'd reappear on refresh.
+  await admin
+    .from('content_flags')
+    .update({ status: 'reviewed' })
+    .eq('sender_id', userId)
+    .eq('status', 'pending')
+
+  // Same cascade for the Reports queue. The queue UI already hides reports
+  // against banned users (their content is shadow-hidden anyway), but the
+  // badge count was including them — so admins saw "8 pending reports" and
+  // an empty queue. Resolving them at ban-time keeps badge and queue
+  // aligned. Also handles reports against the user's posts / comments,
+  // which are shadow-hidden via the user's banned status.
+  await admin
+    .from('reports')
+    .update({ status: 'actioned', reviewed_at: new Date().toISOString() })
+    .eq('status', 'pending')
+    .or(
+      // profile reports — reported_id is the user
+      `and(reported_type.eq.profile,reported_id.eq.${userId})`,
+    )
+
+  // Reports against this user's posts / comments need a join — simplest is
+  // a fetch + bulk update. Cheap because only a handful of rows usually.
+  const { data: theirPosts } = await admin.from('posts').select('id').eq('author_id', userId)
+  const { data: theirComments } = await admin.from('comments').select('id').eq('author_id', userId)
+  const postIds = (theirPosts ?? []).map((p: any) => p.id)
+  const commentIds = (theirComments ?? []).map((c: any) => c.id)
+  if (postIds.length > 0) {
+    await admin.from('reports')
+      .update({ status: 'actioned', reviewed_at: new Date().toISOString() })
+      .eq('status', 'pending').eq('reported_type', 'post').in('reported_id', postIds)
+  }
+  if (commentIds.length > 0) {
+    await admin.from('reports')
+      .update({ status: 'actioned', reviewed_at: new Date().toISOString() })
+      .eq('status', 'pending').eq('reported_type', 'comment').in('reported_id', commentIds)
+  }
 }
 
 // ─── Admin Group Management ──────────────────────────────────────────────────
@@ -1272,6 +1314,7 @@ export interface WatchlistEntry {
     last_name: string
     profile_photo_url: string | null
     status: string
+    signals?: import('@/lib/risk-signals-meta').RiskSignal[]
   }
   activity?: {
     message_count: number
@@ -1299,11 +1342,17 @@ export async function getWatchlist(): Promise<WatchlistEntry[]> {
   // Fetch activity stats for each watched user
   const userIds = filtered.map((w: any) => w.user_id)
 
-  const [{ data: msgCounts }, { data: frCounts }, { data: flagCounts }, { data: reportCounts }] = await Promise.all([
+  const { computeRiskSignals } = await import('@/lib/risk-signals')
+
+  const [{ data: msgCounts }, { data: frCounts }, { data: flagCounts }, { data: reportCounts }, signalsByUser] = await Promise.all([
     admin.from('messages').select('sender_id').in('sender_id', userIds),
     admin.from('friendships').select('requester_id').in('requester_id', userIds),
     admin.from('content_flags').select('sender_id').in('sender_id', userIds).eq('status', 'pending'),
-    admin.from('reports').select('reported_user_id').in('reported_user_id', userIds),
+    // Bug fix: reports table uses (reported_type, reported_id) — no
+    // `reported_user_id` column. Filter to profile reports against any of
+    // these users.
+    admin.from('reports').select('reported_id').eq('reported_type', 'profile').in('reported_id', userIds),
+    computeRiskSignals(admin, userIds),
   ])
 
   const msgMap: Record<string, number> = {}
@@ -1313,10 +1362,11 @@ export async function getWatchlist(): Promise<WatchlistEntry[]> {
   const flagMap: Record<string, number> = {}
   for (const f of flagCounts ?? []) flagMap[f.sender_id] = (flagMap[f.sender_id] ?? 0) + 1
   const reportMap: Record<string, number> = {}
-  for (const r of reportCounts ?? []) reportMap[r.reported_user_id] = (reportMap[r.reported_user_id] ?? 0) + 1
+  for (const r of reportCounts ?? []) reportMap[r.reported_id] = (reportMap[r.reported_id] ?? 0) + 1
 
   return filtered.map((w: any) => ({
     ...w,
+    user: w.user ? { ...w.user, signals: signalsByUser.get(w.user_id) ?? [] } : w.user,
     activity: {
       message_count: msgMap[w.user_id] ?? 0,
       friend_requests_sent: frMap[w.user_id] ?? 0,
@@ -1776,7 +1826,7 @@ export async function getSafetyOverview(): Promise<SafetyOverview> {
       .eq('status', 'banned').gte('updated_at', todayStart.toISOString()),
     admin.from('profiles').select('*', { count: 'exact', head: true })
       .eq('status', 'banned').gte('updated_at', weekAgo),
-    admin.from('content_reports').select('*', { count: 'exact', head: true })
+    admin.from('reports').select('*', { count: 'exact', head: true })
       .eq('status', 'pending'),
     admin.from('content_flags').select('*', { count: 'exact', head: true })
       .eq('status', 'pending'),
@@ -1792,8 +1842,8 @@ export async function getSafetyOverview(): Promise<SafetyOverview> {
       .select('id, sender_id, content, score, flag_type, created_at, sender:profiles!sender_id(username)')
       .eq('status', 'pending').gte('score', 0.7)
       .order('score', { ascending: false }).limit(10),
-    admin.from('content_reports')
-      .select('reported_type, target_id, reason')
+    admin.from('reports')
+      .select('reported_type, reported_id, reason')
       .eq('status', 'pending'),
     admin.from('profiles')
       .select('id, username, first_name, last_name, gender, created_at, country, profile_photo_url, date_of_birth')
@@ -1810,8 +1860,8 @@ export async function getSafetyOverview(): Promise<SafetyOverview> {
 
   const reportMap: Record<string, { reported_type: string; target_id: string; count: number; reason: string }> = {}
   for (const r of hotReportsRaw ?? []) {
-    const key = `${r.reported_type}:${r.target_id}`
-    if (!reportMap[key]) reportMap[key] = { reported_type: r.reported_type, target_id: r.target_id, count: 0, reason: r.reason }
+    const key = `${r.reported_type}:${r.reported_id}`
+    if (!reportMap[key]) reportMap[key] = { reported_type: r.reported_type, target_id: r.reported_id, count: 0, reason: r.reason }
     reportMap[key].count++
   }
   const hotReports = Object.values(reportMap).filter((r) => r.count >= 2).sort((a, b) => b.count - a.count).slice(0, 10)

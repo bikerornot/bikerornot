@@ -49,7 +49,7 @@ export interface ScammerResult {
 
 // ─── Keyword lists ───────────────────────────────────────────────────────────
 
-const ROMANCE_KEYWORDS = [
+export const ROMANCE_KEYWORDS = [
   'late husband', 'late wife', 'are you married', 'are you single',
   'i am lonely', 'i am a widow', 'looking for love', 'soulmate',
   'my dear', 'my love', 'sweetheart', 'honey', 'i miss you so much',
@@ -57,20 +57,82 @@ const ROMANCE_KEYWORDS = [
   'i want to spend my life', 'true love', 'fall in love',
 ]
 
-const OFF_PLATFORM_KEYWORDS = [
-  'whatsapp', 'hangouts', 'google chat', 'telegram', 'signal app',
-  'send me your number', 'give me your number', 'text me at',
-  'call me at', 'my number is', 'let\'s talk off',
-  'personal email', 'private email',
+// Phrases that indicate the user is trying to move the conversation off
+// BikerOrNot. By far the most reliable single tell — almost no real biker
+// asks a stranger to switch to WhatsApp two messages in.
+export const OFF_PLATFORM_KEYWORDS = [
+  // Other apps / platforms
+  'whatsapp', 'whats app', 'whatts app', 'whatzap',
+  'telegram', 'signal app', 'kik', 'snapchat', 'snap me', 'snap chat',
+  'hangouts', 'google chat', 'google duo', 'discord',
+  'instagram', 'insta', ' ig ', 'follow me on',
+  'facebook', 'add me on fb', 'find me on facebook', 'fb messenger',
+  'tinder', 'bumble', 'hinge',
+  'imessage', 'i message',
+  // Phone number requests
+  'send me your number', 'give me your number', 'whats your number',
+  "what's your number", 'what is your number', 'your number please',
+  'text me at', 'call me at', 'my number is', 'here is my number',
+  'here\'s my number', 'mobile number', 'cell number', 'cell phone',
+  'phone number', 'drop your number', 'share your number',
+  // Email handoff
+  'personal email', 'private email', 'email me at', 'my email is',
+  'send me an email', 'gmail', 'yahoo.com', 'hotmail', 'outlook.com', 'icloud',
+  // Generic "let's go elsewhere"
+  'off this app', 'off this site', 'off the app', 'off the site',
+  'off this platform', 'another platform', 'another app', 'somewhere else',
+  'let\'s talk off', 'lets talk off', 'lets chat off',
+  'continue our chat', 'continue chatting', 'continue this elsewhere',
+  'reach me at', 'contact me at', 'better to talk on',
 ]
 
-const FINANCIAL_KEYWORDS = [
-  'gift card', 'itunes card', 'google play card', 'steam card',
-  'crypto', 'bitcoin', 'western union', 'moneygram', 'wire transfer',
-  'bank account', 'send money', 'cash app', 'zelle', 'venmo',
-  'financial help', 'loan', 'invest', 'inheritance',
-  'stuck abroad', 'stranded', 'hospital bill', 'customs fee',
+export const FINANCIAL_KEYWORDS = [
+  'gift card', 'itunes card', 'google play card', 'steam card', 'amazon card',
+  'crypto', 'bitcoin', 'btc', 'usdt', 'tether', 'ethereum',
+  'western union', 'moneygram', 'wire transfer', 'wire money',
+  'bank account', 'send money', 'cash app', 'cashapp', 'zelle', 'venmo',
+  'paypal', 'apple pay',
+  'financial help', 'loan', 'invest', 'investment', 'inheritance',
+  'stuck abroad', 'stranded', 'hospital bill', 'customs fee', 'customs charge',
+  'pay the fee', 'release fee',
 ]
+
+// Returns the subset of keywords that appear (case-insensitive substring) in
+// any of the supplied texts, plus extracted email addresses + phone numbers.
+// Used by the report AI verdict action to pre-flag the "moving off-platform"
+// pattern before handing context to the model.
+export function scanScamSignals(texts: string[]): {
+  off_platform_hits: string[]
+  financial_hits: string[]
+  romance_hits: string[]
+  email_addresses: string[]
+  phone_numbers: string[]
+} {
+  const blob = texts.filter(Boolean).join('\n').toLowerCase()
+  const off_platform_hits = OFF_PLATFORM_KEYWORDS.filter((k) => blob.includes(k.toLowerCase()))
+  const financial_hits = FINANCIAL_KEYWORDS.filter((k) => blob.includes(k.toLowerCase()))
+  const romance_hits = ROMANCE_KEYWORDS.filter((k) => blob.includes(k.toLowerCase()))
+
+  // Email addresses written in any form. Catches obfuscation like
+  // "joe at gmail dot com" too.
+  const emailRegex = /[\w.+-]+@[\w-]+\.[\w.-]+/g
+  const emailObfRegex = /\b[\w.+-]+\s*(?:\(at\)|\[at\]|\sat\s)\s*[\w-]+\s*(?:\(dot\)|\[dot\]|\sdot\s|\.)\s*[\w]+/g
+  const email_addresses = Array.from(new Set([
+    ...(blob.match(emailRegex) ?? []),
+    ...(blob.match(emailObfRegex) ?? []),
+  ])).slice(0, 8)
+
+  // Phone numbers — 7+ digit sequences (with optional separators / country code).
+  // We scan the original cased blob to keep numbers readable.
+  const cased = texts.filter(Boolean).join('\n')
+  const phoneRegex = /(?:\+?\d[\s().-]?){7,15}\d/g
+  const phone_numbers = Array.from(new Set(cased.match(phoneRegex) ?? []))
+    .map((s) => s.trim())
+    .filter((s) => s.replace(/\D/g, '').length >= 7)
+    .slice(0, 8)
+
+  return { off_platform_hits, financial_hits, romance_hits, email_addresses, phone_numbers }
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

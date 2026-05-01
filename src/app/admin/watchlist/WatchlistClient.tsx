@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { removeFromWatchlist, type WatchlistEntry } from '@/app/actions/admin'
-import { getImageUrl } from '@/lib/supabase/image'
+import { getReportAIVerdict, type AIVerdict } from '@/app/actions/report-ai-verdict'
+import { RiskSignalBadges } from '@/app/admin/components/RiskSignalBadge'
+import { UserAvatarWithPreview } from '@/app/admin/components/UserAvatarWithPreview'
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', {
@@ -15,6 +16,26 @@ function formatDate(dateStr: string): string {
 export default function WatchlistClient({ initialEntries }: { initialEntries: WatchlistEntry[] }) {
   const [entries, setEntries] = useState(initialEntries)
   const [removingId, setRemovingId] = useState<string | null>(null)
+  // Per-user verdict cache. Watchlist verdicts don't have a conversation
+  // context (no specific flag), so we just key by user_id.
+  const [verdicts, setVerdicts] = useState<Record<string, AIVerdict>>({})
+  const [verdictErrors, setVerdictErrors] = useState<Record<string, string>>({})
+  const [verdictLoadingFor, setVerdictLoadingFor] = useState<string | null>(null)
+
+  async function handleAIVerdict(userId: string) {
+    if (verdicts[userId] || verdictLoadingFor) return
+    setVerdictLoadingFor(userId)
+    setVerdictErrors((prev) => { const next = { ...prev }; delete next[userId]; return next })
+    try {
+      const result = await getReportAIVerdict(userId)
+      if ('error' in result) setVerdictErrors((prev) => ({ ...prev, [userId]: result.error }))
+      else setVerdicts((prev) => ({ ...prev, [userId]: result }))
+    } catch (err: any) {
+      setVerdictErrors((prev) => ({ ...prev, [userId]: err?.message ?? 'Verdict failed' }))
+    } finally {
+      setVerdictLoadingFor(null)
+    }
+  }
 
   async function handleRemove(userId: string) {
     if (!confirm('Remove this user from the watchlist?')) return
@@ -45,10 +66,9 @@ export default function WatchlistClient({ initialEntries }: { initialEntries: Wa
       {entries.map((entry) => {
         const user = entry.user
         const activity = entry.activity
-        const avatarUrl = user?.profile_photo_url
-          ? getImageUrl('avatars', user.profile_photo_url)
-          : null
         const isRemoving = removingId === entry.user_id
+        const verdict = verdicts[entry.user_id]
+        const verdictError = verdictErrors[entry.user_id]
 
         return (
           <div
@@ -57,18 +77,13 @@ export default function WatchlistClient({ initialEntries }: { initialEntries: Wa
           >
             {/* User info row */}
             <div className="flex items-start gap-3 mb-3">
-              <Link href={`/admin/users/${entry.user_id}`} className="flex-shrink-0">
-                <div className="w-10 h-10 rounded-full bg-zinc-700 overflow-hidden">
-                  {avatarUrl ? (
-                    <Image src={avatarUrl} alt="" width={40} height={40} className="object-cover w-full h-full" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold">
-                      {(user?.first_name?.[0] ?? '?').toUpperCase()}
-                    </div>
-                  )}
-                </div>
-              </Link>
-              <div className="flex-1 min-w-0">
+              <UserAvatarWithPreview
+                username={user?.username ?? null}
+                firstName={user?.first_name}
+                profilePhotoUrl={user?.profile_photo_url ?? null}
+                href={`/admin/users/${entry.user_id}`}
+              />
+              <div className="flex-1 min-w-0 space-y-1">
                 <Link
                   href={`/admin/users/${entry.user_id}`}
                   className="text-white font-semibold text-sm hover:text-orange-400 transition-colors"
@@ -78,7 +93,7 @@ export default function WatchlistClient({ initialEntries }: { initialEntries: Wa
                     <span className="text-zinc-400 font-normal ml-1.5">@{user.username}</span>
                   )}
                 </Link>
-                <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
                     user?.status === 'banned' ? 'bg-red-500/20 text-red-400' :
                     user?.status === 'suspended' ? 'bg-orange-500/20 text-orange-400' :
@@ -87,6 +102,9 @@ export default function WatchlistClient({ initialEntries }: { initialEntries: Wa
                     {user?.status ?? 'unknown'}
                   </span>
                   <span className="text-zinc-600 text-xs">Added {formatDate(entry.created_at)}</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <RiskSignalBadges signals={user?.signals} />
                 </div>
               </div>
             </div>
@@ -139,6 +157,15 @@ export default function WatchlistClient({ initialEntries }: { initialEntries: Wa
                 Scammer Analysis
               </Link>
               <button
+                type="button"
+                onClick={() => handleAIVerdict(entry.user_id)}
+                disabled={verdictLoadingFor === entry.user_id || !!verdict}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-500/15 hover:bg-purple-500/25 disabled:opacity-50 text-purple-300 border border-purple-500/30 transition-colors inline-flex items-center justify-center gap-1.5"
+                title="Run AI scammer analysis on this user"
+              >
+                {verdictLoadingFor === entry.user_id ? '🤖 Analyzing…' : verdict ? '🤖 Done' : '🤖 AI Verdict'}
+              </button>
+              <button
                 onClick={() => handleRemove(entry.user_id)}
                 disabled={isRemoving}
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-zinc-500 border border-zinc-700 transition-colors disabled:opacity-50 ml-auto"
@@ -146,6 +173,37 @@ export default function WatchlistClient({ initialEntries }: { initialEntries: Wa
                 {isRemoving ? '...' : 'Remove'}
               </button>
             </div>
+
+            {(verdict || verdictError) && (
+              <div className="pt-3 mt-3 border-t border-zinc-800">
+                {verdictError && (
+                  <p className="text-red-400 text-xs">AI verdict failed: {verdictError}</p>
+                )}
+                {verdict && (() => {
+                  const tone =
+                    verdict.label === 'likely_scammer'
+                      ? 'bg-red-500/10 border-red-500/40 text-red-200'
+                      : verdict.label === 'likely_real'
+                        ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-200'
+                        : verdict.label === 'likely_victim'
+                          ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-200'
+                          : 'bg-yellow-500/10 border-yellow-500/40 text-yellow-200'
+                  return (
+                    <div className={`rounded-lg border px-3 py-2.5 text-xs space-y-1.5 ${tone}`}>
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="font-bold uppercase tracking-wide">
+                          🤖 {verdict.label.replace(/_/g, ' ')} · {verdict.confidence}%
+                        </span>
+                        <span className="text-[10px] uppercase font-semibold opacity-80">
+                          Suggests: {verdict.recommended_action.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <p className="leading-relaxed text-[13px]">{verdict.rationale}</p>
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
           </div>
         )
       })}

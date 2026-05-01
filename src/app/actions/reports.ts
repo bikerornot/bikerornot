@@ -2,6 +2,11 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { computeRiskSignals, type RiskSignal } from '@/lib/risk-signals'
+
+// Re-exported under the old name for back-compat with components that
+// already imported `ReportSignal` from this module.
+export type ReportSignal = RiskSignal
 
 function getServiceClient() {
   return createServiceClient(
@@ -157,6 +162,9 @@ export interface ContentReport {
   content_images: string[]
   content_author_id: string | null
   content_author_username: string | null
+  content_author_profile_photo_url: string | null
+  content_author_first_name: string | null
+  content_author_signals: ReportSignal[]
 }
 
 export async function getContentReports(
@@ -199,6 +207,9 @@ export async function getContentReports(
         content_images: [],
         content_author_id: null,
         content_author_username: null,
+        content_author_profile_photo_url: null,
+        content_author_first_name: null,
+        content_author_signals: [],
       })
     }
     const group = groupMap.get(key)!
@@ -221,13 +232,13 @@ export async function getContentReports(
 
   const [postsResult, commentsResult, profilesResult] = await Promise.all([
     postIds.length > 0
-      ? admin.from('posts').select('id, content, author_id, author:profiles!author_id(username, status)').in('id', postIds)
+      ? admin.from('posts').select('id, content, author_id, author:profiles!author_id(username, status, profile_photo_url, first_name)').in('id', postIds)
       : Promise.resolve({ data: [] as any[] }),
     commentIds.length > 0
-      ? admin.from('comments').select('id, content, author_id, author:profiles!author_id(username, status)').in('id', commentIds)
+      ? admin.from('comments').select('id, content, author_id, author:profiles!author_id(username, status, profile_photo_url, first_name)').in('id', commentIds)
       : Promise.resolve({ data: [] as any[] }),
     profileIds.length > 0
-      ? admin.from('profiles').select('id, username, status').in('id', profileIds)
+      ? admin.from('profiles').select('id, username, status, profile_photo_url, first_name').in('id', profileIds)
       : Promise.resolve({ data: [] as any[] }),
   ])
 
@@ -259,32 +270,58 @@ export async function getContentReports(
     if (group.content_type === 'post') {
       const post = postMap.get(group.content_id)
       if (post) {
+        const a = (post.author as any) ?? {}
         group.content_preview = post.content?.slice(0, 500) ?? null
         group.content_author_id = post.author_id
-        group.content_author_username = (post.author as any)?.username ?? null
+        group.content_author_username = a.username ?? null
+        group.content_author_profile_photo_url = a.profile_photo_url ?? null
+        group.content_author_first_name = a.first_name ?? null
         group.content_images = imageMap.get(group.content_id) ?? []
-        if ((post.author as any)?.status === 'banned') bannedAuthorIds.add(post.author_id)
+        if (a.status === 'banned') bannedAuthorIds.add(post.author_id)
       }
     } else if (group.content_type === 'comment') {
       const comment = commentMap.get(group.content_id)
       if (comment) {
+        const a = (comment.author as any) ?? {}
         group.content_preview = comment.content?.slice(0, 300) ?? null
         group.content_author_id = comment.author_id
-        group.content_author_username = (comment.author as any)?.username ?? null
-        if ((comment.author as any)?.status === 'banned') bannedAuthorIds.add(comment.author_id)
+        group.content_author_username = a.username ?? null
+        group.content_author_profile_photo_url = a.profile_photo_url ?? null
+        group.content_author_first_name = a.first_name ?? null
+        if (a.status === 'banned') bannedAuthorIds.add(comment.author_id)
       }
     } else if (group.content_type === 'profile') {
-      const p = profileMap.get(group.content_id)
+      const p: any = profileMap.get(group.content_id)
       if (p) {
         group.content_preview = `@${p.username}`
         group.content_author_id = p.id
         group.content_author_username = p.username ?? null
-        if ((p as any).status === 'banned') bannedAuthorIds.add(p.id)
+        group.content_author_profile_photo_url = p.profile_photo_url ?? null
+        group.content_author_first_name = p.first_name ?? null
+        if (p.status === 'banned') bannedAuthorIds.add(p.id)
       }
     }
   }
 
-  return groups.filter((g) => !g.content_author_id || !bannedAuthorIds.has(g.content_author_id))
+  const visible = groups.filter((g) => !g.content_author_id || !bannedAuthorIds.has(g.content_author_id))
+
+  // ── Compute at-a-glance risk signals for each unique author ─────────────
+  // One batched fetch per signal source so we stay O(distinct authors), not
+  // O(reports). Cheap enough to run on every page load.
+  const uniqueAuthorIds = Array.from(
+    new Set(visible.map((g) => g.content_author_id).filter((id): id is string => !!id)),
+  )
+
+  if (uniqueAuthorIds.length > 0) {
+    const signalsByAuthor = await computeRiskSignals(admin, uniqueAuthorIds)
+    for (const g of visible) {
+      if (g.content_author_id) {
+        g.content_author_signals = signalsByAuthor.get(g.content_author_id) ?? []
+      }
+    }
+  }
+
+  return visible
 }
 
 export async function bulkDismissReports(reportIds: string[]): Promise<void> {

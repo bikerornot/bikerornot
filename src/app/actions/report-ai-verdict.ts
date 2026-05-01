@@ -89,12 +89,13 @@ export async function getReportAIVerdict(
   await requireAdminOrMod()
   const admin = getServiceClient()
 
-  const [profileRes, bikesRes, postsRes, msgsRes, frRes] = await Promise.all([
+  const [profileRes, bikesRes, postsRes, msgsRes, frRes, blocksRes] = await Promise.all([
     admin.from('profiles').select('username, first_name, last_name, gender, date_of_birth, bio, riding_style, city, state, country, signup_ip, signup_country, signup_city, phone_number, phone_verified_at, created_at, last_seen_at, status').eq('id', authorId).single(),
     admin.from('user_bikes').select('id, year, make, model').eq('user_id', authorId),
     admin.from('posts').select('id, content, created_at').eq('author_id', authorId).is('deleted_at', null).order('created_at', { ascending: false }).limit(10),
     admin.from('messages').select('content, conversation_id, created_at').eq('sender_id', authorId).order('created_at', { ascending: true }).limit(300),
     admin.from('friendships').select('status, created_at').eq('requester_id', authorId),
+    admin.from('blocks').select('blocker_id', { count: 'exact', head: true }).eq('blocked_id', authorId),
   ])
 
   const profile: any = profileRes.data
@@ -104,6 +105,7 @@ export async function getReportAIVerdict(
   const posts = postsRes.data ?? []
   const msgs = msgsRes.data ?? []
   const friendRequests = frRes.data ?? []
+  const blocksAgainstCount = blocksRes.count ?? 0
 
   const accountAgeDays = Math.floor((Date.now() - new Date(profile.created_at).getTime()) / 86_400_000)
 
@@ -292,6 +294,11 @@ export async function getReportAIVerdict(
     female_recipient_count: femaleRecipientCount,
     avg_female_recipient_age: avgFemaleRecipientAge,
     target_age_skew_years: targetAgeSkew,
+    // Number of users who have blocked this user. Empirically: P(banned)
+    // is 26% with 1+ blocks, 36% with 3+ blocks, vs 6% baseline. Real
+    // signal when present — but absence is neutral, since most scammers
+    // get banned before victims block them.
+    blocks_against_count: blocksAgainstCount,
     friend_requests_sent: friendRequests.length,
     sample_openers: openers.slice(0, 12),
     // PRIMARY scammer-detection signal: explicit attempts to move the
@@ -373,6 +380,19 @@ phrase the user typed.
 - Residential signup IP (not Linode / DigitalOcean / Vultr / OVH)
 - Normal cadence: a handful of DMs per week, not 35 in 24 hours
 - Conversation feels like two humans talking, not a script
+
+═══ NEGATIVE SIGNAL — BLOCKS AGAINST USER ═══
+Empirically on this platform:
+  - 0 blocks against a user — neutral (do NOT penalize; most scammers get
+    banned before victims block them, so absence tells us nothing)
+  - 1-2 blocks → moderate negative (4× ban-rate lift over baseline; 26%
+    of users with 1+ blocks turn out to be scammers vs 6% baseline)
+  - 3+ blocks → strong negative (~6× lift; 36% are scammers)
+
+Field: blocks_against_count
+
+When non-zero, weigh as a real corroborating signal toward likely_scammer.
+When zero, ignore — it's a high-precision low-recall signal.
 
 ═══ NEGATIVE SIGNAL — TARGET-AGE SKEW (PREDATOR PATTERN) ═══
 Empirical pattern in BikerOrNot's confirmed-scammer dataset:

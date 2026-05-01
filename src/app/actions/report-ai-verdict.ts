@@ -116,6 +116,13 @@ export async function getReportAIVerdict(
   const conversationIds = Array.from(new Set(msgs.map((m: any) => m.conversation_id).filter(Boolean) as string[]))
   let bannedPartnersCount = 0
   let totalPartnersCount = 0
+  // Female-recipient age skew — driven by an empirical pattern in our banned
+  // user set: male scammers who claim age <50 target women ~10-22 years
+  // older. A young-claimed male profile messaging mostly older women is
+  // therefore a strong scammer signal.
+  let femaleRecipientCount = 0
+  let avgFemaleRecipientAge: number | null = null
+  let targetAgeSkew: number | null = null  // avg female recipient age − this user's age
   if (conversationIds.length > 0) {
     const { data: convs } = await admin
       .from('conversations')
@@ -130,9 +137,26 @@ export async function getReportAIVerdict(
     if (partnerIds.size > 0) {
       const { data: partners } = await admin
         .from('profiles')
-        .select('id, status')
+        .select('id, status, gender, date_of_birth')
         .in('id', Array.from(partnerIds))
-      bannedPartnersCount = ((partners ?? []) as any[]).filter((p) => p.status === 'banned').length
+      const partnersList = (partners ?? []) as any[]
+      bannedPartnersCount = partnersList.filter((p) => p.status === 'banned').length
+
+      const femaleAges = partnersList
+        .filter((p) => p.gender === 'female' && p.date_of_birth)
+        .map((p) => {
+          const ageMs = Date.now() - new Date(p.date_of_birth).getTime()
+          return ageMs / (365.25 * 86_400_000)
+        })
+        .filter((a) => a >= 18 && a <= 100)
+      femaleRecipientCount = femaleAges.length
+      if (femaleAges.length > 0) {
+        avgFemaleRecipientAge = +(femaleAges.reduce((a, b) => a + b, 0) / femaleAges.length).toFixed(1)
+        if (profile.date_of_birth) {
+          const userAge = (Date.now() - new Date(profile.date_of_birth).getTime()) / (365.25 * 86_400_000)
+          targetAgeSkew = +(avgFemaleRecipientAge - userAge).toFixed(1)
+        }
+      }
     }
   }
 
@@ -261,6 +285,13 @@ export async function getReportAIVerdict(
     total_conversation_partners: totalPartnersCount,
     banned_conversation_partners_count: bannedPartnersCount,
     banned_partner_ratio: totalPartnersCount > 0 ? +(bannedPartnersCount / totalPartnersCount).toFixed(2) : 0,
+    // Target-age skew — empirical pattern in our banned-user set:
+    // male scammers who claim <50 target women ~10-22 years older. Use
+    // alongside the user's claimed age + gender to spot the predator
+    // pattern of a young-claimed man DMing much older women.
+    female_recipient_count: femaleRecipientCount,
+    avg_female_recipient_age: avgFemaleRecipientAge,
+    target_age_skew_years: targetAgeSkew,
     friend_requests_sent: friendRequests.length,
     sample_openers: openers.slice(0, 12),
     // PRIMARY scammer-detection signal: explicit attempts to move the
@@ -342,6 +373,32 @@ phrase the user typed.
 - Residential signup IP (not Linode / DigitalOcean / Vultr / OVH)
 - Normal cadence: a handful of DMs per week, not 35 in 24 hours
 - Conversation feels like two humans talking, not a script
+
+═══ NEGATIVE SIGNAL — TARGET-AGE SKEW (PREDATOR PATTERN) ═══
+Empirical pattern in BikerOrNot's confirmed-scammer dataset:
+  - Male scammers claiming AGE <40 target women on average +22 years older
+  - Male scammers claiming AGE 40-49 target women +11 years older
+  - Male scammers claiming AGE 50-59 target women +5 years older
+  - Male scammers claiming AGE 60+ target women in their own age range
+    (no useful age-skew signal in this band)
+
+Context fields:
+  - age (the user's claimed age)
+  - female_recipient_count (how many distinct female partners with DOB)
+  - avg_female_recipient_age
+  - target_age_skew_years (avg_female_recipient_age − user's age)
+
+Weigh as a STRONG NEGATIVE signal (toward likely_scammer) when:
+  - User is male AND age < 50 AND target_age_skew_years >= 10 AND
+    female_recipient_count >= 3 → very strong predator pattern
+  - User is male AND age < 40 AND target_age_skew_years >= 15 AND
+    female_recipient_count >= 3 → near-conclusive on its own
+
+Do NOT flag based on this signal when:
+  - User is age 60+ (the pattern doesn't hold in that band)
+  - User is female (this analysis is male-scammers-targeting-older-women)
+  - female_recipient_count < 3 (sample too small)
+  - target_age_skew_years is null (no DOB data)
 
 ═══ POSITIVE SIGNAL — "SCAMMER MAGNET" PATTERN ═══
 

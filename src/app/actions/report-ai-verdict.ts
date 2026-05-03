@@ -89,13 +89,18 @@ export async function getReportAIVerdict(
   await requireAdminOrMod()
   const admin = getServiceClient()
 
-  const [profileRes, bikesRes, postsRes, msgsRes, frRes, blocksRes] = await Promise.all([
+  const [profileRes, bikesRes, postsRes, msgsRes, frRes, blocksRes, groupJoinsRes] = await Promise.all([
     admin.from('profiles').select('username, first_name, last_name, gender, date_of_birth, bio, riding_style, city, state, country, signup_ip, signup_country, signup_city, phone_number, phone_verified_at, created_at, last_seen_at, status').eq('id', authorId).single(),
     admin.from('user_bikes').select('id, year, make, model').eq('user_id', authorId),
     admin.from('posts').select('id, content, created_at').eq('author_id', authorId).is('deleted_at', null).order('created_at', { ascending: false }).limit(10),
     admin.from('messages').select('content, conversation_id, created_at').eq('sender_id', authorId).order('created_at', { ascending: true }).limit(300),
     admin.from('friendships').select('status, created_at').eq('requester_id', authorId),
     admin.from('blocks').select('blocker_id', { count: 'exact', head: true }).eq('blocked_id', authorId),
+    // Group-join behavior — burst-joining + out-of-state group joining
+    // both correlate strongly with scammers (45-65% ban rate at threshold).
+    admin.from('group_members')
+      .select('joined_at, group:groups!group_id(state)')
+      .eq('user_id', authorId),
   ])
 
   const profile: any = profileRes.data
@@ -106,6 +111,38 @@ export async function getReportAIVerdict(
   const msgs = msgsRes.data ?? []
   const friendRequests = frRes.data ?? []
   const blocksAgainstCount = blocksRes.count ?? 0
+
+  // ── Group-join behavior signals ───────────────────────────────────────────
+  // Burst-joining: P(banned) hits 45% at 3+ groups in 24h, 57% at 5+.
+  // Geographic mismatch: P(banned) hits 65% at "joined groups in 2+ different
+  // other states in first 7 days" — scammers join out-of-state local groups
+  // to bulk up profile signals without checking which state they're in.
+  const groupJoins = (groupJoinsRes.data ?? []) as any[]
+  const userState = profile.state as string | null
+  const signupTs = new Date(profile.created_at).getTime()
+  let groupsJoinedFirst1h = 0
+  let groupsJoinedFirst24h = 0
+  let groupsJoinedFirst7d = 0
+  const otherStatesJoined = new Set<string>()
+  let joinsInOtherStates = 0
+  let joinsInOwnState = 0
+  for (const gj of groupJoins) {
+    const joinedTs = new Date(gj.joined_at).getTime()
+    const ageHrs = (joinedTs - signupTs) / (60 * 60 * 1000)
+    if (ageHrs <= 1) groupsJoinedFirst1h++
+    if (ageHrs <= 24) groupsJoinedFirst24h++
+    const inFirst7d = ageHrs <= 24 * 7
+    if (inFirst7d) groupsJoinedFirst7d++
+    const groupState: string | null = gj.group?.state ?? null
+    if (inFirst7d && userState && groupState) {
+      if (groupState !== userState) {
+        otherStatesJoined.add(groupState)
+        joinsInOtherStates++
+      } else {
+        joinsInOwnState++
+      }
+    }
+  }
 
   const accountAgeDays = Math.floor((Date.now() - new Date(profile.created_at).getTime()) / 86_400_000)
 
@@ -299,6 +336,18 @@ export async function getReportAIVerdict(
     // signal when present — but absence is neutral, since most scammers
     // get banned before victims block them.
     blocks_against_count: blocksAgainstCount,
+    // Group-joining behavior. Two empirical patterns:
+    //   - Burst-join: 3+ groups in first 24h → 45% banned, 5+ → 57% banned
+    //   - Geographic mismatch: joining local groups in 2+ different OTHER
+    //     states in first 7d → 65% banned (scammers don't think about
+    //     whether the group is near where they claim to live)
+    groups_joined_total: groupJoins.length,
+    groups_joined_first_1h: groupsJoinedFirst1h,
+    groups_joined_first_24h: groupsJoinedFirst24h,
+    groups_joined_first_7d: groupsJoinedFirst7d,
+    distinct_other_states_joined_first_7d: otherStatesJoined.size,
+    joins_in_other_states_first_7d: joinsInOtherStates,
+    joins_in_own_state_first_7d: joinsInOwnState,
     friend_requests_sent: friendRequests.length,
     sample_openers: openers.slice(0, 12),
     // PRIMARY scammer-detection signal: explicit attempts to move the
@@ -380,6 +429,32 @@ phrase the user typed.
 - Residential signup IP (not Linode / DigitalOcean / Vultr / OVH)
 - Normal cadence: a handful of DMs per week, not 35 in 24 hours
 - Conversation feels like two humans talking, not a script
+
+═══ NEGATIVE SIGNAL — GROUP-JOINING BEHAVIOR ═══
+Two empirical patterns from BON's confirmed-scammer dataset:
+
+1) BURST JOINING (groups_joined_first_24h):
+   - 3+ groups joined in the first 24 hours after signup → 45% ban rate
+   - 5+ groups joined in 24h → 57% ban rate
+   - Real users typically join 0-1 groups in their first day
+   Treat as STRONG negative when ≥3, very strong when ≥5.
+
+2) GEOGRAPHIC MISMATCH (distinct_other_states_joined_first_7d):
+   Scammers bulk-join local-flavored groups in their first week to look
+   active, but don't check whether those groups are near where they claim
+   to live. The signature: joining "Wind Therapy Florida Riders" + "Texas
+   Harley Group" + "Ohio Motorcycle Club" in 7 days while claiming to
+   live in Tennessee.
+   - 2+ different OTHER states joined in first 7 days → 65% ban rate
+   - More out-of-state joins than in-state joins → 35% ban rate
+   - Real users overwhelmingly join groups in their own state if at all
+   Treat as STRONG negative when 2+ other states; moderate when out-of-
+   state joins exceed in-state joins.
+
+Context fields:
+  groups_joined_first_24h, groups_joined_first_7d,
+  distinct_other_states_joined_first_7d,
+  joins_in_other_states_first_7d, joins_in_own_state_first_7d
 
 ═══ NEGATIVE SIGNAL — BLOCKS AGAINST USER ═══
 Empirically on this platform:
